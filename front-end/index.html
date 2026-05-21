@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multinode Energy Modeler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans overflow-hidden">
+    
+    <header class="bg-blue-900 text-white shadow-md z-20 flex-shrink-0">
+        <div class="px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide">Multinode Energy Modeler</h1>
+            <span class="text-sm font-medium text-blue-200 bg-blue-800 px-3 py-1 rounded-full border border-blue-700">APEC Optimization Engine</span>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        
+        <aside class="w-[380px] bg-white border-r border-slate-200 flex flex-col overflow-hidden z-10 shadow-sm flex-shrink-0">
+            
+            <div class="p-5 border-b border-slate-200 bg-slate-50 space-y-4 flex-shrink-0 select-none">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">1. Environment Setup</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Economy</label>
+                            <select id="select-economy" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                        </div>
+                        <div class="flex space-x-3">
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Year</label>
+                                <select id="select-year" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Sector Flow</label>
+                                <select id="select-sector" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 space-y-3">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">2. Global Macro Drivers</h2>
+                    
+                    <div class="space-y-2 p-2.5 bg-slate-100 border border-slate-200 rounded-md shadow-sm">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">Driver Template</label>
+                            <select id="select-macro-driver-type" class="w-full text-xs border-slate-300 rounded p-1.5 border bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                                <option value="households">Households</option>
+                                <option value="floor_area_sqm">Floor Area (sqm)</option>
+                                <option value="occupancy_rate">Occupancy Rate</option>
+                                <option value="custom">Custom (Add New...)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="container-custom-driver-name" class="hidden">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-0.5">Custom Key Identifier</label>
+                            <input type="text" id="input-custom-driver-name" placeholder="e.g., cooling_degree_days" class="w-full text-xs border-slate-300 rounded p-1.5 border bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                        </div>
+                        
+                        <button type="button" id="btn-add-macro-driver" class="w-full bg-slate-700 hover:bg-slate-800 text-white py-1 rounded text-xs font-semibold transition-colors shadow-sm">
+                            + Add Macro Driver
+                        </button>
+                    </div>
+                    
+                    <div id="global-drivers-container" class="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                        </div>
+                </div>
+
+                <button id="btn-start" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-md font-semibold transition-colors text-sm shadow-sm">
+                    Initialize Model
+                </button>
+            </div>
+
+            <div id="target-dashboard" class="flex-1 overflow-y-auto p-5 hidden custom-scrollbar bg-white">
+                <div class="flex justify-between items-end mb-4 pb-2 border-b border-slate-100">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">ESTO Fuel Targets</h2>
+                    <div class="text-right">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Top-Down Mass</div>
+                        <div class="text-lg font-black text-blue-900" id="display-total-energy">0.00</div>
+                    </div>
+                </div>
+                
+                <div id="fuel-targets-container" class="space-y-4"></div>
+            </div>
+        </aside>
+
+        <section class="flex-1 relative flex flex-col bg-slate-100/50">
+            
+            <div id="tree-canvas" class="flex-1 overflow-hidden relative select-none">
+                <div id="canvas-empty-state" class="flex flex-col items-center justify-center h-full text-slate-400">
+                    <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <p class="font-medium">Initialize the model on the left to start building.</p>
+                </div>
+                
+                <div id="tree-root-container" class="hidden w-full h-full relative">
+                    <!-- Top Toolbar Floats in Place -->
+                    <div class="absolute top-5 left-5 z-20 flex gap-2">
+                        <button id="btn-add-root-branch" class="bg-white/95 backdrop-blur border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-700 px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-all active:scale-95 flex items-center gap-2">
+                            <span>+ Add Root Branch</span>
+                        </button>
+                        <button id="btn-collapse-all" class="bg-white/95 backdrop-blur border border-slate-200 hover:border-purple-400 hover:text-purple-600 text-slate-700 px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-all active:scale-95 flex items-center gap-2" title="Collapse all branches for unified screen view">
+                            <span>Collapse All</span>
+                        </button>
+                        <button id="btn-expand-all" class="bg-white/95 backdrop-blur border border-slate-200 hover:border-purple-400 hover:text-purple-600 text-slate-700 px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-all active:scale-95 flex items-center gap-2" title="Expand all branches">
+                            <span>Expand All</span>
+                        </button>
+                    </div>
+
+                    <!-- Floating Canvas Control Widget (Glassmorphism design, now positioned top-right) -->
+                    <div id="canvas-controls" class="absolute top-5 right-5 z-20 flex items-center bg-white/85 backdrop-blur-md border border-slate-200/65 px-3 py-2 rounded-lg shadow-md gap-3">
+                        <button id="btn-zoom-out" class="w-8 h-8 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-base flex items-center justify-center transition-colors shadow-sm active:scale-90" title="Zoom Out (Ctrl + Scroll Down)">−</button>
+                        <span id="display-zoom" class="text-xs font-bold text-slate-600 w-12 text-center select-none">100%</span>
+                        <button id="btn-zoom-in" class="w-8 h-8 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-base flex items-center justify-center transition-colors shadow-sm active:scale-90" title="Zoom In (Ctrl + Scroll Up)">+</button>
+                        <div class="h-5 w-[1px] bg-slate-200"></div>
+                        <button id="btn-fit-screen" class="px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs flex items-center gap-1 transition-colors shadow-sm active:scale-90" title="Fit tree to screen">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"></path></svg>
+                            Fit
+                        </button>
+                        <button id="btn-toggle-compact" class="px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs flex items-center gap-1 transition-colors shadow-sm active:scale-90" title="Compact Mode">
+                            <span id="compact-icon">👁️</span>
+                            Compact
+                        </button>
+                    </div>
+
+                    <!-- Transform Wrapper (Holds the entire tree structure for Zoom & Pan) -->
+                    <div id="tree-transform-container" class="absolute top-20 left-5 origin-top-left transition-transform duration-75 ease-out pb-40">
+                        <ul id="tree-nodes-list" class="tree-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Persistent Bottom Action Panel -->
+            <div id="action-console" class="flex-shrink-0 bg-white border-t border-slate-200 p-4 flex justify-between items-center hidden z-10">
+                <div id="status-message" class="text-sm font-semibold text-slate-500">
+                    Tree ready. Ensure all mass is distributed.
+                </div>
+                <div class="flex space-x-3">
+                    <button id="btn-validate" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-md font-semibold text-sm transition-all shadow-md active:scale-95">
+                        Check Balance
+                    </button>
+                    <button id="btn-optimize" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-semibold text-sm transition-all shadow-md active:scale-95 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Optimize Weights
+                    </button>
+                    <button id="btn-export" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-semibold text-sm transition-all shadow-md active:scale-95 hidden">
+                        Export to LEAP
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loading-overlay" class="hidden absolute inset-0 bg-white/70 backdrop-blur-sm flex-col items-center justify-center z-50">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600 mb-4 shadow-sm"></div>
+                <span class="text-slate-800 font-bold tracking-wide" id="loading-text">Processing Math...</span>
+            </div>
+        </section>
+
+        <!-- Collapsible Results Sidebar -->
+        <aside id="results-sidebar" class="w-[500px] bg-white border-l border-slate-200 flex flex-col overflow-hidden z-10 shadow-sm flex-shrink-0 transition-all duration-300 relative">
+            <!-- Collapse/Expand Toggle Button -->
+            <button id="btn-toggle-results" class="absolute left-[-14px] top-1/2 -translate-y-1/2 w-[14px] h-[60px] bg-white border border-r-0 border-slate-200 hover:border-blue-400 hover:text-blue-500 rounded-l-md flex items-center justify-center shadow-md cursor-pointer z-20 text-[10px] font-bold text-slate-500 transition-colors" title="Collapse Results Panel">
+                ›
+            </button>
+            
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center select-none flex-shrink-0 gap-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider truncate">Results Summary</h2>
+                    <!-- Symbology Help Icon with Premium Glossary Tooltip -->
+                    <div class="relative group flex-shrink-0">
+                        <button class="w-4 h-4 rounded-full bg-slate-200 hover:bg-blue-600 hover:text-white text-slate-500 font-bold text-[10px] flex items-center justify-center transition-colors cursor-help" aria-label="View glossary legend">
+                            ?
+                        </button>
+                        <!-- Tooltip Container -->
+                        <div class="absolute left-1/2 -translate-x-1/2 top-6 w-[280px] hidden group-hover:block bg-slate-900/95 backdrop-blur text-white text-[11px] p-4 rounded-lg shadow-xl z-50 border border-slate-700/60 transition-all">
+                            <h4 class="font-extrabold text-blue-300 border-b border-slate-700/50 pb-1.5 mb-2 text-xs uppercase tracking-wider">Metrics glossary & formulas</h4>
+                            <ul class="space-y-2">
+                                <li><strong>Branch Path:</strong> Hierarchy leading to the leaf node (e.g. <i>Urban › Heating › Heat Pump</i>).</li>
+                                <li><strong>Energy:</strong> Output energy in the chosen unit (PJ, GJ, or MJ).</li>
+                                <li><strong>Activity Level:</strong> Weights product along the path ($w_1^{\text{norm}} \times w_2^{\text{norm}} \times \dots$). Equal to $\text{Energy}_{\text{branch}} / \text{Energy}_{\text{total}}$.</li>
+                                <li><strong>Macro Driver:</strong> Metric and its active value. Falls back to first active driver (e.g., Households) if unassigned.</li>
+                                <li><strong>Energy Intensity:</strong> Calculated ratio of $\text{Energy} / \text{Driver Value}$.</li>
+                                <li><strong>Fuels:</strong> Visual list of fuels associated with the leaf node.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <!-- Unit Selector dropdown -->
+                    <select id="select-results-unit" class="text-xs border border-slate-300 rounded p-1 outline-none bg-white font-bold text-slate-600 focus:border-blue-400 cursor-pointer shadow-sm" title="Select energy display unit">
+                        <option value="PJ">PJ (Petajoules)</option>
+                        <option value="GJ">GJ (Gigajoules)</option>
+                        <option value="MJ">MJ (Megajoules)</option>
+                    </select>
+                    
+                    <span id="results-count" class="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full whitespace-nowrap">0 branches</span>
+                </div>
+            </div>
+            
+            <!-- Sidebar Controls & Body -->
+            <div class="flex-1 overflow-auto p-5 custom-scrollbar bg-slate-50/50 flex flex-col h-full">
+                <!-- Search and Export Toolbar -->
+                <div class="mb-4 flex gap-2 flex-shrink-0">
+                    <div class="relative flex-1">
+                        <input type="text" id="input-search-results" placeholder="Search branch path..." class="w-full text-xs border border-slate-300 rounded p-2 pl-7 outline-none focus:border-blue-500 bg-white shadow-sm">
+                        <svg class="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <button id="btn-export-results-csv" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow active:scale-95 flex-shrink-0" title="Export current results to CSV">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        CSV
+                    </button>
+                </div>
+                
+                <!-- Dynamic summary content -->
+                <div id="results-table-container" class="space-y-4 flex-1">
+                    <!-- Loaded dynamically via app.js -->
+                    <div class="flex flex-col items-center justify-center text-slate-400 h-full text-center py-20 italic">
+                        <svg class="w-10 h-10 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        No branches available. Initialize the model to view results.
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Custom Confirmation Modal (Glassmorphism design) -->
+    <div id="custom-confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
+            <div class="p-6">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="confirm-modal-title" class="text-base font-bold text-slate-800">Action Required</h3>
+                        <p id="confirm-modal-message" class="text-sm text-slate-500 mt-1 whitespace-pre-line"></p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button id="confirm-modal-cancel" class="px-4 py-2 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">Cancel</button>
+                    <button id="confirm-modal-confirm" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Container -->
+    <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[340px]"></div>
+
+<script src="api.js"></script> 
+<script src="app.js"></script>
+</body>
+</html>
