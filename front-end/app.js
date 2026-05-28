@@ -1064,7 +1064,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
     }
 }
 
-function downloadRoadModule1ProvidedValuesTemplate() {
+async function downloadRoadModule1ProvidedValuesTemplate() {
     const version = DOM.roadVersionSelect.value;
     const economy = DOM.roadEconomySelect.value;
     const scenario = DOM.roadScenarioSelect.value;
