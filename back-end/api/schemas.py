@@ -75,6 +75,16 @@ class LayerUpdateResponse(BaseModel):
     balanced_tree: Dict[str, CalculatedNode] = Field(..., description="The newly balanced tree populated with calculated energy values")
     validation_details: Optional[Dict[str, Any]] = Field(default=None, description="Detailed breakdown of macro imbalances")
 
+class UserVariable(BaseModel):
+    """A researcher-defined variable to be included in the export workbook."""
+    name: str = Field(..., description="Snake_case key identifier (e.g. 'scrappage_rate_2030')")
+    display_name: str = Field(..., description="Human-readable label shown in the output sheet")
+    value: float = Field(..., description="Numeric value")
+    unit: Optional[str] = Field(default=None, description="Unit of measurement (e.g. '%', 'vehicles/yr')")
+    description: Optional[str] = Field(default=None, description="What this variable represents")
+    category: Optional[str] = Field(default=None, description="Grouping category (e.g. 'Scrappage', 'Fleet Turnover')")
+
+
 class ExportRequest(BaseModel):
     """Payload to trigger the final Excel generation."""
     economy: str
@@ -82,9 +92,34 @@ class ExportRequest(BaseModel):
     sector_flow: str
     macro_drivers: MacroDrivers = Field(..., description="The macroeconomic values for intensity calculations")
     balanced_tree: Dict[str, CalculatedNode] = Field(..., description="The fully built, validated, and balanced energy tree")
+    user_variables: Optional[List[UserVariable]] = Field(default_factory=list, description="Researcher-defined variables appended as a dedicated sheet")
 
 class ExportResponse(BaseModel):
     """Response details for a successful LEAP export."""
     status: str
     leap_export_path: str = Field(..., description="File path to the generated LEAP Excel workbook")
+    message: str
+
+
+class RoadModule1Override(BaseModel):
+    """Single researcher override keyed by the LEAP-like Road model key columns."""
+    key: Dict[str, Any]
+    year: int | str
+    value: Optional[float] = None
+    comment: Optional[str] = ""
+
+
+class RoadModule1ResearcherOutputRequest(BaseModel):
+    version: str
+    economy: str
+    overrides: List[RoadModule1Override] = Field(default_factory=list)
+
+
+class RoadModule1ResearcherOutputResponse(BaseModel):
+    status: str
+    completed_inputs_path: str
+    rows_written: int
+    overrides_applied: int
+    override_issue_count: int
+    structure_validation_passed: bool
     message: str

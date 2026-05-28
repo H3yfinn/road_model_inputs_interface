@@ -1,5 +1,11 @@
 # Multinode Energy Modeler
 
+> **Current Road Module 1 structure guide:**
+> `docs/new model/multinode_road_module1_repo_guide.md`
+>
+> Use that document as the source of truth for the current Road Module 1 folder
+> layout, static bundle packaging, and archive conventions.
+
 An interactive full-stack modeling and mathematical optimization platform designed to reconcile bottom-up user-defined energy demand structures with top-down macroeconomic energy datasets. Developed for **APEC (Asia-Pacific Economic Cooperation)** and **APERC (Asia Pacific Energy Research Centre)**, this application allows energy modelers to define customizable sector hierarchies, assign relative weights and physical fuel shares, check for mass balances, mathematically optimize weights to match macro targets, and export ready-to-use configurations directly to the **LEAP (Low Emissions Analysis Platform)** software.
 
 ---

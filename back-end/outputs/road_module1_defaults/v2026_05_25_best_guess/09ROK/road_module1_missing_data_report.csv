@@ -1,0 +1,13 @@
+Region,Scenario,Variable,missing_field,input_source,row_count,action_taken,severity,notes
+Korea,Reference,Fuel Economy,researcher_value,default,51,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Mileage,researcher_value,default,7,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,PHEV Electric Driving Share,researcher_value,provided,2,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Passenger Vehicle Saturation,researcher_value,provided,1,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Reconciliation Bound Lower,researcher_value,provided,2,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Reconciliation Bound Upper,researcher_value,provided,2,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Reconciliation Weight,researcher_value,provided,2,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Sales Share,researcher_value,default,30,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Stock,researcher_value,default,30,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Survival Rate,researcher_value,default,62,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Vehicle Equivalent Weight,researcher_value,provided,4,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.
+Korea,Reference,Vintage Profile Share,researcher_value,default,62,provided_value_inserted,review_needed,The Road model provided-values package is being used for these rows.

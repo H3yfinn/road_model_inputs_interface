@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Imported data_ingestor alongside the router to handle eager loading
-from api.routers import router, data_ingestor
+from api.routers import router, road_router, data_ingestor
 from core.logger import get_logger
 
 # Initialize logger
@@ -44,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(road_router)
 
 # --- GLOBAL EXCEPTION HANDLERS ---
 

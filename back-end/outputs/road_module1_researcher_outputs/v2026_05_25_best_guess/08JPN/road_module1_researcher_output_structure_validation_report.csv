@@ -1,0 +1,11 @@
+check_name,status,issue_count,details
+required_columns_present,pass,0,
+no_unexpected_columns,pass,0,
+column_order_matches_contract,pass,0,
+required_values_populated,pass,0,
+year_values_are_numeric,pass,0,
+module1_key_columns_are_unique,pass,0,Key columns: Branch Path; Variable; Scenario; Region
+variables_are_known,pass,0,
+units_match_variable_contract,pass,0,
+input_sources_are_known,pass,0,
+label_statuses_are_known,pass,0,

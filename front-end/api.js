@@ -1,6 +1,6 @@
 /**
  * api.js
- * Core HTTP client module handling communication with the Multinode Energy Modeler FastAPI backend.
+ * Core HTTP client module handling optional communication with the Multinode Energy Modeler FastAPI backend.
  * Engineered using native Fetch API to eliminate external dependency overhead.
  */
 
@@ -14,9 +14,9 @@ class EnergyModelAPI {
      * @param {Object} payload - The JSON-serializable body request object.
      * @returns {Promise<Object>} Resolves with the parsed backend response payload.
      */
-    static async _post(endpoint, payload) {
+    static async _post(endpoint, payload, baseUrl = API_BASE_URL) {
         try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const response = await fetch(`${baseUrl}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -47,10 +47,10 @@ class EnergyModelAPI {
      * @param {Object} [params={}] - Key-value mapping representing GET query parameters.
      * @returns {Promise<Object>} Resolves with the parsed backend response payload.
      */
-    static async _get(endpoint, params = {}) {
+    static async _get(endpoint, params = {}, baseUrl = API_BASE_URL) {
         try {
             const queryString = new URLSearchParams(params).toString();
-            const url = queryString ? `${API_BASE_URL}${endpoint}?${queryString}` : `${API_BASE_URL}${endpoint}`;
+            const url = queryString ? `${baseUrl}${endpoint}?${queryString}` : `${baseUrl}${endpoint}`;
             
             const response = await fetch(url, {
                 method: 'GET',

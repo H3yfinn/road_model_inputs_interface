@@ -15,6 +15,29 @@ const State = {
     macro_targets: {}, 
     treeState: {},     
     balancedTree: null,
+    roadModule1: {
+        version: null,
+        economy: null,
+        scenario: 'Reference',
+        keyColumns: [],
+        rows: [],
+        overrides: new Map(),
+        sharedMileageOverrides: new Map(),
+        activeFilter: '',
+        structuredFilters: {
+            transport: '',
+            vehicle: '',
+            drive: '',
+            fuel: '',
+            measure: '',
+            review: ''
+        },
+        sortBy: 'branch',
+        sortDirection: 'asc',
+        viewMode: 'list',
+        detailedMileage: false,
+        lastDraftSavedAt: null
+    },
     // NEW: Open and extensible dictionary configuration for variable socio-economic drivers
     macroDrivers: {
         households: 132400000,
@@ -29,7 +52,57 @@ const State = {
     startX: 0,
     startY: 0,
     isCompactMode: false,
-    activeNodePathStr: null
+    activeNodePathStr: null,
+    // Researcher-defined variables exported to the User_Variables sheet
+    userVariables: []  // Array of { id, name, key, value, unit, category, description }
+};
+
+const ROAD_MODULE1_FALLBACK_VERSION = 'v2026_05_25_best_guess';
+const ROAD_MODULE1_BASE_YEAR = 2022;
+const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
+const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
+const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
+const ROAD_MODULE1_VALUE_RULES = {
+    'Stock': { min: 0 },
+    'Sales Share': { min: 0, max: 100 },
+    'Final On-Road Fuel Economy': { min: 0 },
+    'Fuel Economy': { min: 0 },
+    'Mileage': { min: 0 },
+    'Passenger Vehicle Saturation': { min: 0 },
+    'PHEV Electric Driving Share': { min: 0, max: 100 },
+    'Reconciliation Bound Lower': { min: 0 },
+    'Reconciliation Bound Upper': { min: 0 },
+    'Reconciliation Weight': { min: 0 },
+    'Survival Rate': { min: 0, max: 100 },
+    'Vehicle Equivalent Weight': { min: 0 },
+    'Vintage Profile Share': { min: 0, max: 100 }
+};
+const ROAD_MODULE1_FALLBACK_ECONOMIES = [
+    { economy: "01AUS", economy_name: "Australia" },
+    { economy: "02BD", economy_name: "Brunei Darussalam" },
+    { economy: "03CDA", economy_name: "Canada" },
+    { economy: "04CHL", economy_name: "Chile" },
+    { economy: "05PRC", economy_name: "China" },
+    { economy: "06HKC", economy_name: "Hong Kong, China" },
+    { economy: "07INA", economy_name: "Indonesia" },
+    { economy: "08JPN", economy_name: "Japan" },
+    { economy: "09ROK", economy_name: "Korea" },
+    { economy: "10MAS", economy_name: "Malaysia" },
+    { economy: "11MEX", economy_name: "Mexico" },
+    { economy: "12NZ", economy_name: "New Zealand" },
+    { economy: "13PNG", economy_name: "Papua New Guinea" },
+    { economy: "14PE", economy_name: "Peru" },
+    { economy: "15PHL", economy_name: "Philippines" },
+    { economy: "16RUS", economy_name: "Russia" },
+    { economy: "17SGP", economy_name: "Singapore" },
+    { economy: "18CT", economy_name: "Chinese Taipei" },
+    { economy: "19THA", economy_name: "Thailand" },
+    { economy: "20USA", economy_name: "United States" },
+    { economy: "21VN", economy_name: "Viet Nam" }
+];
+const RoadModule1StaticBundleState = {
+    indexLoaded: false,
+    indexData: null
 };
 
 const DOM = {
@@ -44,6 +117,17 @@ const DOM = {
     btnAddMacroDriver: document.getElementById('btn-add-macro-driver'),
     globalDriversContainer: document.getElementById('global-drivers-container'),
     
+    // User Variables panel
+    btnToggleUserVars: document.getElementById('btn-toggle-user-vars'),
+    userVarsForm: document.getElementById('user-vars-form'),
+    inputUvarName: document.getElementById('input-uvar-name'),
+    inputUvarValue: document.getElementById('input-uvar-value'),
+    inputUvarUnit: document.getElementById('input-uvar-unit'),
+    inputUvarCategory: document.getElementById('input-uvar-category'),
+    inputUvarDescription: document.getElementById('input-uvar-description'),
+    btnAddUserVar: document.getElementById('btn-add-user-var'),
+    userVarsContainer: document.getElementById('user-vars-container'),
+
     btnStart: document.getElementById('btn-start'),
     targetDashboard: document.getElementById('target-dashboard'),
     displayTotalEnergy: document.getElementById('display-total-energy'),
@@ -76,6 +160,44 @@ const DOM = {
     btnToggleCompact: document.getElementById('btn-toggle-compact'),
     displayZoom: document.getElementById('display-zoom'),
     compactIcon: document.getElementById('compact-icon'),
+    btnModeEnergy: document.getElementById('btn-mode-energy'),
+    btnModeRoadModule1: document.getElementById('btn-mode-road-module1'),
+    energyAppMain: document.getElementById('energy-app-main'),
+    roadModule1Main: document.getElementById('road-module1-main'),
+    roadVersionSelect: document.getElementById('road-version-select'),
+    roadEconomySelect: document.getElementById('road-economy-select'),
+    roadScenarioSelect: document.getElementById('road-scenario-select'),
+    roadLoadDefaults: document.getElementById('road-load-defaults'),
+    roadUseBuiltinProvidedValues: document.getElementById('road-use-builtin-provided-values'),
+    roadDownloadProvidedTemplate: document.getElementById('road-download-provided-template'),
+    roadProvidedFileInput: document.getElementById('road-provided-file-input'),
+    roadUploadProvidedValues: document.getElementById('road-upload-provided-values'),
+    roadLeftPanel: document.getElementById('road-left-panel'),
+    roadToggleLeftPanel: document.getElementById('road-toggle-left-panel'),
+    roadFilterInput: document.getElementById('road-filter-input'),
+    roadFilterTransport: document.getElementById('road-filter-transport'),
+    roadFilterVehicle: document.getElementById('road-filter-vehicle'),
+    roadFilterDrive: document.getElementById('road-filter-drive'),
+    roadFilterFuel: document.getElementById('road-filter-fuel'),
+    roadFilterMeasure: document.getElementById('road-filter-measure'),
+    roadFilterReview: document.getElementById('road-filter-review'),
+    roadSortBy: document.getElementById('road-sort-by'),
+    roadSortDirection: document.getElementById('road-sort-direction'),
+    roadListView: document.getElementById('road-list-view'),
+    roadTreeView: document.getElementById('road-tree-view'),
+    roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
+    roadRowCount: document.getElementById('road-row-count'),
+    roadOverrideCount: document.getElementById('road-override-count'),
+    roadSaveOutput: document.getElementById('road-save-output'),
+    roadClearDraft: document.getElementById('road-clear-draft'),
+    roadSaveStatus: document.getElementById('road-save-status'),
+    roadValidationSummary: document.getElementById('road-validation-summary'),
+    roadInputContainer: document.getElementById('road-input-container'),
+    roadUploadSummaryModal: document.getElementById('road-upload-summary-modal'),
+    roadUploadSummaryTitle: document.getElementById('road-upload-summary-title'),
+    roadUploadSummaryText: document.getElementById('road-upload-summary-text'),
+    roadUploadSummaryClose: document.getElementById('road-upload-summary-close'),
+    roadUploadSummaryDismiss: document.getElementById('road-upload-summary-dismiss'),
     // Collapsible Results Panel elements
     resultsSidebar: document.getElementById('results-sidebar'),
     btnToggleResults: document.getElementById('btn-toggle-results'),
@@ -90,6 +212,7 @@ const DOM = {
 // CUSTOM CONFIRMATION MODAL & TOAST MANAGERS
 // ==========================================
 let currentConfirmResolve = null;
+let roadModule1DraftSaveTimer = null;
 
 function showCustomConfirm(title, message, options = {}) {
     const modal = document.getElementById('custom-confirm-modal');
@@ -146,6 +269,41 @@ document.getElementById('custom-confirm-modal').addEventListener('click', (e) =>
     }
 });
 
+function showRoadUploadSummaryModal(title, summaryText) {
+    if (!DOM.roadUploadSummaryModal || !DOM.roadUploadSummaryText || !DOM.roadUploadSummaryTitle) return;
+    DOM.roadUploadSummaryTitle.innerText = title || 'Upload Change Summary';
+    DOM.roadUploadSummaryText.value = summaryText || '';
+    DOM.roadUploadSummaryModal.classList.remove('hidden');
+    DOM.roadUploadSummaryModal.classList.add('flex-display');
+
+    setTimeout(() => {
+        DOM.roadUploadSummaryModal.style.opacity = '1';
+        DOM.roadUploadSummaryModal.querySelector('.road-upload-summary-card')?.classList.add('is-open');
+    }, 20);
+}
+
+function closeRoadUploadSummaryModal() {
+    if (!DOM.roadUploadSummaryModal) return;
+    DOM.roadUploadSummaryModal.style.opacity = '0';
+    DOM.roadUploadSummaryModal.querySelector('.road-upload-summary-card')?.classList.remove('is-open');
+    setTimeout(() => {
+        DOM.roadUploadSummaryModal.classList.add('hidden');
+        DOM.roadUploadSummaryModal.classList.remove('flex-display');
+    }, 200);
+}
+
+if (DOM.roadUploadSummaryClose) {
+    DOM.roadUploadSummaryClose.addEventListener('click', closeRoadUploadSummaryModal);
+}
+if (DOM.roadUploadSummaryDismiss) {
+    DOM.roadUploadSummaryDismiss.addEventListener('click', closeRoadUploadSummaryModal);
+}
+if (DOM.roadUploadSummaryModal) {
+    DOM.roadUploadSummaryModal.addEventListener('click', (event) => {
+        if (event.target === DOM.roadUploadSummaryModal) closeRoadUploadSummaryModal();
+    });
+}
+
 function showCustomToast(message, type = 'info', duration = 3500) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -183,7 +341,10 @@ function showCustomToast(message, type = 'info', duration = 3500) {
 
 function initApp() {
     setupDropdowns();
+    setupModeSwitcher();
+    setupRoadModule1();
     renderGlobalMacroDriversPanel(); // Initial execution pass to append default drivers
+    renderUserVariablesPanel();       // Initial empty-state render for user variables
     DOM.btnStart.addEventListener('click', handleStartModeling);
     
     // Setup global layout compaction events
@@ -193,6 +354,13 @@ function initApp() {
     // Listeners for customizable macro driver additions
     DOM.selectMacroDriverType.addEventListener('change', handleMacroDriverTemplateToggle);
     DOM.btnAddMacroDriver.addEventListener('click', handleAddMacroDriverItem);
+
+    // Listeners for user-defined variables panel
+    DOM.btnToggleUserVars.addEventListener('click', () => {
+        DOM.userVarsForm.classList.toggle('hidden');
+        DOM.btnToggleUserVars.textContent = DOM.userVarsForm.classList.contains('hidden') ? '+ Add' : '− Hide';
+    });
+    DOM.btnAddUserVar.addEventListener('click', handleAddUserVariable);
 
     // Setup Panning, Zooming, and Float UI bindings
     setupInteractiveCanvas();
@@ -250,6 +418,2229 @@ function setupDropdowns() {
     sectors.forEach(sec => DOM.selectSector.add(new Option(sec, sec))); 
     DOM.selectSector.value = "16.02 Residential";
     DOM.selectEconomy.value = "20USA"; // Default
+}
+
+function setupModeSwitcher() {
+    if (!DOM.btnModeEnergy || !DOM.btnModeRoadModule1) return;
+
+    DOM.btnModeEnergy.addEventListener('click', () => setActiveMode('energy'));
+    DOM.btnModeRoadModule1.addEventListener('click', () => setActiveMode('road-module1'));
+
+    if (window.location.hash === '#road-module1') {
+        setActiveMode('road-module1');
+    }
+}
+
+function setActiveMode(mode) {
+    const isRoadMode = mode === 'road-module1';
+    DOM.energyAppMain.classList.toggle('hidden', isRoadMode);
+    DOM.energyAppMain.classList.toggle('flex', !isRoadMode);
+    DOM.roadModule1Main.classList.toggle('hidden', !isRoadMode);
+    DOM.roadModule1Main.classList.toggle('flex', isRoadMode);
+
+    DOM.btnModeEnergy.className = isRoadMode
+        ? 'px-3 py-1.5 rounded text-xs font-bold text-blue-100 hover:bg-blue-800'
+        : 'px-3 py-1.5 rounded text-xs font-bold bg-white text-blue-900';
+    DOM.btnModeRoadModule1.className = isRoadMode
+        ? 'px-3 py-1.5 rounded text-xs font-bold bg-white text-blue-900'
+        : 'px-3 py-1.5 rounded text-xs font-bold text-blue-100 hover:bg-blue-800';
+}
+
+function setupRoadModule1() {
+    if (!DOM.roadModule1Main) return;
+
+    seedRoadModule1FallbackSelectors();
+    setupRoadHelpTooltips();
+
+    DOM.roadLoadDefaults.addEventListener('click', loadRoadModule1Defaults);
+    if (DOM.roadUseBuiltinProvidedValues) {
+        DOM.roadUseBuiltinProvidedValues.addEventListener('click', loadRoadModule1BuiltinProvidedValues);
+    }
+    if (DOM.roadDownloadProvidedTemplate) {
+        DOM.roadDownloadProvidedTemplate.addEventListener('click', downloadRoadModule1ProvidedValuesTemplate);
+    }
+    if (DOM.roadUploadProvidedValues && DOM.roadProvidedFileInput) {
+        DOM.roadUploadProvidedValues.addEventListener('click', () => DOM.roadProvidedFileInput.click());
+        DOM.roadProvidedFileInput.addEventListener('change', handleRoadModule1ProvidedFileSelected);
+    }
+    DOM.roadSaveOutput.addEventListener('click', saveRoadModule1ResearcherOutput);
+    if (DOM.roadClearDraft) {
+        DOM.roadClearDraft.addEventListener('click', clearRoadModule1DraftForCurrentSelection);
+    }
+    if (DOM.roadToggleLeftPanel && DOM.roadLeftPanel) {
+        DOM.roadToggleLeftPanel.addEventListener('click', () => {
+            const isCollapsed = DOM.roadLeftPanel.classList.toggle('is-collapsed');
+            DOM.roadToggleLeftPanel.setAttribute('aria-expanded', String(!isCollapsed));
+            DOM.roadToggleLeftPanel.innerText = isCollapsed ? '>' : '<';
+            DOM.roadToggleLeftPanel.title = isCollapsed ? 'Expand settings panel' : 'Collapse settings panel';
+            DOM.roadToggleLeftPanel.setAttribute(
+                'aria-label',
+                isCollapsed ? 'Expand settings panel' : 'Collapse settings panel'
+            );
+        });
+    }
+    DOM.roadFilterInput.addEventListener('input', (event) => {
+        State.roadModule1.activeFilter = event.target.value.trim().toLowerCase();
+        renderRoadModule1Inputs();
+        scheduleRoadModule1DraftSave();
+    });
+    setupRoadModule1FilterControls();
+    setupRoadModule1ViewControls();
+    DOM.roadVersionSelect.addEventListener('change', async () => {
+        await populateRoadModule1Economies(DOM.roadVersionSelect.value);
+    });
+
+    updateRoadModule1OptionalBackendUiState();
+    populateRoadModule1Selectors();
+}
+
+function updateRoadModule1OptionalBackendUiState() {
+    if (DOM.roadUseBuiltinProvidedValues) {
+        DOM.roadUseBuiltinProvidedValues.disabled = false;
+        DOM.roadUseBuiltinProvidedValues.title = '';
+    }
+    if (DOM.roadDownloadProvidedTemplate) {
+        DOM.roadDownloadProvidedTemplate.disabled = false;
+        DOM.roadDownloadProvidedTemplate.title = '';
+    }
+}
+
+function getRoadStaticIndexVersions(indexData) {
+    const versions = Array.isArray(indexData?.versions)
+        ? indexData.versions
+        : [];
+    return versions
+        .map(item => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item.version === 'string') return item.version;
+            return '';
+        })
+        .filter(Boolean);
+}
+
+function getRoadStaticIndexDefaultVersion(indexData, versions) {
+    const defaultVersion = String(indexData?.default_version || '').trim();
+    if (defaultVersion && versions.includes(defaultVersion)) return defaultVersion;
+    if (versions.length > 0) return versions[versions.length - 1];
+    return ROAD_MODULE1_FALLBACK_VERSION;
+}
+
+function getRoadStaticEconomies(indexData, version) {
+    const versions = Array.isArray(indexData?.versions)
+        ? indexData.versions
+        : [];
+    const versionRecord = versions.find(item => item && typeof item === 'object' && item.version === version);
+    const economies = Array.isArray(versionRecord?.economies)
+        ? versionRecord.economies
+        : [];
+
+    return economies
+        .map(item => {
+            if (!item || typeof item !== 'object') return null;
+            const economy = String(item.economy || '').trim();
+            const economyName = String(item.economy_name || '').trim();
+            if (!economy || !economyName) return null;
+            return { economy, economy_name: economyName };
+        })
+        .filter(Boolean);
+}
+
+function sanitizeRoadStaticSegment(value) {
+    return String(value || '')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]+/g, '_');
+}
+
+async function fetchRoadModule1StaticIndex() {
+    if (RoadModule1StaticBundleState.indexLoaded) {
+        return RoadModule1StaticBundleState.indexData;
+    }
+
+    const response = await fetch(ROAD_MODULE1_STATIC_INDEX_PATH, { cache: 'no-store' });
+    if (!response.ok) {
+        throw new Error(`Static selector index was not found at ${ROAD_MODULE1_STATIC_INDEX_PATH}.`);
+    }
+
+    const data = await response.json();
+    if (!data || typeof data !== 'object') {
+        throw new Error('Static selector index is malformed.');
+    }
+
+    RoadModule1StaticBundleState.indexLoaded = true;
+    RoadModule1StaticBundleState.indexData = data;
+    return data;
+}
+
+async function loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario = 'Reference') {
+    const safeVersion = sanitizeRoadStaticSegment(version);
+    const safeEconomy = sanitizeRoadStaticSegment(economy);
+    const safeScenario = sanitizeRoadStaticSegment(scenario || 'Reference');
+
+    const candidatePaths = [
+        `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}_${safeScenario}.json`,
+        `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}.json`
+    ];
+
+    for (const path of candidatePaths) {
+        const response = await fetch(path, { cache: 'no-store' });
+        if (!response.ok) continue;
+        const data = await response.json();
+        if (!Array.isArray(data?.rows)) {
+            throw new Error(`Static defaults file is malformed: ${path}`);
+        }
+        return {
+            key_columns: Array.isArray(data?.key_columns) && data.key_columns.length
+                ? data.key_columns
+                : ROAD_MODULE1_REQUIRED_KEY_COLUMNS,
+            rows: data.rows
+        };
+    }
+
+    throw new Error(
+        `No packaged defaults file found for ${version}/${economy}/${scenario}. Expected one of: ${candidatePaths.join(' or ')}`
+    );
+}
+
+function normalizeRoadModule1RowsForUi(rows) {
+    return (rows || []).map(row => ({
+        ...row,
+        researcher_review_recommended: false
+    }));
+}
+
+function seedRoadModule1FallbackSelectors() {
+    if (DOM.roadVersionSelect && DOM.roadVersionSelect.options.length === 0) {
+        DOM.roadVersionSelect.add(new Option(ROAD_MODULE1_FALLBACK_VERSION, ROAD_MODULE1_FALLBACK_VERSION));
+        DOM.roadVersionSelect.value = ROAD_MODULE1_FALLBACK_VERSION;
+    }
+    if (DOM.roadEconomySelect && DOM.roadEconomySelect.options.length === 0) {
+        ROAD_MODULE1_FALLBACK_ECONOMIES.forEach(item => {
+            DOM.roadEconomySelect.add(new Option(`${item.economy} (${item.economy_name})`, item.economy));
+        });
+        DOM.roadEconomySelect.value = '20USA';
+    }
+}
+
+function setupRoadHelpTooltips() {
+    document.querySelectorAll('.road-help-button').forEach(button => {
+        const tooltip = button.parentElement?.querySelector('.road-help-tooltip');
+        if (!tooltip) return;
+
+        const showTooltip = () => {
+            tooltip.classList.add('is-visible');
+            tooltip.style.left = '0px';
+            tooltip.style.top = '0px';
+            const buttonRect = button.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const gap = 8;
+            let left = buttonRect.right + gap;
+            let top = buttonRect.top - 8;
+
+            if (left + tooltipRect.width > window.innerWidth - gap) {
+                left = buttonRect.left - tooltipRect.width - gap;
+            }
+            if (left < gap) left = gap;
+            if (top + tooltipRect.height > window.innerHeight - gap) {
+                top = window.innerHeight - tooltipRect.height - gap;
+            }
+            if (top < gap) top = gap;
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        };
+        const hideTooltip = () => {
+            tooltip.classList.remove('is-visible');
+        };
+
+        button.addEventListener('mouseenter', showTooltip);
+        button.addEventListener('focus', showTooltip);
+        button.addEventListener('mouseleave', hideTooltip);
+        button.addEventListener('blur', hideTooltip);
+    });
+}
+
+function setupRoadModule1FilterControls() {
+    const filterBindings = [
+        [DOM.roadFilterTransport, 'transport'],
+        [DOM.roadFilterVehicle, 'vehicle'],
+        [DOM.roadFilterDrive, 'drive'],
+        [DOM.roadFilterFuel, 'fuel'],
+        [DOM.roadFilterMeasure, 'measure'],
+        [DOM.roadFilterReview, 'review']
+    ];
+
+    filterBindings.forEach(([element, filterKey]) => {
+        if (!element) return;
+        element.addEventListener('change', (event) => {
+            State.roadModule1.structuredFilters[filterKey] = event.target.value;
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    });
+
+    if (DOM.roadSortBy) {
+        DOM.roadSortBy.addEventListener('change', (event) => {
+            State.roadModule1.sortBy = event.target.value;
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+    if (DOM.roadSortDirection) {
+        DOM.roadSortDirection.addEventListener('change', (event) => {
+            State.roadModule1.sortDirection = event.target.value;
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+}
+
+function setupRoadModule1ViewControls() {
+    if (DOM.roadListView) {
+        DOM.roadListView.addEventListener('click', () => {
+            State.roadModule1.viewMode = 'list';
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+    if (DOM.roadTreeView) {
+        DOM.roadTreeView.addEventListener('click', () => {
+            State.roadModule1.viewMode = 'tree';
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+    if (DOM.roadDetailedMileageToggle) {
+        DOM.roadDetailedMileageToggle.addEventListener('change', (event) => {
+            State.roadModule1.detailedMileage = event.target.checked;
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+}
+
+async function populateRoadModule1Selectors() {
+    seedRoadModule1FallbackSelectors();
+
+    try {
+        const staticIndex = await fetchRoadModule1StaticIndex();
+        const versions = getRoadStaticIndexVersions(staticIndex);
+        if (versions.length > 0) {
+            DOM.roadVersionSelect.innerHTML = '';
+            versions.forEach(version => {
+                DOM.roadVersionSelect.add(new Option(version, version));
+            });
+            DOM.roadVersionSelect.value = getRoadStaticIndexDefaultVersion(staticIndex, versions);
+            await populateRoadModule1Economies(DOM.roadVersionSelect.value);
+            if (DOM.roadSaveStatus) {
+                DOM.roadSaveStatus.innerText = 'Using packaged static Road Module 1 selector metadata.';
+            }
+            return;
+        }
+    } catch (error) {
+        if (DOM.roadSaveStatus) {
+            DOM.roadSaveStatus.innerText = `Static selector metadata unavailable. Using built-in selector defaults. (${error.message})`;
+        }
+    }
+
+    seedRoadModule1FallbackSelectors();
+}
+
+async function populateRoadModule1Economies(version) {
+    try {
+        const staticIndex = await fetchRoadModule1StaticIndex();
+        const economies = getRoadStaticEconomies(staticIndex, version);
+        if (economies.length > 0) {
+            DOM.roadEconomySelect.innerHTML = '';
+            economies.forEach(item => {
+                DOM.roadEconomySelect.add(new Option(`${item.economy} (${item.economy_name})`, item.economy));
+            });
+            if (DOM.roadEconomySelect.querySelector('option[value="20USA"]')) {
+                DOM.roadEconomySelect.value = '20USA';
+            }
+            return;
+        }
+    } catch {
+        // If static index is unavailable, fallback economy list applies below.
+    }
+
+    seedRoadModule1FallbackSelectors();
+}
+
+function getRoadModule1DraftKey(version = State.roadModule1.version, economy = State.roadModule1.economy, scenario = State.roadModule1.scenario) {
+    if (!version || !economy || !scenario) return null;
+    return `roadModule1Draft:${version}:${economy}:${scenario}`;
+}
+
+function buildRoadModule1OverrideMapKey(override) {
+    const rowKey = State.roadModule1.keyColumns
+        .map(column => `${column}=${override.key?.[column] ?? ''}`)
+        .join('||');
+    return `${rowKey}||Year=${override.year}`;
+}
+
+function buildRoadSharedMileageMapKey(sharedKey, year) {
+    return `${sharedKey}||Year=${year}`;
+}
+
+function serializeRoadModule1Draft() {
+    return {
+        savedAt: new Date().toISOString(),
+        version: State.roadModule1.version,
+        economy: State.roadModule1.economy,
+        scenario: State.roadModule1.scenario,
+        overrides: Array.from(State.roadModule1.overrides.values()),
+        activeFilter: State.roadModule1.activeFilter,
+        structuredFilters: { ...State.roadModule1.structuredFilters },
+        sortBy: State.roadModule1.sortBy,
+        sortDirection: State.roadModule1.sortDirection,
+        viewMode: State.roadModule1.viewMode,
+        detailedMileage: State.roadModule1.detailedMileage,
+        sharedMileageOverrides: Array.from(State.roadModule1.sharedMileageOverrides.values())
+    };
+}
+
+function readRoadModule1Draft(version, economy, scenario) {
+    const draftKey = getRoadModule1DraftKey(version, economy, scenario);
+    if (!draftKey) return null;
+    if (typeof localStorage === 'undefined') return null;
+    try {
+        const rawDraft = localStorage.getItem(draftKey);
+        return rawDraft ? JSON.parse(rawDraft) : null;
+    } catch (error) {
+        console.warn('Failed to read Road model draft:', error);
+        return null;
+    }
+}
+
+function saveRoadModule1DraftNow() {
+    const draftKey = getRoadModule1DraftKey();
+    if (!draftKey || !State.roadModule1.rows.length) return;
+    if (typeof localStorage === 'undefined') return;
+
+    try {
+        const draft = serializeRoadModule1Draft();
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+        State.roadModule1.lastDraftSavedAt = draft.savedAt;
+        if (DOM.roadClearDraft) DOM.roadClearDraft.disabled = false;
+    } catch (error) {
+        console.warn('Failed to save Road model draft:', error);
+    }
+}
+
+function scheduleRoadModule1DraftSave() {
+    if (!State.roadModule1.version || !State.roadModule1.economy) return;
+    clearTimeout(roadModule1DraftSaveTimer);
+    roadModule1DraftSaveTimer = setTimeout(saveRoadModule1DraftNow, 350);
+}
+
+function clearRoadModule1Draft(version = State.roadModule1.version, economy = State.roadModule1.economy, scenario = State.roadModule1.scenario) {
+    const draftKey = getRoadModule1DraftKey(version, economy, scenario);
+    if (!draftKey) return;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(draftKey);
+    }
+    State.roadModule1.lastDraftSavedAt = null;
+    if (DOM.roadClearDraft) DOM.roadClearDraft.disabled = true;
+}
+
+async function clearRoadModule1DraftForCurrentSelection() {
+    const accepted = await showCustomConfirm(
+        'Clear Saved Draft',
+        'Clear the browser-saved draft for the currently loaded Road model version, economy, and scenario?',
+        { confirmText: 'Clear Draft', isDanger: true }
+    );
+    if (!accepted) return;
+    clearRoadModule1Draft();
+    showCustomToast('Saved draft cleared.', 'info');
+}
+
+function applyRoadModule1Draft(draft) {
+    if (!draft) return;
+    State.roadModule1.overrides = new Map();
+    State.roadModule1.sharedMileageOverrides = new Map();
+    (draft.overrides || []).forEach(override => {
+        if (!override || !override.key || override.year === undefined) return;
+        if (!isRoadEditableYear(override.year)) return;
+        State.roadModule1.overrides.set(buildRoadModule1OverrideMapKey(override), override);
+    });
+    (draft.sharedMileageOverrides || []).forEach(override => {
+        if (!override || !override.sharedKey || override.year === undefined) return;
+        if (!isRoadEditableYear(override.year)) return;
+        State.roadModule1.sharedMileageOverrides.set(buildRoadSharedMileageMapKey(override.sharedKey, override.year), override);
+    });
+
+    State.roadModule1.activeFilter = draft.activeFilter || '';
+    State.roadModule1.structuredFilters = {
+        ...State.roadModule1.structuredFilters,
+        ...(draft.structuredFilters || {})
+    };
+    State.roadModule1.sortBy = draft.sortBy || State.roadModule1.sortBy;
+    State.roadModule1.sortDirection = draft.sortDirection || State.roadModule1.sortDirection;
+    State.roadModule1.viewMode = draft.viewMode || State.roadModule1.viewMode;
+    if (State.roadModule1.viewMode === 'graph' || State.roadModule1.viewMode === 'canvas') {
+        State.roadModule1.viewMode = 'tree';
+    }
+    State.roadModule1.detailedMileage = Boolean(draft.detailedMileage);
+    State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
+    applyRoadModule1FilterControlValues();
+}
+
+function applyRoadModule1FilterControlValues() {
+    if (DOM.roadFilterInput) DOM.roadFilterInput.value = State.roadModule1.activeFilter;
+    const filterBindings = [
+        [DOM.roadFilterTransport, 'transport'],
+        [DOM.roadFilterVehicle, 'vehicle'],
+        [DOM.roadFilterDrive, 'drive'],
+        [DOM.roadFilterFuel, 'fuel'],
+        [DOM.roadFilterMeasure, 'measure'],
+        [DOM.roadFilterReview, 'review']
+    ];
+
+    filterBindings.forEach(([element, filterKey]) => {
+        if (!element) return;
+        const value = State.roadModule1.structuredFilters[filterKey] || '';
+        element.value = Array.from(element.options || []).some(option => option.value === value) ? value : '';
+        State.roadModule1.structuredFilters[filterKey] = element.value;
+    });
+    if (DOM.roadSortBy) DOM.roadSortBy.value = State.roadModule1.sortBy;
+    if (DOM.roadSortDirection) DOM.roadSortDirection.value = State.roadModule1.sortDirection;
+    if (DOM.roadDetailedMileageToggle) DOM.roadDetailedMileageToggle.checked = State.roadModule1.detailedMileage;
+    updateRoadModule1ViewToggle();
+}
+
+function updateRoadModule1ViewToggle() {
+    if (DOM.roadListView) DOM.roadListView.classList.toggle('is-active', State.roadModule1.viewMode === 'list');
+    if (DOM.roadTreeView) DOM.roadTreeView.classList.toggle('is-active', State.roadModule1.viewMode === 'tree');
+}
+
+function getRoadModule1OverrideCount() {
+    return State.roadModule1.overrides.size + State.roadModule1.sharedMileageOverrides.size;
+}
+
+function updateRoadModule1OverrideCount() {
+    if (DOM.roadOverrideCount) {
+        DOM.roadOverrideCount.innerText = getRoadModule1OverrideCount().toLocaleString('en-US');
+    }
+}
+
+async function loadRoadModule1Defaults() {
+    const version = DOM.roadVersionSelect.value;
+    const economy = DOM.roadEconomySelect.value;
+    const scenario = DOM.roadScenarioSelect.value;
+
+    if (!version || !economy) {
+        showCustomToast("Select a road provided-values version and economy first.", "warning");
+        return;
+    }
+
+    showLoading("Loading Road model Provided Values...");
+    try {
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        const loadSourceLabel = 'packaged static defaults';
+
+        State.roadModule1.version = version;
+        State.roadModule1.economy = economy;
+        State.roadModule1.scenario = scenario;
+        State.roadModule1.keyColumns = response.key_columns || ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
+        State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
+        State.roadModule1.overrides = new Map();
+        State.roadModule1.sharedMileageOverrides = new Map();
+        populateRoadModule1StructuredFilters(State.roadModule1.rows);
+        const draft = readRoadModule1Draft(version, economy, scenario);
+        if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
+            const savedAtLabel = draft.savedAt ? new Date(draft.savedAt).toLocaleString('en-US') : 'an earlier time';
+            const accepted = await showCustomConfirm(
+                'Restore Saved Draft',
+                `A browser-saved draft exists for this version/economy/scenario from ${savedAtLabel}.\n\nRestore it now?`,
+                { confirmText: 'Restore Draft', cancelText: 'Ignore' }
+            );
+            if (accepted) {
+                applyRoadModule1Draft(draft);
+            } else if (DOM.roadClearDraft) {
+                DOM.roadClearDraft.disabled = false;
+            }
+        } else if (DOM.roadClearDraft) {
+            DOM.roadClearDraft.disabled = true;
+        }
+        DOM.roadSaveOutput.disabled = false;
+        DOM.roadSaveStatus.innerText = `Loaded ${State.roadModule1.rows.length.toLocaleString('en-US')} rows from ${loadSourceLabel}.`;
+        renderRoadModule1Inputs();
+        showCustomToast("Road model provided values loaded.", "success");
+    } catch (error) {
+        showCustomToast("Failed to load road provided values: " + error.message, "error");
+    } finally {
+        hideLoading();
+    }
+}
+
+async function handleRoadModule1ProvidedFileSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const version = DOM.roadVersionSelect.value;
+    const economy = DOM.roadEconomySelect.value;
+    const scenario = DOM.roadScenarioSelect.value;
+    if (!version || !economy) {
+        showCustomToast("Select a road provided-values version and economy first.", "warning");
+        event.target.value = '';
+        return;
+    }
+
+    if (!State.roadModule1.rows || State.roadModule1.rows.length === 0) {
+        showCustomToast("Load provided values first, then upload a checkpoint/values file to overlay it in your browser state.", "warning", 5000);
+        event.target.value = '';
+        return;
+    }
+
+    showLoading("Applying Provided Values File...");
+    try {
+        const uploadResult = await readRoadModule1RowsFromUploadFile(file);
+        const overlayResult = applyRoadModule1UploadedRowsClientSide(uploadResult.rows);
+
+        State.roadModule1.version = version;
+        State.roadModule1.economy = economy;
+        State.roadModule1.scenario = scenario;
+        State.roadModule1.overrides = new Map();
+        State.roadModule1.sharedMileageOverrides = new Map();
+        populateRoadModule1StructuredFilters(State.roadModule1.rows);
+        clearRoadModule1Draft(version, economy, scenario);
+        DOM.roadSaveOutput.disabled = false;
+        DOM.roadSaveStatus.innerText = [
+            `${overlayResult.appliedCount.toLocaleString('en-US')} row-year values applied from ${file.name}.`,
+            `${overlayResult.unmatchedCount.toLocaleString('en-US')} uploaded rows did not match this version/economy/scenario template.`,
+            `${overlayResult.validationIssueCount.toLocaleString('en-US')} value checks were flagged and skipped.`
+        ].join('\n');
+        renderRoadModule1Inputs();
+        const hasIssues = overlayResult.unmatchedCount > 0 || overlayResult.validationIssueCount > 0;
+        const summaryParts = [
+            `Applied ${overlayResult.appliedCount.toLocaleString('en-US')} values client-side.`
+        ];
+        if (overlayResult.unmatchedCount > 0) summaryParts.push(`${overlayResult.unmatchedCount.toLocaleString('en-US')} unmatched rows`);
+        if (overlayResult.validationIssueCount > 0) summaryParts.push(`${overlayResult.validationIssueCount.toLocaleString('en-US')} validation issues`);
+        showCustomToast(summaryParts.join(' | '), hasIssues ? "warning" : "success", 6000);
+
+        showRoadUploadSummaryModal(
+            'Upload Change Summary',
+            buildRoadUploadSummaryText(file.name, uploadResult.summary, overlayResult)
+        );
+    } catch (error) {
+        showCustomToast("Failed to apply provided values file: " + error.message, "error");
+    } finally {
+        event.target.value = '';
+        hideLoading();
+    }
+}
+
+async function loadRoadModule1BuiltinProvidedValues() {
+    const version = DOM.roadVersionSelect.value;
+    const economy = DOM.roadEconomySelect.value;
+    const scenario = DOM.roadScenarioSelect.value;
+
+    if (!version || !economy) {
+        showCustomToast("Select a road provided-values version and economy first.", "warning");
+        return;
+    }
+
+    showLoading("Applying Built-In Provided Values...");
+    try {
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        State.roadModule1.version = version;
+        State.roadModule1.economy = economy;
+        State.roadModule1.scenario = scenario;
+        State.roadModule1.keyColumns = response.key_columns;
+        State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
+        State.roadModule1.overrides = new Map();
+        State.roadModule1.sharedMileageOverrides = new Map();
+        populateRoadModule1StructuredFilters(State.roadModule1.rows);
+        clearRoadModule1Draft(version, economy, scenario);
+        DOM.roadSaveOutput.disabled = false;
+        DOM.roadSaveStatus.innerText = `Loaded ${State.roadModule1.rows.length.toLocaleString('en-US')} rows from packaged static defaults.`;
+        renderRoadModule1Inputs();
+        showCustomToast('Built-in provided values applied from packaged static defaults.', 'success', 5000);
+    } catch (error) {
+        showCustomToast("Failed to apply built-in provided values: " + error.message, "error");
+    } finally {
+        hideLoading();
+    }
+}
+
+function downloadRoadModule1ProvidedValuesTemplate() {
+    const version = DOM.roadVersionSelect.value;
+    const economy = DOM.roadEconomySelect.value;
+    const scenario = DOM.roadScenarioSelect.value;
+
+    if (!version || !economy) {
+        showCustomToast("Select a road provided-values version and economy first.", "warning");
+        return;
+    }
+
+    showLoading("Preparing Provided Values Template...");
+    try {
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        const safeVersion = sanitizeRoadStaticSegment(version);
+        const safeScenario = sanitizeRoadStaticSegment(scenario || 'Reference');
+        const fileName = `road_module1_provided_values_template_${economy}_${safeVersion}_${safeScenario}.xlsx`;
+        exportRoadModule1CheckpointWorkbookClientSide(response.rows, economy, fileName);
+        DOM.roadSaveStatus.innerText = `Provided values template exported from packaged static defaults (${version}/${economy}/${scenario}).`;
+        showCustomToast('Provided values template exported client-side.', 'success', 5000);
+    } catch (error) {
+        showCustomToast("Failed to export provided values template: " + error.message, "error");
+    } finally {
+        hideLoading();
+    }
+}
+
+function buildRoadModule1Key(row) {
+    return State.roadModule1.keyColumns.map(column => `${column}=${row[column] ?? ''}`).join('||');
+}
+
+function roadModule1KeyPayload(row) {
+    const keyPayload = {};
+    State.roadModule1.keyColumns.forEach(column => {
+        keyPayload[column] = row[column];
+    });
+    return keyPayload;
+}
+
+function formatRoadDefaultValue(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '';
+    if (Math.abs(numeric) >= 1000000) return numeric.toExponential(4);
+    if (Math.abs(numeric) > 0 && Math.abs(numeric) < 0.001) return numeric.toExponential(4);
+    return numeric.toLocaleString('en-US', { maximumFractionDigits: 6 });
+}
+
+function formatRoadInputSourceLabel(source) {
+    const normalized = String(source || '').trim().toLowerCase();
+    if (!normalized || normalized === 'default') return 'provided';
+    return source;
+}
+
+function formatRoadSeriesInputValue(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '';
+    if (Math.abs(numeric) >= 1000000) return numeric.toExponential(6);
+    if (Math.abs(numeric) > 0 && Math.abs(numeric) < 0.000001) return numeric.toExponential(6);
+    return String(Number(numeric.toFixed(8)));
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatRoadBranchPath(path) {
+    return String(path || '')
+        .split('\\')
+        .filter(Boolean)
+        .map((part, index) => `<span style="padding-left:${index === 0 ? 0 : 0.35}rem">${escapeHtml(part)}</span>`)
+        .join('<span class="road-breadcrumb-separator">/</span>');
+}
+
+function getRoadBranchDepth(path) {
+    return String(path || '').split('\\').filter(Boolean).length;
+}
+
+function getRoadAgeFromBranchPath(path) {
+    const parts = String(path || '').split('\\').filter(Boolean);
+    const lastPart = parts.length ? parts[parts.length - 1] : '';
+    const match = lastPart.match(/^Age\s+(\d+)$/i);
+    return match ? Number(match[1]) : null;
+}
+
+function getRoadParentBranchPath(path) {
+    const parts = String(path || '').split('\\').filter(Boolean);
+    if (getRoadAgeFromBranchPath(path) === null) return String(path || '');
+    return parts.slice(0, -1).join('\\');
+}
+
+function isRoadAgeSeriesRow(row) {
+    return getRoadAgeFromBranchPath(row['Branch Path']) !== null;
+}
+
+function isRoadMileageRow(row) {
+    return String(row.Variable || '').trim().toLowerCase() === 'mileage';
+}
+
+function getRoadMileageSharedBranchPath(row) {
+    const parts = getRoadPathParts(row);
+    const vehicleTypeDepth = parts.length >= 4 && !looksLikeRoadDrive(parts[3]) ? 4 : 3;
+    return parts.slice(0, Math.min(vehicleTypeDepth, parts.length)).join('\\') || row['Branch Path'] || '';
+}
+
+function getRoadMileageSharedVehicleLabel(row) {
+    const parts = getRoadMileageSharedBranchPath(row).split('\\').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : 'vehicle type';
+}
+
+function getRoadSharedMileageKey(row) {
+    return [
+        getRoadMileageSharedBranchPath(row),
+        row.Variable || '',
+        row.Scenario || '',
+        row.Region || '',
+        row.Units || ''
+    ].join('||');
+}
+
+function getRoadSharedMileageOverride(row, year) {
+    if (!isRoadMileageRow(row)) return null;
+    return State.roadModule1.sharedMileageOverrides.get(
+        buildRoadSharedMileageMapKey(getRoadSharedMileageKey(row), year)
+    ) || null;
+}
+
+function getRoadInheritedMileageValue(row, year) {
+    const sharedOverride = getRoadSharedMileageOverride(row, year);
+    return sharedOverride && sharedOverride.value !== null && sharedOverride.value !== ''
+        ? sharedOverride.value
+        : '';
+}
+
+function getRoadDisplayedPlaceholderValue(row, year) {
+    const inheritedMileageValue = getRoadInheritedMileageValue(row, year);
+    return inheritedMileageValue !== '' ? inheritedMileageValue : getRoadDefaultValue(row, year);
+}
+
+function normalizeRoadFilterValue(value) {
+    return String(value ?? '').trim();
+}
+
+function getRoadPathParts(row) {
+    return String(row['Branch Path'] || '').split('\\').filter(Boolean);
+}
+
+function looksLikeRoadDrive(value) {
+    const normalized = normalizeRoadFilterValue(value).toLowerCase();
+    if (!normalized) return false;
+    return ['bev', 'fcev', 'hev', 'ice', 'phev'].some(token => normalized.includes(token));
+}
+
+function getRoadRowFilterMeta(row) {
+    const parts = getRoadPathParts(row);
+    const transport = parts[1] || '';
+    const vehicle = parts[2] || '';
+    const detail = parts[3] || '';
+    const leafFuel = parts[4] || '';
+    const isAgeSeries = isRoadAgeSeriesRow(row);
+    const drive = !isAgeSeries && looksLikeRoadDrive(detail) ? detail : '';
+    const fuel = !isAgeSeries ? (leafFuel || (!looksLikeRoadDrive(detail) ? detail : '')) : '';
+
+    return {
+        branch: row['Branch Path'] || '',
+        transport: transport,
+        vehicle: vehicle,
+        drive: drive,
+        fuel: fuel,
+        measure: row.Variable || '',
+        source: row.input_source || '',
+        review: row.researcher_review_recommended ? 'needs-review' : 'not-needed',
+        units: row.Units || '',
+        isAgeSeries: isAgeSeries ? 'age-series' : 'single-row'
+    };
+}
+
+function addRoadSelectOptions(selectEl, values, allLabel = 'All') {
+    if (!selectEl) return;
+    const previousValue = selectEl.value;
+    selectEl.innerHTML = '';
+    selectEl.add(new Option(allLabel, ''));
+    values.forEach(value => {
+        selectEl.add(new Option(value, value));
+    });
+    selectEl.value = values.includes(previousValue) ? previousValue : '';
+}
+
+function getUniqueRoadFilterValues(rows, metaKey) {
+    return [...new Set(rows
+        .map(row => normalizeRoadFilterValue(getRoadRowFilterMeta(row)[metaKey]))
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'en-US', { numeric: true }));
+}
+
+function populateRoadModule1StructuredFilters(rows) {
+    addRoadSelectOptions(DOM.roadFilterTransport, getUniqueRoadFilterValues(rows, 'transport'));
+    addRoadSelectOptions(DOM.roadFilterVehicle, getUniqueRoadFilterValues(rows, 'vehicle'));
+    addRoadSelectOptions(DOM.roadFilterDrive, getUniqueRoadFilterValues(rows, 'drive'));
+    addRoadSelectOptions(DOM.roadFilterFuel, getUniqueRoadFilterValues(rows, 'fuel'));
+    addRoadSelectOptions(DOM.roadFilterMeasure, getUniqueRoadFilterValues(rows, 'measure'));
+
+    Object.keys(State.roadModule1.structuredFilters).forEach(key => {
+        State.roadModule1.structuredFilters[key] = '';
+    });
+    if (DOM.roadFilterReview) DOM.roadFilterReview.value = '';
+    if (DOM.roadSortBy) DOM.roadSortBy.value = State.roadModule1.sortBy;
+    if (DOM.roadSortDirection) DOM.roadSortDirection.value = State.roadModule1.sortDirection;
+    if (DOM.roadFilterInput) DOM.roadFilterInput.value = '';
+}
+
+function roadRowMatchesStructuredFilters(row) {
+    const meta = getRoadRowFilterMeta(row);
+    const filters = State.roadModule1.structuredFilters;
+    return Object.entries(filters).every(([filterKey, filterValue]) => {
+        if (!filterValue) return true;
+        return normalizeRoadFilterValue(meta[filterKey]) === filterValue;
+    });
+}
+
+function getRoadSortValue(row) {
+    const meta = getRoadRowFilterMeta(row);
+    if (State.roadModule1.sortBy === 'branch') return meta.branch;
+    if (State.roadModule1.sortBy === 'measure') return meta.measure;
+    if (State.roadModule1.sortBy === 'review') return meta.review;
+    return meta[State.roadModule1.sortBy] || '';
+}
+
+function sortRoadRows(rows) {
+    const directionMultiplier = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
+    return [...rows].sort((a, b) => {
+        const primary = String(getRoadSortValue(a)).localeCompare(String(getRoadSortValue(b)), 'en-US', { numeric: true });
+        if (primary !== 0) return primary * directionMultiplier;
+        return String(a['Branch Path'] || '').localeCompare(String(b['Branch Path'] || ''), 'en-US', { numeric: true })
+            || String(a.Variable || '').localeCompare(String(b.Variable || ''), 'en-US', { numeric: true });
+    });
+}
+
+function getRoadBaseYearColumn(row) {
+    const yearColumns = Object.keys(row)
+        .filter(column => /^\d{4}$/.test(column))
+        .sort();
+    const eligibleYearColumns = yearColumns.filter(isRoadEditableYear);
+    const baseYear = eligibleYearColumns.find(year => Number(year) === ROAD_MODULE1_BASE_YEAR);
+    if (baseYear) return baseYear;
+
+    const populatedYear = eligibleYearColumns.find(year => {
+        const value = row[year];
+        return value !== null && value !== undefined && String(value).trim() !== '';
+    });
+    if (populatedYear) return populatedYear;
+    if (eligibleYearColumns.length > 0) return eligibleYearColumns[0];
+    if (row.Year !== undefined && isRoadEditableYear(row.Year)) return String(row.Year);
+    return '';
+}
+
+function getRoadRowTitle(row) {
+    if (row['Key Detail']) return row['Key Detail'];
+
+    const keyParts = [
+        row.transport_type,
+        row.vehicle_type,
+        row.drive,
+        row.fuel,
+        row.parameter_detail
+    ].filter(value => value !== undefined && value !== null && value !== '');
+
+    if (keyParts.length > 0) return keyParts.join(' | ');
+    if (row.Scenario || row.Region) {
+        return [row.Scenario, row.Region].filter(Boolean).join(' | ');
+    }
+    return row.Variable || row.parameter || 'Input row';
+}
+
+function getRoadRowMeta(row, yearLabels) {
+    const metaParts = [
+        yearLabels.join(', '),
+        row.Units,
+        row.parameter || row.Variable
+    ].filter(value => value !== undefined && value !== null && value !== '');
+
+    return metaParts.join(' | ');
+}
+
+function getRoadYearColumns(row) {
+    const wideYearColumns = Object.keys(row)
+        .filter(column => /^\d{4}$/.test(column) && isRoadEditableYear(column))
+        .sort();
+    if (wideYearColumns.length > 0) {
+        const populatedColumns = wideYearColumns.filter(column => {
+            const value = row[column];
+            return value !== null && value !== undefined && String(value).trim() !== '';
+        });
+        return populatedColumns.length > 0 ? populatedColumns : [wideYearColumns[0]];
+    }
+    if (row.Year !== undefined && row.Value !== undefined && isRoadEditableYear(row.Year)) return [String(row.Year)];
+    return [];
+}
+
+function isRoadEditableYear(year) {
+    const parsedYear = Number(String(year).trim());
+    return Number.isInteger(parsedYear) && parsedYear <= ROAD_MODULE1_BASE_YEAR;
+}
+
+function getRoadDefaultValue(row, year) {
+    if (Object.prototype.hasOwnProperty.call(row, year)) return row[year];
+    if (String(row.Year) === String(year)) return row.Value;
+    return '';
+}
+
+function getRoadCommentForKeys(rowKeys, years) {
+    for (const rowKey of rowKeys) {
+        for (const year of years) {
+            const override = State.roadModule1.overrides.get(`${rowKey}||Year=${year}`);
+            if (override && override.comment) return override.comment;
+        }
+    }
+    return '';
+}
+
+function getRoadSharedMileageComment(sharedKey, years) {
+    for (const year of years) {
+        const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedMileageMapKey(sharedKey, year));
+        if (override && override.comment) return override.comment;
+    }
+    return '';
+}
+
+function buildRoadSeriesSvg(defaultPoints, providedPoints) {
+    const width = 230;
+    const height = 82;
+    const padding = 10;
+    const numericDefaultPoints = defaultPoints
+        .filter(point => point.value !== null && point.value !== undefined && String(point.value).trim() !== '' && Number.isFinite(Number(point.value)));
+    const numericProvidedPoints = providedPoints
+        .filter(point => point.value !== null && point.value !== undefined && String(point.value).trim() !== '' && Number.isFinite(Number(point.value)));
+    const allPoints = [...numericDefaultPoints, ...numericProvidedPoints];
+    const allValues = allPoints
+        .map(point => Number(point.value))
+        .filter(value => Number.isFinite(value));
+
+    if (allValues.length === 0) {
+        return '<div class="road-series-chart-empty">No numeric values</div>';
+    }
+
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+    const valueRange = maxValue - minValue || 1;
+    const maxAge = Math.max(...allPoints.map(point => point.age));
+    const minAge = Math.min(...allPoints.map(point => point.age));
+    const ageRange = maxAge - minAge || 1;
+
+    const toXY = (point) => {
+        const x = padding + ((point.age - minAge) / ageRange) * (width - padding * 2);
+        const y = height - padding - ((Number(point.value) - minValue) / valueRange) * (height - padding * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    };
+
+    const defaultLine = numericDefaultPoints.length > 1
+        ? `<polyline class="road-series-default-line" points="${numericDefaultPoints.map(toXY).join(' ')}"></polyline>`
+        : '';
+    const providedLine = numericProvidedPoints.length > 1
+        ? `<polyline class="road-series-provided-line" points="${numericProvidedPoints.map(toXY).join(' ')}"></polyline>`
+        : '';
+    const providedDots = numericProvidedPoints
+        .map(point => {
+            const [x, y] = toXY(point).split(',');
+            return `<circle class="road-series-provided-dot" cx="${x}" cy="${y}" r="2.6"></circle>`;
+        })
+        .join('');
+
+    return `
+        <svg class="road-series-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Loaded and entered series chart">
+            <line class="road-series-axis" x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}"></line>
+            ${defaultLine}
+            ${providedLine}
+            ${providedDots}
+        </svg>
+    `;
+}
+
+function parseRoadSeriesValues(rawText) {
+    return String(rawText || '')
+        .trim()
+        .split(/[,\t\r\n ;]+/)
+        .map(value => value.trim())
+        .filter(Boolean)
+        .filter(value => Number.isFinite(Number(value)));
+}
+
+function getRoadSeriesRowRefs(seriesEl) {
+    return JSON.parse(decodeURIComponent(seriesEl.dataset.rowRefs || '%5B%5D'));
+}
+
+function getRoadSeriesProvidedPoints(seriesEl) {
+    const rowRefs = getRoadSeriesRowRefs(seriesEl);
+    const values = parseRoadSeriesValues(seriesEl.querySelector('.road-series-input')?.value || '');
+    return values.slice(0, rowRefs.length).map((value, index) => ({
+        age: rowRefs[index].age,
+        value: value
+    }));
+}
+
+function updateRoadSeriesChart(seriesEl) {
+    const defaultPoints = JSON.parse(decodeURIComponent(seriesEl.dataset.defaultPoints));
+    const chartEl = seriesEl.querySelector('.road-series-chart-wrap');
+    if (!chartEl) return;
+    chartEl.innerHTML = buildRoadSeriesSvg(defaultPoints, getRoadSeriesProvidedPoints(seriesEl));
+}
+
+function bindRoadModule1InputEvents() {
+    DOM.roadInputContainer.querySelectorAll('.road-value-input, .road-series-input, .road-comment-input').forEach(input => {
+        input.addEventListener('input', handleRoadModule1InputChange);
+    });
+    DOM.roadInputContainer.querySelectorAll('.road-reset-button').forEach(button => {
+        button.addEventListener('click', handleRoadModule1ResetClick);
+    });
+}
+
+function groupRoadRowsForEditors(filteredRows) {
+    const groupedRows = new Map();
+    filteredRows.forEach(row => {
+        const useSharedMileage = isRoadMileageRow(row) && !State.roadModule1.detailedMileage;
+        const branchPath = useSharedMileage
+            ? getRoadMileageSharedBranchPath(row)
+            : (isRoadAgeSeriesRow(row) ? getRoadParentBranchPath(row['Branch Path']) : row['Branch Path']);
+        const groupType = useSharedMileage ? 'shared-mileage' : (isRoadAgeSeriesRow(row) ? 'age-series' : 'rows');
+        const sharedKey = useSharedMileage ? getRoadSharedMileageKey(row) : '';
+        const groupKey = useSharedMileage
+            ? `${groupType}|${sharedKey}`
+            : `${groupType}|${branchPath}|${row.Variable}`;
+        if (!groupedRows.has(groupKey)) {
+            groupedRows.set(groupKey, {
+                groupType: groupType,
+                branchPath: branchPath,
+                sharedKey: sharedKey,
+                rows: []
+            });
+        }
+        groupedRows.get(groupKey).rows.push(row);
+    });
+    return groupedRows;
+}
+
+function buildRoadTreeNode() {
+    return {
+        children: new Map(),
+        groups: []
+    };
+}
+
+function buildRoadModule1TreeGroups(groupedRows) {
+    const root = buildRoadTreeNode();
+    groupedRows.forEach(group => {
+        const pathParts = String(group.branchPath || '').split('\\').filter(Boolean);
+        let node = root;
+        pathParts.forEach(part => {
+            if (!node.children.has(part)) node.children.set(part, buildRoadTreeNode());
+            node = node.children.get(part);
+        });
+        node.groups.push(group);
+    });
+    return root;
+}
+
+function renderRoadModule1TreeNode(node, depth = 0, label = '') {
+    const childEntries = [...node.children.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0], 'en-US', { numeric: true }));
+    const groupHtml = node.groups
+        .map(group => buildRoadModule1TreeEditorHtml(group, depth))
+        .join('');
+    const childrenHtml = childEntries
+        .map(([childLabel, childNode]) => renderRoadModule1TreeNode(childNode, depth + 1, childLabel))
+        .join('');
+
+    if (!label) return `${groupHtml}${childrenHtml}`;
+
+    const descendantCount = countRoadTreeRows(node);
+    return `
+        <details class="road-tree-node" open>
+            <summary class="road-tree-summary" style="--road-tree-depth:${depth}">
+                <span class="road-tree-label">${escapeHtml(label)}</span>
+                <span class="road-tree-count">${descendantCount} row${descendantCount === 1 ? '' : 's'}</span>
+            </summary>
+            <div class="road-tree-children">
+                ${groupHtml}
+                ${childrenHtml}
+            </div>
+        </details>
+    `;
+}
+
+function countRoadTreeRows(node) {
+    const ownRows = node.groups.reduce((sum, group) => sum + group.rows.length, 0);
+    return ownRows + [...node.children.values()].reduce((sum, child) => sum + countRoadTreeRows(child), 0);
+}
+
+function renderRoadModule1GraphChildren(node, depth = 0) {
+    const childEntries = [...node.children.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0], 'en-US', { numeric: true }));
+
+    if (childEntries.length === 0) return '';
+
+    return `
+        <ul class="road-graph-list ${depth === 0 ? 'road-graph-root-list' : ''}">
+            ${childEntries.map(([childLabel, childNode]) => renderRoadModule1GraphNode(childLabel, childNode, depth + 1)).join('')}
+        </ul>
+    `;
+}
+
+function renderRoadModule1GraphNode(label, node, depth) {
+    const childHtml = renderRoadModule1GraphChildren(node, depth);
+    const groupHtml = node.groups
+        .map(group => buildRoadModule1GraphEditorHtml(group, depth))
+        .join('');
+    const rowCount = countRoadTreeRows(node);
+    const measureCount = new Set(node.groups.map(group => group.rows[0]?.Variable).filter(Boolean)).size;
+    const isLeaf = node.children.size === 0;
+
+    return `
+        <li class="road-graph-node-group ${isLeaf ? 'is-leaf' : ''}">
+            <div class="road-graph-node-wrapper">
+                <article class="road-graph-card ${node.groups.length ? 'has-editors' : ''}">
+                    <div class="road-graph-card-header">
+                        <div class="min-w-0">
+                            <div class="road-graph-level">Level ${depth}</div>
+                            <div class="road-graph-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+                        </div>
+                        <div class="road-graph-card-meta">
+                            <span>${rowCount} row${rowCount === 1 ? '' : 's'}</span>
+                            ${measureCount ? `<span>${measureCount} measure${measureCount === 1 ? '' : 's'}</span>` : ''}
+                        </div>
+                    </div>
+                    ${groupHtml ? `<div class="road-graph-editors">${groupHtml}</div>` : ''}
+                </article>
+            </div>
+            ${childHtml}
+        </li>
+    `;
+}
+
+function buildRoadModule1GraphEditorHtml(group, depth) {
+    const first = group.rows[0];
+    const groupUnits = [...new Set(group.rows.map(row => row.Units).filter(Boolean))];
+    return `
+        <section class="road-graph-editor">
+            <div class="road-graph-editor-header">
+                <span class="road-graph-editor-title">${escapeHtml(first.Variable || 'Measure')}</span>
+                ${groupUnits.length ? `<span class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</span>` : ''}
+            </div>
+            ${buildRoadModule1EditorRowsHtml(group, depth)}
+        </section>
+    `;
+}
+
+function buildRoadModule1TreeEditorHtml(group, depth) {
+    const groupRows = group.rows;
+    const first = groupRows[0];
+    const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
+    const groupCountLabel = group.groupType === 'age-series'
+        ? `${groupRows.length} point series`
+        : `${groupRows.length} row${groupRows.length === 1 ? '' : 's'}`;
+    return `
+        <section class="road-group-card road-tree-editor" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
+            <div class="road-group-header">
+                <div class="min-w-0">
+                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
+                    <div class="road-group-title-row">
+                        <div class="road-group-title">${escapeHtml(first.Variable)}</div>
+                        ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
+                    </div>
+                </div>
+                <div class="road-group-count">${groupCountLabel}</div>
+            </div>
+            <div class="road-group-rows">
+                ${buildRoadModule1EditorRowsHtml(group, depth)}
+            </div>
+        </section>
+    `;
+}
+
+function buildRoadModule1EditorRowsHtml(group, depth = 0) {
+    const groupRows = group.rows;
+    const first = groupRows[0];
+
+    if (group.groupType === 'shared-mileage') {
+        const yearColumns = getRoadYearColumns(first);
+        const sharedKey = group.sharedKey || getRoadSharedMileageKey(first);
+        const sharedComment = getRoadSharedMileageComment(sharedKey, yearColumns);
+        const childCount = State.roadModule1.rows
+            .filter(row => isRoadMileageRow(row) && getRoadSharedMileageKey(row) === sharedKey)
+            .length;
+        const yearInputs = yearColumns.map(year => {
+            const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedMileageMapKey(sharedKey, year));
+            const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
+            const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
+            return `
+                <div class="road-year-input" data-year="${year}">
+                    <label>${escapeHtml(year)}</label>
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="road-input-row road-shared-mileage-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-shared-mileage-key="${encodeURIComponent(sharedKey)}">
+                <div class="road-row-label">
+                    <div class="road-row-title" title="Mileage shared across this vehicle type">Mileage shared across ${escapeHtml(getRoadMileageSharedVehicleLabel(first))}</div>
+                    <div class="road-row-meta">${escapeHtml(getRoadRowMeta(first, yearColumns))}${childCount > 1 ? ` | applies to ${childCount} detailed rows` : ''}</div>
+                    <div class="road-review-note">One mileage series is used across all drives and fuels in this vehicle type.</div>
+                </div>
+                <div class="road-year-grid">${yearInputs}</div>
+                <div class="road-row-actions">
+                    <span class="road-source-badge">shared</span>
+                    <button type="button" class="road-reset-button" title="Reset shared mileage to the original provided value" aria-label="Reset shared mileage">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
+                </div>
+            </div>
+        `;
+    }
+
+    if (group.groupType === 'age-series') {
+        const sortedRows = [...groupRows].sort((a, b) => getRoadAgeFromBranchPath(a['Branch Path']) - getRoadAgeFromBranchPath(b['Branch Path']));
+        const defaultPoints = sortedRows.map(row => {
+            const year = getRoadBaseYearColumn(row);
+            return {
+                age: getRoadAgeFromBranchPath(row['Branch Path']),
+                value: getRoadDefaultValue(row, year)
+            };
+        });
+        const providedPoints = [];
+        const rowRefs = sortedRows.map(row => {
+            const age = getRoadAgeFromBranchPath(row['Branch Path']);
+            const year = getRoadBaseYearColumn(row);
+            const rowKey = buildRoadModule1Key(row);
+            const key = `${rowKey}||Year=${year}`;
+            const override = State.roadModule1.overrides.get(key);
+            if (override && override.value !== null && override.value !== '') {
+                providedPoints.push({ age: age, value: override.value });
+            }
+            return {
+                age: age,
+                year: year,
+                rowKey: rowKey,
+                keyPayload: roadModule1KeyPayload(row)
+            };
+        });
+        const defaultSeriesText = defaultPoints.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
+        const providedSeriesText = rowRefs
+            .map(ref => {
+                const key = `${ref.rowKey}||Year=${ref.year}`;
+                const override = State.roadModule1.overrides.get(key);
+                return override && override.value !== null && override.value !== ''
+                    ? formatRoadSeriesInputValue(override.value)
+                    : '';
+            })
+            .join(', ')
+            .replace(/(, )+$/g, '');
+        const seriesComment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
+        const seriesTitle = `${first.Variable || getRoadRowTitle(first)} series`;
+        const rowMeta = getRoadRowMeta(first, [getRoadBaseYearColumn(first)]);
+        return `
+            <div class="road-input-row road-series-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
+                <div class="road-row-label">
+                    <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}</div>
+                    <div class="road-row-meta">${escapeHtml(rowMeta)} | ages ${defaultPoints[0]?.age ?? ''}-${defaultPoints[defaultPoints.length - 1]?.age ?? ''}</div>
+                    ${first.review_reason ? `<div class="road-review-note">${escapeHtml(first.review_reason)}</div>` : ''}
+                    <div class="road-series-legend">
+                        <span><i class="default"></i>Loaded</span>
+                        <span><i class="provided"></i>Entered</span>
+                    </div>
+                </div>
+                <div class="road-series-entry">
+                    <label>Provided series (${rowRefs.length} values, age order)</label>
+                    <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
+                    <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines.</div>
+                </div>
+                <div class="road-row-actions road-series-actions">
+                    <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
+                    <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(seriesComment)}">
+                </div>
+            </div>
+        `;
+    }
+
+    return groupRows.map(row => {
+        const reviewClass = row.researcher_review_recommended ? 'road-source-badge needs-review' : 'road-source-badge';
+        const rowKey = buildRoadModule1Key(row);
+        const keyPayload = encodeURIComponent(JSON.stringify(roadModule1KeyPayload(row)));
+        const yearColumns = getRoadYearColumns(row);
+        const yearInputs = yearColumns.map(year => {
+            const key = `${rowKey}||Year=${year}`;
+            const override = State.roadModule1.overrides.get(key);
+            const defaultValue = formatRoadDefaultValue(getRoadDisplayedPlaceholderValue(row, year));
+            const inheritedValue = getRoadInheritedMileageValue(row, year);
+            const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
+            return `
+                <div class="road-year-input" data-year="${year}">
+                    <label>${escapeHtml(year)}</label>
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
+                </div>
+            `;
+        }).join('');
+        const rowComment = getRoadCommentForKeys([rowKey], yearColumns);
+        const rowTitle = getRoadRowTitle(row);
+        const rowMeta = getRoadRowMeta(row, yearColumns);
+        return `
+            <div class="road-input-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
+                <div class="road-row-label">
+                    <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}</div>
+                    <div class="road-row-meta">${escapeHtml(rowMeta)}</div>
+                    ${row.review_reason ? `<div class="road-review-note">${escapeHtml(row.review_reason)}</div>` : ''}
+                </div>
+                <div class="road-year-grid">${yearInputs}</div>
+                <div class="road-row-actions">
+                    <span class="${reviewClass}">${escapeHtml(formatRoadInputSourceLabel(row.input_source))}</span>
+                    <button type="button" class="road-reset-button" title="${isRoadMileageRow(row) ? 'Reset detailed row to inherited shared mileage' : 'Reset row to the original provided value'}" aria-label="Reset row">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getRoadModule1InputBoundsAttrs(variable) {
+    const rule = ROAD_MODULE1_VALUE_RULES[variable];
+    if (!rule) return '';
+
+    const attrs = [];
+    if (rule.min !== undefined) attrs.push(`min="${rule.min}"`);
+    if (rule.max !== undefined) attrs.push(`max="${rule.max}"`);
+    return attrs.join(' ');
+}
+
+function renderRoadModule1TreeInputs(filteredRows) {
+    const groupedRows = groupRoadRowsForEditors(filteredRows);
+    const treeRoot = buildRoadModule1TreeGroups(groupedRows);
+    DOM.roadInputContainer.innerHTML = `
+        <div class="road-graph-canvas">
+            ${renderRoadModule1GraphChildren(treeRoot)}
+        </div>
+    `;
+    bindRoadModule1InputEvents();
+}
+
+function buildRoadModule1ListGroupHtml(group) {
+    const groupRows = group.rows;
+    const first = groupRows[0];
+    const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
+    const groupCountLabel = group.groupType === 'age-series'
+        ? `${groupRows.length} point series`
+        : `${groupRows.length} row${groupRows.length === 1 ? '' : 's'}`;
+    return `
+        <section class="road-group-card">
+            <div class="road-group-header">
+                <div class="min-w-0">
+                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
+                    <div class="road-group-title-row">
+                        <div class="road-group-title">${escapeHtml(first.Variable)}</div>
+                        ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
+                    </div>
+                </div>
+                <div class="road-group-count">${groupCountLabel}</div>
+            </div>
+            <div class="road-group-rows">
+                ${buildRoadModule1EditorRowsHtml(group)}
+            </div>
+        </section>
+    `;
+}
+
+function renderRoadModule1ListInputs(filteredRows) {
+    const groupedRows = groupRoadRowsForEditors(filteredRows);
+    DOM.roadInputContainer.innerHTML = `
+        <div class="road-list-view">
+            ${[...groupedRows.values()].map(buildRoadModule1ListGroupHtml).join('')}
+        </div>
+    `;
+    bindRoadModule1InputEvents();
+}
+
+function renderRoadModule1Inputs() {
+    if (!DOM.roadInputContainer) return;
+
+    const rows = State.roadModule1.rows || [];
+    const filter = State.roadModule1.activeFilter;
+    const textFilteredRows = filter
+        ? rows.filter(row => {
+            const meta = getRoadRowFilterMeta(row);
+            const haystack = [
+                row['Branch Path'],
+                row.Variable,
+                row.Units,
+                row.Region,
+                meta.transport,
+                meta.vehicle,
+                meta.drive,
+                meta.fuel,
+                meta.source
+            ].join(' ').toLowerCase();
+            return haystack.includes(filter);
+        })
+        : rows;
+    const filteredRows = sortRoadRows(textFilteredRows.filter(roadRowMatchesStructuredFilters));
+
+    DOM.roadRowCount.innerText = filteredRows.length.toLocaleString('en-US');
+    updateRoadModule1OverrideCount();
+    DOM.roadValidationSummary.innerText = `${rows.length.toLocaleString('en-US')} provided rows loaded`;
+
+    if (filteredRows.length === 0) {
+        DOM.roadInputContainer.innerHTML = '<div class="text-sm text-slate-400">No rows match the current filter.</div>';
+        return;
+    }
+
+    updateRoadModule1ViewToggle();
+    if (State.roadModule1.viewMode === 'tree') {
+        renderRoadModule1TreeInputs(filteredRows);
+    } else {
+        State.roadModule1.viewMode = 'list';
+        renderRoadModule1ListInputs(filteredRows);
+    }
+}
+
+function handleRoadModule1InputChange(event) {
+    const rowEl = event.target.closest('.road-input-row');
+    if (!rowEl) return;
+
+    if (rowEl.classList.contains('road-shared-mileage-row')) {
+        handleRoadModule1SharedMileageInputChange(rowEl);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-series-row')) {
+        handleRoadModule1SeriesInputChange(rowEl);
+        return;
+    }
+
+    const rowKey = decodeURIComponent(rowEl.dataset.key);
+    const keyPayload = JSON.parse(decodeURIComponent(rowEl.dataset.keyPayload));
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput.value.trim();
+    let rowOverrideCount = 0;
+
+    rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+        const year = yearEl.dataset.year;
+        const key = `${rowKey}||Year=${year}`;
+        const valueInput = yearEl.querySelector('.road-value-input');
+        const value = valueInput.value.trim();
+
+        if (!value) {
+            State.roadModule1.overrides.delete(key);
+            return;
+        }
+
+        State.roadModule1.overrides.set(key, {
+            key: keyPayload,
+            year: year,
+            value: value || null,
+            comment: comment
+        });
+        rowOverrideCount += 1;
+    });
+
+    if (comment && rowOverrideCount === 0) {
+        rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+            const year = yearEl.dataset.year;
+            const key = `${rowKey}||Year=${year}`;
+            const existing = State.roadModule1.overrides.get(key);
+            if (existing) existing.comment = comment;
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
+    updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1SharedMileageInputChange(rowEl) {
+    const sharedKey = decodeURIComponent(rowEl.dataset.sharedMileageKey || '');
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput.value.trim();
+    let rowOverrideCount = 0;
+
+    rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+        const year = yearEl.dataset.year;
+        const key = buildRoadSharedMileageMapKey(sharedKey, year);
+        const valueInput = yearEl.querySelector('.road-value-input');
+        const value = valueInput.value.trim();
+
+        if (!value) {
+            State.roadModule1.sharedMileageOverrides.delete(key);
+            return;
+        }
+
+        State.roadModule1.sharedMileageOverrides.set(key, {
+            sharedKey: sharedKey,
+            year: year,
+            value: value || null,
+            comment: comment
+        });
+        rowOverrideCount += 1;
+    });
+
+    if (comment && rowOverrideCount === 0) {
+        rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+            const key = buildRoadSharedMileageMapKey(sharedKey, yearEl.dataset.year);
+            const existing = State.roadModule1.sharedMileageOverrides.get(key);
+            if (existing) existing.comment = comment;
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
+    updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1ResetClick(event) {
+    const rowEl = event.target.closest('.road-input-row');
+    if (!rowEl) return;
+
+    if (rowEl.classList.contains('road-shared-mileage-row')) {
+        const sharedKey = decodeURIComponent(rowEl.dataset.sharedMileageKey || '');
+        rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+            State.roadModule1.sharedMileageOverrides.delete(buildRoadSharedMileageMapKey(sharedKey, yearEl.dataset.year));
+            const input = yearEl.querySelector('.road-value-input');
+            if (input) input.value = '';
+        });
+        const commentInput = rowEl.querySelector('.road-comment-input');
+        if (commentInput) commentInput.value = '';
+        rowEl.classList.remove('is-edited');
+        updateRoadModule1OverrideCount();
+        renderRoadModule1Inputs();
+        scheduleRoadModule1DraftSave();
+        return;
+    }
+
+    const encodedRowKey = rowEl.dataset.key;
+    if (!encodedRowKey) return;
+    const rowKey = decodeURIComponent(encodedRowKey);
+    rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+        State.roadModule1.overrides.delete(`${rowKey}||Year=${yearEl.dataset.year}`);
+        const input = yearEl.querySelector('.road-value-input');
+        if (input) input.value = '';
+    });
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    if (commentInput) commentInput.value = '';
+    rowEl.classList.remove('is-edited');
+    updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1SeriesInputChange(rowEl) {
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput.value.trim();
+    const seriesInput = rowEl.querySelector('.road-series-input');
+    const rowRefs = getRoadSeriesRowRefs(rowEl);
+    const values = parseRoadSeriesValues(seriesInput ? seriesInput.value : '');
+    let rowOverrideCount = 0;
+
+    rowRefs.forEach(ref => {
+        State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${ref.year}`);
+    });
+
+    values.slice(0, rowRefs.length).forEach((value, index) => {
+        const ref = rowRefs[index];
+        const key = `${ref.rowKey}||Year=${ref.year}`;
+
+        if (!value) {
+            return;
+        }
+
+        State.roadModule1.overrides.set(key, {
+            key: ref.keyPayload,
+            year: ref.year,
+            value: value || null,
+            comment: comment
+        });
+        rowOverrideCount += 1;
+    });
+
+    if (comment) {
+        rowRefs.forEach(ref => {
+            const key = `${ref.rowKey}||Year=${ref.year}`;
+            const existing = State.roadModule1.overrides.get(key);
+            if (existing) existing.comment = comment;
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
+    updateRoadModule1OverrideCount();
+    updateRoadSeriesChart(rowEl);
+    scheduleRoadModule1DraftSave();
+}
+
+async function saveRoadModule1ResearcherOutput() {
+    if (!State.roadModule1.version || !State.roadModule1.economy) {
+        showCustomToast("Load road provided values before exporting.", "warning");
+        return;
+    }
+
+    const overrides = buildRoadModule1ExportOverrides();
+    const originalButtonText = DOM.roadSaveOutput.innerText;
+
+    DOM.roadSaveOutput.disabled = true;
+    DOM.roadSaveOutput.innerText = "Exporting...";
+    DOM.roadSaveStatus.innerText = "Exporting checkpoint workbook from current browser state...";
+    showLoading("Exporting Checkpoint Workbook...");
+    try {
+        const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
+        exportRoadModule1CheckpointWorkbookClientSide(completedRows, State.roadModule1.economy);
+
+        DOM.roadSaveStatus.innerText = [
+            'Checkpoint workbook exported from current browser state.',
+            `Rows included: ${completedRows.length.toLocaleString('en-US')}`,
+            `Checkpoint values applied: ${overrides.length.toLocaleString('en-US')}`,
+            'Download started in your browser.'
+        ].join('\n');
+
+        clearRoadModule1Draft();
+        showCustomToast('Checkpoint workbook exported client-side.', 'success', 5000);
+    } catch (error) {
+        showCustomToast("Failed to save checkpoint workbook: " + error.message, "error");
+        DOM.roadSaveStatus.innerText = "Failed to export checkpoint workbook: " + error.message;
+    } finally {
+        DOM.roadSaveOutput.disabled = false;
+        DOM.roadSaveOutput.innerText = originalButtonText;
+        hideLoading();
+    }
+}
+
+function triggerRoadModule1ResearcherOutputDownload(url) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
+function parseCsvLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i += 1;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === ',' && !inQuotes) {
+            values.push(current);
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    values.push(current);
+    return values.map(value => value.trim());
+}
+
+function parseCsvText(csvText) {
+    const lines = String(csvText || '')
+        .split(/\r?\n/)
+        .filter(line => line.trim().length > 0);
+    if (lines.length === 0) return [];
+
+    const headers = parseCsvLine(lines[0]);
+    return lines.slice(1).map(line => {
+        const cells = parseCsvLine(line);
+        const row = {};
+        headers.forEach((header, idx) => {
+            row[header] = cells[idx] ?? '';
+        });
+        return row;
+    });
+}
+
+function rowHasRoadModule1RequiredColumns(row) {
+    if (!row || typeof row !== 'object') return false;
+    return ROAD_MODULE1_REQUIRED_KEY_COLUMNS.every(column => Object.prototype.hasOwnProperty.call(row, column));
+}
+
+function normalizeRoadTextToken(value) {
+    return String(value ?? '').trim().toLowerCase();
+}
+
+function normalizeRoadNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+    const numeric = Number(String(value).replace(/,/g, '').trim());
+    return Number.isFinite(numeric) ? numeric : null;
+}
+
+function getRoadModule1UploadContextDefaults() {
+    const version = State.roadModule1.version || DOM.roadVersionSelect.value || '';
+    const scenario = State.roadModule1.scenario || DOM.roadScenarioSelect.value || 'Reference';
+    const rows = Array.isArray(State.roadModule1.rows) ? State.roadModule1.rows : [];
+    const regionFromLoadedRows = rows.length > 0 ? rows[0].Region : '';
+    return {
+        version,
+        scenario,
+        region: regionFromLoadedRows || ''
+    };
+}
+
+function getRoadRowsByVariableAndTransport(variableName, transportType = 'all', scenario = 'Reference') {
+    const normalizedVariable = normalizeRoadTextToken(variableName);
+    const normalizedTransport = normalizeRoadTextToken(transportType || 'all');
+    const normalizedScenario = normalizeRoadTextToken(scenario || 'Reference');
+
+    return (State.roadModule1.rows || []).filter(row => {
+        if (normalizeRoadTextToken(row.Variable) !== normalizedVariable) return false;
+        if (normalizedScenario && normalizeRoadTextToken(row.Scenario) !== normalizedScenario) return false;
+
+        const branchPath = normalizeRoadTextToken(row['Branch Path']);
+        if (normalizedTransport === 'passenger') return branchPath.includes('passenger road');
+        if (normalizedTransport === 'freight') return branchPath.includes('freight road');
+        return true;
+    });
+}
+
+function buildRoadRowsFromFactorsSheet(factorRows, contextDefaults) {
+    if (!Array.isArray(factorRows) || factorRows.length === 0) return { rows: [], unmappedItems: [] };
+
+    const parameterMap = {
+        'phev_electric_utilisation_rate': 'PHEV Electric Driving Share',
+        'reconciliation_bound_lower': 'Reconciliation Bound Lower',
+        'reconciliation_bound_upper': 'Reconciliation Bound Upper',
+        'stock_reconciliation_weight': 'Reconciliation Weight',
+        'mileage_reconciliation_weight': 'Reconciliation Weight',
+        'efficiency_reconciliation_weight': 'Reconciliation Weight'
+    };
+
+    const generatedRows = [];
+    const unmappedItems = [];
+
+    factorRows.forEach(rawRow => {
+        const parameter = normalizeRoadTextToken(rawRow.Parameter);
+        const variable = parameterMap[parameter];
+        if (!variable) return;
+
+        const numericValue = normalizeRoadNumber(rawRow.Value);
+        if (numericValue === null) return;
+
+        const transportType = normalizeRoadTextToken(rawRow['Transport Type'] || 'all');
+        const scenario = String(rawRow.Scenario || contextDefaults.scenario || 'Reference').trim();
+
+        const matchingRows = getRoadRowsByVariableAndTransport(variable, transportType, scenario);
+        if (matchingRows.length === 0) {
+            unmappedItems.push(`Factors: ${rawRow.Parameter || parameter} (transport=${transportType || 'all'}, scenario=${scenario})`);
+        }
+        matchingRows.forEach(match => {
+            generatedRows.push({
+                'Branch Path': match['Branch Path'],
+                'Variable': match.Variable,
+                'Scenario': match.Scenario,
+                'Region': match.Region,
+                [String(ROAD_MODULE1_BASE_YEAR)]: numericValue
+            });
+        });
+    });
+
+    return {
+        rows: generatedRows,
+        unmappedItems: unmappedItems
+    };
+}
+
+function parseRoadProfilePointsFromLifecycleLikeSheet(sheetRows) {
+    const profilePoints = new Map();
+    let currentProfile = '';
+
+    sheetRows.forEach(row => {
+        const profileCell = row['Profile:'] ?? row['Profile'] ?? row.profile ?? '';
+        const profileName = String(profileCell || '').trim();
+        if (profileName) {
+            currentProfile = profileName;
+            if (!profilePoints.has(currentProfile)) profilePoints.set(currentProfile, []);
+        }
+
+        const yearRaw = row['Year'] ?? row['Age'] ?? row.year ?? row.age;
+        const valueRaw = row['Value'] ?? row.value;
+        const ageNumeric = normalizeRoadNumber(yearRaw);
+        const valueNumeric = normalizeRoadNumber(valueRaw);
+        if (!currentProfile || ageNumeric === null || valueNumeric === null) return;
+
+        profilePoints.get(currentProfile).push({
+            age: Number(ageNumeric),
+            value: Number(valueNumeric)
+        });
+    });
+
+    return profilePoints;
+}
+
+function buildRoadRowsFromLifecycleLikeSheet(sheetRows, lifecycleType, contextDefaults) {
+    if (!Array.isArray(sheetRows) || sheetRows.length === 0) return { rows: [], unmappedItems: [] };
+
+    const profilePoints = parseRoadProfilePointsFromLifecycleLikeSheet(sheetRows);
+    const generatedRows = [];
+    const unmappedItems = [];
+
+    profilePoints.forEach((points, profileName) => {
+        const normalizedProfile = normalizeRoadTextToken(profileName);
+        const isPassenger = normalizedProfile.includes('passenger');
+        const isFreight = normalizedProfile.includes('freight');
+        const transportLabel = isPassenger ? 'Passenger road' : (isFreight ? 'Freight road' : '');
+        if (!transportLabel) {
+            unmappedItems.push(`${lifecycleType}: ${profileName} (unknown transport profile)`);
+            return;
+        }
+
+        const variable = lifecycleType === 'lifecycle' ? 'Survival Rate' : 'Vintage Profile Share';
+
+        points.forEach(point => {
+            if (!Number.isFinite(point.age) || !Number.isFinite(point.value)) return;
+            const ageInt = Math.trunc(point.age);
+            const branchPath = `Demand\\${transportLabel}\\Age ${ageInt}`;
+
+            const matchingRow = (State.roadModule1.rows || []).find(row =>
+                row['Branch Path'] === branchPath
+                && normalizeRoadTextToken(row.Variable) === normalizeRoadTextToken(variable)
+                && normalizeRoadTextToken(row.Scenario) === normalizeRoadTextToken(contextDefaults.scenario || 'Reference')
+            );
+
+            if (!matchingRow) {
+                unmappedItems.push(`${lifecycleType}: ${profileName} age ${ageInt} (no canonical row found)`);
+            }
+
+            generatedRows.push({
+                'Branch Path': branchPath,
+                'Variable': variable,
+                'Scenario': matchingRow?.Scenario || contextDefaults.scenario || 'Reference',
+                'Region': matchingRow?.Region || contextDefaults.region || '',
+                [String(ROAD_MODULE1_BASE_YEAR)]: point.value
+            });
+        });
+    });
+
+    return {
+        rows: generatedRows,
+        unmappedItems: unmappedItems
+    };
+}
+
+function dedupeRoadUploadRows(rows) {
+    const map = new Map();
+    rows.forEach(row => {
+        if (!rowHasRoadModule1RequiredColumns(row)) return;
+        const key = getRoadModule1ComparableKeyFromRow(row);
+        const existing = map.get(key) || {};
+        map.set(key, { ...existing, ...row });
+    });
+    return Array.from(map.values());
+}
+
+async function readRoadModule1RowsFromUploadFile(file) {
+    const fileName = String(file?.name || '').toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+    const isWorkbook = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+    if (!isCsv && !isWorkbook) {
+        throw new Error('Use a CSV, XLSX, or XLS file with the same Module 1 columns.');
+    }
+
+    if (isCsv) {
+        const text = await file.text();
+        const csvRows = parseCsvText(text);
+        return {
+            rows: csvRows,
+            summary: {
+                sourceSheet: 'CSV',
+                keyedInputRows: csvRows.length,
+                factorsMappedRows: 0,
+                lifecycleMappedRows: 0,
+                vintageMappedRows: 0,
+                unmappedItems: []
+            }
+        };
+    }
+
+    if (typeof XLSX === 'undefined') {
+        throw new Error('Workbook upload requires the SheetJS parser in static mode.');
+    }
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const contextDefaults = getRoadModule1UploadContextDefaults();
+
+    const preferredSheet = workbook.SheetNames.includes('Details')
+        ? 'Details'
+        : (workbook.SheetNames.includes('Data') ? 'Data' : workbook.SheetNames[0]);
+
+    const preferredRows = XLSX.utils.sheet_to_json(workbook.Sheets[preferredSheet], { defval: '' });
+    const hasPreferredRowKeys = preferredRows.length > 0 && rowHasRoadModule1RequiredColumns(preferredRows[0]);
+    const keyedRowsFromPreferred = hasPreferredRowKeys ? preferredRows : [];
+
+    const factorsRows = workbook.SheetNames.includes('Factors')
+        ? XLSX.utils.sheet_to_json(workbook.Sheets.Factors, { defval: '' })
+        : [];
+    const lifecycleRows = workbook.SheetNames.includes('Lifecycle')
+        ? XLSX.utils.sheet_to_json(workbook.Sheets.Lifecycle, { defval: '' })
+        : [];
+    const vintageRows = workbook.SheetNames.includes('Vintage')
+        ? XLSX.utils.sheet_to_json(workbook.Sheets.Vintage, { defval: '' })
+        : [];
+
+    const generatedFromFactors = buildRoadRowsFromFactorsSheet(factorsRows, contextDefaults);
+    const generatedFromLifecycle = buildRoadRowsFromLifecycleLikeSheet(lifecycleRows, 'lifecycle', contextDefaults);
+    const generatedFromVintage = buildRoadRowsFromLifecycleLikeSheet(vintageRows, 'vintage', contextDefaults);
+
+    const mergedRows = dedupeRoadUploadRows([
+        ...keyedRowsFromPreferred,
+        ...generatedFromFactors.rows,
+        ...generatedFromLifecycle.rows,
+        ...generatedFromVintage.rows
+    ]);
+
+    if (mergedRows.length === 0) {
+        throw new Error(
+            'Workbook upload did not contain usable row-key data. Include Details/Data with key columns, or provide parseable Factors/Lifecycle/Vintage sheets.'
+        );
+    }
+
+    return {
+        rows: mergedRows,
+        summary: {
+            sourceSheet: preferredSheet,
+            keyedInputRows: keyedRowsFromPreferred.length,
+            factorsMappedRows: generatedFromFactors.rows.length,
+            lifecycleMappedRows: generatedFromLifecycle.rows.length,
+            vintageMappedRows: generatedFromVintage.rows.length,
+            unmappedItems: [
+                ...generatedFromFactors.unmappedItems,
+                ...generatedFromLifecycle.unmappedItems,
+                ...generatedFromVintage.unmappedItems
+            ]
+        }
+    };
+}
+
+function buildRoadUploadSummaryText(fileName, parseSummary, overlayResult) {
+    const lines = [
+        `File: ${fileName}`,
+        '',
+        'Parsed workbook/file content:',
+        `- Primary row-key source: ${parseSummary?.sourceSheet || 'Unknown'}`,
+        `- Row-key records read from Data/Details/primary sheet: ${(parseSummary?.keyedInputRows || 0).toLocaleString('en-US')}`,
+        `- Additional rows mapped from Factors: ${(parseSummary?.factorsMappedRows || 0).toLocaleString('en-US')}`,
+        `- Additional rows mapped from Lifecycle: ${(parseSummary?.lifecycleMappedRows || 0).toLocaleString('en-US')}`,
+        `- Additional rows mapped from Vintage: ${(parseSummary?.vintageMappedRows || 0).toLocaleString('en-US')}`,
+        '',
+        'Applied to current browser state:',
+        `- Row-year values applied: ${(overlayResult?.appliedCount || 0).toLocaleString('en-US')}`,
+        `- Uploaded rows that did not match current template: ${(overlayResult?.unmatchedCount || 0).toLocaleString('en-US')}`,
+        `- Value checks skipped (non-numeric/out-of-bounds): ${(overlayResult?.validationIssueCount || 0).toLocaleString('en-US')}`
+    ];
+
+    const unmappedItems = Array.isArray(parseSummary?.unmappedItems) ? parseSummary.unmappedItems : [];
+    if (unmappedItems.length > 0) {
+        lines.push('', 'Unmapped sheet items (not converted to canonical rows):');
+        unmappedItems.slice(0, 50).forEach(item => lines.push(`- ${item}`));
+        if (unmappedItems.length > 50) {
+            lines.push(`- ...and ${(unmappedItems.length - 50).toLocaleString('en-US')} more`);
+        }
+    }
+
+    lines.push('', 'Recommendation: safest workflow is export checkpoint workbook, edit values while keeping exact structure/key columns, then upload again.');
+    return lines.join('\n');
+}
+
+function getRoadModule1ComparableKeyFromRow(rowLike) {
+    return ROAD_MODULE1_REQUIRED_KEY_COLUMNS
+        .map(column => String(rowLike?.[column] ?? '').trim())
+        .join('||');
+}
+
+function validateRoadModule1ValueForVariable(variable, numericValue) {
+    const rule = ROAD_MODULE1_VALUE_RULES[variable];
+    if (!rule) return '';
+    if (rule.min !== undefined && numericValue < rule.min) {
+        return `${variable} must be greater than or equal to ${rule.min}.`;
+    }
+    if (rule.max !== undefined && numericValue > rule.max) {
+        return `${variable} must be less than or equal to ${rule.max}.`;
+    }
+    return '';
+}
+
+function getRoadModule1EditableYearColumnsFromRows(rows) {
+    const years = new Set();
+    rows.forEach(row => {
+        Object.keys(row || {}).forEach(column => {
+            if (/^\d{4}$/.test(column) && isRoadEditableYear(column)) {
+                years.add(column);
+            }
+        });
+    });
+    return Array.from(years).sort();
+}
+
+function applyRoadModule1UploadedRowsClientSide(uploadRows) {
+    if (!Array.isArray(uploadRows) || uploadRows.length === 0) {
+        throw new Error('Uploaded file has no data rows.');
+    }
+
+    const missingKeyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS
+        .filter(column => !Object.prototype.hasOwnProperty.call(uploadRows[0], column));
+    if (missingKeyColumns.length > 0) {
+        throw new Error(`Uploaded file is missing required columns: ${missingKeyColumns.join(', ')}`);
+    }
+    if (!Object.prototype.hasOwnProperty.call(uploadRows[0], String(ROAD_MODULE1_BASE_YEAR))) {
+        throw new Error(`Uploaded file must include the base-year column ${ROAD_MODULE1_BASE_YEAR}.`);
+    }
+
+    const editableYearColumns = getRoadModule1EditableYearColumnsFromRows(State.roadModule1.rows);
+    if (editableYearColumns.length === 0) {
+        throw new Error('Current selection has no editable year columns to overlay.');
+    }
+
+    const targetRows = State.roadModule1.rows.map(row => ({ ...row }));
+    const targetRowByKey = new Map(
+        targetRows.map(row => [getRoadModule1ComparableKeyFromRow(row), row])
+    );
+
+    let appliedCount = 0;
+    let unmatchedCount = 0;
+    let validationIssueCount = 0;
+
+    uploadRows.forEach(uploadRow => {
+        const rowKey = getRoadModule1ComparableKeyFromRow(uploadRow);
+        const targetRow = targetRowByKey.get(rowKey);
+        if (!targetRow) {
+            unmatchedCount += 1;
+            return;
+        }
+
+        editableYearColumns.forEach(yearColumn => {
+            if (!Object.prototype.hasOwnProperty.call(uploadRow, yearColumn)) return;
+            const rawValue = uploadRow[yearColumn];
+            if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') return;
+
+            const numericValue = Number(String(rawValue).replace(/,/g, '').trim());
+            if (!Number.isFinite(numericValue)) {
+                validationIssueCount += 1;
+                return;
+            }
+
+            const validationMessage = validateRoadModule1ValueForVariable(String(targetRow.Variable || ''), numericValue);
+            if (validationMessage) {
+                validationIssueCount += 1;
+                return;
+            }
+
+            targetRow[yearColumn] = numericValue;
+            appliedCount += 1;
+        });
+    });
+
+    State.roadModule1.rows = targetRows;
+    return { appliedCount, unmatchedCount, validationIssueCount };
+}
+
+function buildRoadModule1CompletedRowsForCheckpoint() {
+    const rowsByKey = new Map(
+        State.roadModule1.rows.map(row => [buildRoadModule1Key(row), { ...row }])
+    );
+
+    Array.from(State.roadModule1.sharedMileageOverrides.values())
+        .filter(override => override.value !== null && override.value !== '' && isRoadEditableYear(override.year))
+        .forEach(override => {
+            State.roadModule1.rows
+                .filter(row => isRoadMileageRow(row) && getRoadSharedMileageKey(row) === override.sharedKey)
+                .forEach(row => {
+                    const rowKey = buildRoadModule1Key(row);
+                    const targetRow = rowsByKey.get(rowKey);
+                    if (targetRow) targetRow[String(override.year)] = Number(override.value);
+                });
+        });
+
+    Array.from(State.roadModule1.overrides.values())
+        .filter(override => override.value !== null && override.value !== '' && isRoadEditableYear(override.year))
+        .forEach(override => {
+            const rowKey = State.roadModule1.keyColumns
+                .map(column => `${column}=${override.key?.[column] ?? ''}`)
+                .join('||');
+            const targetRow = rowsByKey.get(rowKey);
+            if (targetRow) targetRow[String(override.year)] = Number(override.value);
+        });
+
+    return Array.from(rowsByKey.values());
+}
+
+function exportRoadModule1CheckpointWorkbookClientSide(completedRows, economyCode, fileNameOverride = '') {
+    if (typeof XLSX === 'undefined') {
+        throw new Error('Workbook export requires the SheetJS parser in static mode.');
+    }
+
+    const detailsSheet = XLSX.utils.json_to_sheet(completedRows, { skipHeader: false });
+
+    const preferredDataColumns = ['Branch Path', 'Variable', 'Scenario', 'Region', 'Scale', 'Units', 'Per...', '2022', '2030', '2040', '2050'];
+    const existingColumns = completedRows.length ? Object.keys(completedRows[0]) : [];
+    const dataColumns = preferredDataColumns.filter(column => existingColumns.includes(column));
+    const dataRows = completedRows.map(row => {
+        const dataRow = {};
+        dataColumns.forEach(column => {
+            dataRow[column] = row[column] ?? '';
+        });
+        return dataRow;
+    });
+    const dataSheet = XLSX.utils.json_to_sheet(dataRows, { skipHeader: false });
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, dataSheet, 'Data');
+    XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Details');
+
+    const fileName = fileNameOverride || `road_module1_inputs_${economyCode}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+}
+
+function buildRoadModule1ExportOverrides() {
+    const overridesByKey = new Map();
+
+    State.roadModule1.rows.forEach(row => {
+        const rowKey = buildRoadModule1Key(row);
+        const keyPayload = roadModule1KeyPayload(row);
+        getRoadYearColumns(row)
+            .filter(isRoadEditableYear)
+            .forEach(year => {
+                const value = getRoadDefaultValue(row, year);
+                if (value === null || value === undefined || value === '') return;
+                overridesByKey.set(`${rowKey}||Year=${year}`, {
+                    key: keyPayload,
+                    year: year,
+                    value: value,
+                    comment: 'Checkpoint value from current browser state.'
+                });
+            });
+    });
+
+    State.roadModule1.rows
+        .filter(isRoadMileageRow)
+        .forEach(row => {
+            const rowKey = buildRoadModule1Key(row);
+            const keyPayload = roadModule1KeyPayload(row);
+            getRoadYearColumns(row).forEach(year => {
+                const detailedOverrideKey = `${rowKey}||Year=${year}`;
+
+                const sharedOverride = getRoadSharedMileageOverride(row, year);
+                if (!sharedOverride || sharedOverride.value === null || sharedOverride.value === '') return;
+
+                overridesByKey.set(detailedOverrideKey, {
+                    key: keyPayload,
+                    year: year,
+                    value: sharedOverride.value,
+                    comment: sharedOverride.comment || 'Inherited from shared mileage value.'
+                });
+            });
+        });
+
+    Array.from(State.roadModule1.overrides.values())
+        .filter(item => item.value !== null && item.value !== '' && isRoadEditableYear(item.year))
+        .forEach(override => {
+            overridesByKey.set(buildRoadModule1OverrideMapKey(override), override);
+        });
+
+    return Array.from(overridesByKey.values())
+        .filter(item => item.value !== null && item.value !== '');
 }
 
 function handleMacroDriverTemplateToggle() {
@@ -356,6 +2747,103 @@ function renderGlobalMacroDriversPanel() {
                     showCustomToast(`Macro driver '${associatedKey}' deleted successfully.`, "info");
                 }
             });
+        });
+    });
+}
+
+// ==========================================
+// USER-DEFINED VARIABLES
+// ==========================================
+
+function _toSnakeCase(str) {
+    return str.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function handleAddUserVariable() {
+    const name = DOM.inputUvarName.value.trim();
+    if (!name) {
+        showCustomToast("Please enter a variable name.", "warning");
+        return;
+    }
+    const rawValue = DOM.inputUvarValue.value.trim();
+    if (rawValue === '') {
+        showCustomToast("Please enter a numeric value.", "warning");
+        return;
+    }
+    const value = parseFloat(rawValue);
+    if (isNaN(value)) {
+        showCustomToast("Value must be a number.", "warning");
+        return;
+    }
+
+    const key = _toSnakeCase(name);
+    if (State.userVariables.some(v => v.key === key)) {
+        showCustomToast(`A variable with key '${key}' already exists.`, "warning");
+        return;
+    }
+
+    State.userVariables.push({
+        id: Date.now(),
+        name: name,
+        key: key,
+        value: value,
+        unit: DOM.inputUvarUnit.value.trim() || null,
+        category: DOM.inputUvarCategory.value.trim() || null,
+        description: DOM.inputUvarDescription.value.trim() || null
+    });
+
+    // Clear form fields
+    DOM.inputUvarName.value = '';
+    DOM.inputUvarValue.value = '';
+    DOM.inputUvarUnit.value = '';
+    DOM.inputUvarCategory.value = '';
+    DOM.inputUvarDescription.value = '';
+
+    renderUserVariablesPanel();
+    showCustomToast(`Variable '${name}' added.`, "success");
+}
+
+function renderUserVariablesPanel() {
+    DOM.userVarsContainer.innerHTML = '';
+
+    if (State.userVariables.length === 0) {
+        DOM.userVarsContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center py-1">No variables added yet.</p>';
+        return;
+    }
+
+    State.userVariables.forEach((v, idx) => {
+        const html = `
+            <div class="bg-white border border-amber-200 rounded p-1.5 shadow-sm fade-in space-y-0.5" data-idx="${idx}">
+                <div class="flex items-start justify-between gap-1">
+                    <div class="flex-1 min-w-0">
+                        <span class="block text-xs font-semibold text-slate-700 truncate" title="${v.name}">${v.name}</span>
+                        ${v.category ? `<span class="text-[9px] text-amber-600 uppercase tracking-tight font-bold">${v.category}</span>` : ''}
+                    </div>
+                    <button class="text-slate-300 hover:text-red-500 font-bold text-sm leading-none px-0.5 btn-remove-uvar flex-shrink-0" data-idx="${idx}" title="Remove variable">&times;</button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <input type="number" step="any" value="${v.value}" class="flex-1 text-xs border border-slate-200 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-amber-400 input-uvar-val" data-idx="${idx}">
+                    ${v.unit ? `<span class="text-[10px] text-slate-500 font-medium flex-shrink-0">${v.unit}</span>` : ''}
+                </div>
+                ${v.description ? `<p class="text-[9px] text-slate-400 italic truncate" title="${v.description}">${v.description}</p>` : ''}
+            </div>
+        `;
+        DOM.userVarsContainer.insertAdjacentHTML('beforeend', html);
+    });
+
+    DOM.userVarsContainer.querySelectorAll('.input-uvar-val').forEach(input => {
+        input.addEventListener('input', e => {
+            const idx = parseInt(e.target.dataset.idx);
+            State.userVariables[idx].value = parseFloat(e.target.value) || 0;
+        });
+    });
+
+    DOM.userVarsContainer.querySelectorAll('.btn-remove-uvar').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const idx = parseInt(e.target.closest('[data-idx]').dataset.idx);
+            const removed = State.userVariables.splice(idx, 1)[0];
+            renderUserVariablesPanel();
+            showCustomToast(`Variable '${removed.name}' removed.`, "info");
         });
     });
 }
@@ -1356,11 +3844,19 @@ DOM.btnExport.addEventListener('click', async () => {
     showLoading("Generating LEAP Export...");
     try {
         const payload = {
-            economy: State.economy, 
-            year: State.year, 
+            economy: State.economy,
+            year: State.year,
             sector_flow: State.sector_flow,
-            macro_drivers: State.macroDrivers, 
-            balanced_tree: State.treeState 
+            macro_drivers: State.macroDrivers,
+            balanced_tree: State.treeState,
+            user_variables: State.userVariables.map(v => ({
+                name: v.key,
+                display_name: v.name,
+                value: v.value,
+                unit: v.unit || null,
+                description: v.description || null,
+                category: v.category || null
+            }))
         };
         const res = await EnergyModelAPI.exportToLeap(payload);
         await showCustomConfirm(

@@ -1,0 +1,253 @@
+economy_code,Region,Scenario,Variable,row_count,source_types,needs_research_priority
+01AUS,Australia,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+01AUS,Australia,Reference,Mileage,7,default_best_guess,True
+01AUS,Australia,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+01AUS,Australia,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+01AUS,Australia,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+01AUS,Australia,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+01AUS,Australia,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+01AUS,Australia,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+01AUS,Australia,Reference,Stock,30,default_best_guess,True
+01AUS,Australia,Reference,Survival Rate,62,default_best_guess,True
+01AUS,Australia,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+01AUS,Australia,Reference,Vintage Profile Share,62,default_best_guess,True
+02BD,Brunei Darussalam,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+02BD,Brunei Darussalam,Reference,Mileage,7,default_best_guess,True
+02BD,Brunei Darussalam,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+02BD,Brunei Darussalam,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+02BD,Brunei Darussalam,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+02BD,Brunei Darussalam,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+02BD,Brunei Darussalam,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+02BD,Brunei Darussalam,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+02BD,Brunei Darussalam,Reference,Stock,30,default_best_guess,True
+02BD,Brunei Darussalam,Reference,Survival Rate,62,default_best_guess,True
+02BD,Brunei Darussalam,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+02BD,Brunei Darussalam,Reference,Vintage Profile Share,62,default_best_guess,True
+03CDA,Canada,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+03CDA,Canada,Reference,Mileage,7,default_best_guess,True
+03CDA,Canada,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+03CDA,Canada,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+03CDA,Canada,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+03CDA,Canada,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+03CDA,Canada,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+03CDA,Canada,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+03CDA,Canada,Reference,Stock,30,default_best_guess,True
+03CDA,Canada,Reference,Survival Rate,62,default_best_guess,True
+03CDA,Canada,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+03CDA,Canada,Reference,Vintage Profile Share,62,default_best_guess,True
+04CHL,Chile,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+04CHL,Chile,Reference,Mileage,7,default_best_guess,True
+04CHL,Chile,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+04CHL,Chile,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+04CHL,Chile,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+04CHL,Chile,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+04CHL,Chile,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+04CHL,Chile,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+04CHL,Chile,Reference,Stock,30,default_best_guess,True
+04CHL,Chile,Reference,Survival Rate,62,default_best_guess,True
+04CHL,Chile,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+04CHL,Chile,Reference,Vintage Profile Share,62,default_best_guess,True
+05PRC,China,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+05PRC,China,Reference,Mileage,7,default_best_guess,True
+05PRC,China,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+05PRC,China,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+05PRC,China,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+05PRC,China,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+05PRC,China,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+05PRC,China,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+05PRC,China,Reference,Stock,30,default_best_guess,True
+05PRC,China,Reference,Survival Rate,62,default_best_guess,True
+05PRC,China,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+05PRC,China,Reference,Vintage Profile Share,62,default_best_guess,True
+06HKC,"Hong Kong, China",Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+06HKC,"Hong Kong, China",Reference,Mileage,7,default_best_guess,True
+06HKC,"Hong Kong, China",Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+06HKC,"Hong Kong, China",Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+06HKC,"Hong Kong, China",Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+06HKC,"Hong Kong, China",Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+06HKC,"Hong Kong, China",Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+06HKC,"Hong Kong, China",Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+06HKC,"Hong Kong, China",Reference,Stock,30,default_best_guess,True
+06HKC,"Hong Kong, China",Reference,Survival Rate,62,default_best_guess,True
+06HKC,"Hong Kong, China",Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+06HKC,"Hong Kong, China",Reference,Vintage Profile Share,62,default_best_guess,True
+07INA,Indonesia,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+07INA,Indonesia,Reference,Mileage,7,default_best_guess,True
+07INA,Indonesia,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+07INA,Indonesia,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+07INA,Indonesia,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+07INA,Indonesia,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+07INA,Indonesia,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+07INA,Indonesia,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+07INA,Indonesia,Reference,Stock,30,default_best_guess,True
+07INA,Indonesia,Reference,Survival Rate,62,default_best_guess,True
+07INA,Indonesia,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+07INA,Indonesia,Reference,Vintage Profile Share,62,default_best_guess,True
+08JPN,Japan,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+08JPN,Japan,Reference,Mileage,7,default_best_guess,True
+08JPN,Japan,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+08JPN,Japan,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+08JPN,Japan,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+08JPN,Japan,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+08JPN,Japan,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+08JPN,Japan,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+08JPN,Japan,Reference,Stock,30,default_best_guess,True
+08JPN,Japan,Reference,Survival Rate,62,default_best_guess,True
+08JPN,Japan,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+08JPN,Japan,Reference,Vintage Profile Share,62,default_best_guess,True
+09ROK,Korea,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+09ROK,Korea,Reference,Mileage,7,default_best_guess,True
+09ROK,Korea,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+09ROK,Korea,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+09ROK,Korea,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+09ROK,Korea,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+09ROK,Korea,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+09ROK,Korea,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+09ROK,Korea,Reference,Stock,30,default_best_guess,True
+09ROK,Korea,Reference,Survival Rate,62,default_best_guess,True
+09ROK,Korea,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+09ROK,Korea,Reference,Vintage Profile Share,62,default_best_guess,True
+10MAS,Malaysia,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+10MAS,Malaysia,Reference,Mileage,7,default_best_guess,True
+10MAS,Malaysia,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+10MAS,Malaysia,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+10MAS,Malaysia,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+10MAS,Malaysia,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+10MAS,Malaysia,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+10MAS,Malaysia,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+10MAS,Malaysia,Reference,Stock,30,default_best_guess,True
+10MAS,Malaysia,Reference,Survival Rate,62,default_best_guess,True
+10MAS,Malaysia,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+10MAS,Malaysia,Reference,Vintage Profile Share,62,default_best_guess,True
+11MEX,Mexico,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+11MEX,Mexico,Reference,Mileage,7,default_best_guess,True
+11MEX,Mexico,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+11MEX,Mexico,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+11MEX,Mexico,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+11MEX,Mexico,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+11MEX,Mexico,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+11MEX,Mexico,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+11MEX,Mexico,Reference,Stock,30,default_best_guess,True
+11MEX,Mexico,Reference,Survival Rate,62,default_best_guess,True
+11MEX,Mexico,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+11MEX,Mexico,Reference,Vintage Profile Share,62,default_best_guess,True
+12NZ,New Zealand,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+12NZ,New Zealand,Reference,Mileage,7,default_best_guess,True
+12NZ,New Zealand,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+12NZ,New Zealand,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+12NZ,New Zealand,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+12NZ,New Zealand,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+12NZ,New Zealand,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+12NZ,New Zealand,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+12NZ,New Zealand,Reference,Stock,30,default_best_guess,True
+12NZ,New Zealand,Reference,Survival Rate,62,default_best_guess,True
+12NZ,New Zealand,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+12NZ,New Zealand,Reference,Vintage Profile Share,62,default_best_guess,True
+13PNG,Papua New Guinea,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+13PNG,Papua New Guinea,Reference,Mileage,7,default_best_guess,True
+13PNG,Papua New Guinea,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+13PNG,Papua New Guinea,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+13PNG,Papua New Guinea,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+13PNG,Papua New Guinea,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+13PNG,Papua New Guinea,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+13PNG,Papua New Guinea,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+13PNG,Papua New Guinea,Reference,Stock,30,default_best_guess,True
+13PNG,Papua New Guinea,Reference,Survival Rate,62,default_best_guess,True
+13PNG,Papua New Guinea,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+13PNG,Papua New Guinea,Reference,Vintage Profile Share,62,default_best_guess,True
+14PE,Peru,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+14PE,Peru,Reference,Mileage,7,default_best_guess,True
+14PE,Peru,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+14PE,Peru,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+14PE,Peru,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+14PE,Peru,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+14PE,Peru,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+14PE,Peru,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+14PE,Peru,Reference,Stock,30,default_best_guess,True
+14PE,Peru,Reference,Survival Rate,62,default_best_guess,True
+14PE,Peru,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+14PE,Peru,Reference,Vintage Profile Share,62,default_best_guess,True
+15PHL,Philippines,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+15PHL,Philippines,Reference,Mileage,7,default_best_guess,True
+15PHL,Philippines,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+15PHL,Philippines,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+15PHL,Philippines,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+15PHL,Philippines,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+15PHL,Philippines,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+15PHL,Philippines,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+15PHL,Philippines,Reference,Stock,30,default_best_guess,True
+15PHL,Philippines,Reference,Survival Rate,62,default_best_guess,True
+15PHL,Philippines,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+15PHL,Philippines,Reference,Vintage Profile Share,62,default_best_guess,True
+16RUS,Russia,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+16RUS,Russia,Reference,Mileage,7,default_best_guess,True
+16RUS,Russia,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+16RUS,Russia,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+16RUS,Russia,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+16RUS,Russia,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+16RUS,Russia,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+16RUS,Russia,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+16RUS,Russia,Reference,Stock,30,default_best_guess,True
+16RUS,Russia,Reference,Survival Rate,62,default_best_guess,True
+16RUS,Russia,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+16RUS,Russia,Reference,Vintage Profile Share,62,default_best_guess,True
+17SGP,Singapore,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+17SGP,Singapore,Reference,Mileage,7,default_best_guess,True
+17SGP,Singapore,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+17SGP,Singapore,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+17SGP,Singapore,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+17SGP,Singapore,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+17SGP,Singapore,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+17SGP,Singapore,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+17SGP,Singapore,Reference,Stock,30,default_best_guess,True
+17SGP,Singapore,Reference,Survival Rate,62,default_best_guess,True
+17SGP,Singapore,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+17SGP,Singapore,Reference,Vintage Profile Share,62,default_best_guess,True
+18CT,Chinese Taipei,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+18CT,Chinese Taipei,Reference,Mileage,7,default_best_guess,True
+18CT,Chinese Taipei,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+18CT,Chinese Taipei,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+18CT,Chinese Taipei,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+18CT,Chinese Taipei,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+18CT,Chinese Taipei,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+18CT,Chinese Taipei,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+18CT,Chinese Taipei,Reference,Stock,30,default_best_guess,True
+18CT,Chinese Taipei,Reference,Survival Rate,62,default_best_guess,True
+18CT,Chinese Taipei,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+18CT,Chinese Taipei,Reference,Vintage Profile Share,62,default_best_guess,True
+19THA,Thailand,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+19THA,Thailand,Reference,Mileage,7,default_best_guess,True
+19THA,Thailand,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+19THA,Thailand,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+19THA,Thailand,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+19THA,Thailand,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+19THA,Thailand,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+19THA,Thailand,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+19THA,Thailand,Reference,Stock,30,default_best_guess,True
+19THA,Thailand,Reference,Survival Rate,62,default_best_guess,True
+19THA,Thailand,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+19THA,Thailand,Reference,Vintage Profile Share,62,default_best_guess,True
+20USA,United States,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+20USA,United States,Reference,Mileage,7,default_best_guess,True
+20USA,United States,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+20USA,United States,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+20USA,United States,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+20USA,United States,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+20USA,United States,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+20USA,United States,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+20USA,United States,Reference,Stock,30,default_best_guess,True
+20USA,United States,Reference,Survival Rate,62,default_best_guess,True
+20USA,United States,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+20USA,United States,Reference,Vintage Profile Share,62,default_best_guess,True
+21VN,Viet Nam,Reference,Fuel Economy,51,default_best_guess|transport_leap_export_default,True
+21VN,Viet Nam,Reference,Mileage,7,default_best_guess,True
+21VN,Viet Nam,Reference,PHEV Electric Driving Share,2,apec_phev_utilisation_rates,False
+21VN,Viet Nam,Reference,Passenger Vehicle Saturation,1,apec_passenger_saturation,False
+21VN,Viet Nam,Reference,Reconciliation Bound Lower,2,apec_reconciliation_factors,False
+21VN,Viet Nam,Reference,Reconciliation Bound Upper,2,apec_reconciliation_factors,False
+21VN,Viet Nam,Reference,Reconciliation Weight,2,apec_reconciliation_factors,False
+21VN,Viet Nam,Reference,Sales Share,30,default_best_guess|transport_leap_export_default,True
+21VN,Viet Nam,Reference,Stock,30,default_best_guess,True
+21VN,Viet Nam,Reference,Survival Rate,62,default_best_guess,True
+21VN,Viet Nam,Reference,Vehicle Equivalent Weight,4,apec_vehicle_equivalent_weights,False
+21VN,Viet Nam,Reference,Vintage Profile Share,62,default_best_guess,True
