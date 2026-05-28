@@ -534,7 +534,7 @@
     height: 100%;
     max-width: 560px;
     min-width: 300px;
-    overflow-x: hidden;
+    overflow-x: visible;
     overflow-y: auto;
     resize: horizontal;
     transition: width 260ms ease, transform 260ms ease;
@@ -571,11 +571,10 @@
     font-weight: 900;
     height: 72px;
     justify-content: center;
-    position: sticky;
-    align-self: flex-end;
-    margin-bottom: -72px;
+    position: absolute;
     right: 0;
-    top: 5rem;
+    top: 50%;
+    transform: translate(50%, -50%);
     width: 26px;
     z-index: 90;
 }
@@ -583,11 +582,11 @@
 #road-left-panel.is-collapsed .road-left-toggle {
     border-left: 1px solid #cbd5e1;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
-    left: 0;
-    margin-bottom: 0;
-    position: fixed;
-    right: auto;
-    top: 6rem;
+    left: auto;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(50%, -50%);
     z-index: 1000;
 }
 
