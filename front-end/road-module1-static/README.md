@@ -7,10 +7,10 @@ This folder is the packaged local-data source for static/client-side deployments
 - `index.json`
   - contains available `versions`, `economies`, and `default_version`.
 
-- defaults JSON files by version/economy/scenario, for example:
-  - `v2026_05_25_best_guess/20USA_Reference.json`
-  - fallback name (scenario omitted) is also supported:
-    - `v2026_05_25_best_guess/20USA.json`
+- defaults JSON files by version/economy, for example:
+  - `v2026_05_25_best_guess/20USA.json`
+
+The scenario is fixed to `Current Accounts` in the loaded rows.
 
 ## Defaults file schema
 
@@ -23,7 +23,7 @@ Each defaults file should look like:
     {
       "Branch Path": "Demand\\Passenger road\\LPVs\\ICE medium",
       "Variable": "Sales Share",
-      "Scenario": "Reference",
+      "Scenario": "Current Accounts",
       "Region": "United States",
       "Scale": "%",
       "Units": "Share",

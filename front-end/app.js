@@ -18,7 +18,7 @@ const State = {
     roadModule1: {
         version: null,
         economy: null,
-        scenario: 'Reference',
+        scenario: 'Current Accounts',
         keyColumns: [],
         rows: [],
         overrides: new Map(),
@@ -166,7 +166,6 @@ const DOM = {
     roadModule1Main: document.getElementById('road-module1-main'),
     roadVersionSelect: document.getElementById('road-version-select'),
     roadEconomySelect: document.getElementById('road-economy-select'),
-    roadScenarioSelect: document.getElementById('road-scenario-select'),
     roadLoadDefaults: document.getElementById('road-load-defaults'),
     roadUseBuiltinProvidedValues: document.getElementById('road-use-builtin-provided-values'),
     roadDownloadProvidedTemplate: document.getElementById('road-download-provided-template'),
@@ -213,6 +212,12 @@ const DOM = {
 // ==========================================
 let currentConfirmResolve = null;
 let roadModule1DraftSaveTimer = null;
+let roadModule1AutoLoadInFlight = false;
+let roadModule1SuppressAutoLoad = false;
+
+function getSelectedRoadModule1Version() {
+    return DOM.roadVersionSelect?.value || State.roadModule1.version || ROAD_MODULE1_FALLBACK_VERSION;
+}
 
 function showCustomConfirm(title, message, options = {}) {
     const modal = document.getElementById('custom-confirm-modal');
@@ -452,7 +457,9 @@ function setupRoadModule1() {
     seedRoadModule1FallbackSelectors();
     setupRoadHelpTooltips();
 
-    DOM.roadLoadDefaults.addEventListener('click', loadRoadModule1Defaults);
+    if (DOM.roadLoadDefaults) {
+        DOM.roadLoadDefaults.addEventListener('click', loadRoadModule1Defaults);
+    }
     if (DOM.roadUseBuiltinProvidedValues) {
         DOM.roadUseBuiltinProvidedValues.addEventListener('click', loadRoadModule1BuiltinProvidedValues);
     }
@@ -486,8 +493,16 @@ function setupRoadModule1() {
     });
     setupRoadModule1FilterControls();
     setupRoadModule1ViewControls();
-    DOM.roadVersionSelect.addEventListener('change', async () => {
-        await populateRoadModule1Economies(DOM.roadVersionSelect.value);
+    if (DOM.roadVersionSelect) {
+        DOM.roadVersionSelect.addEventListener('change', async () => {
+            if (roadModule1SuppressAutoLoad) return;
+            await populateRoadModule1Economies(getSelectedRoadModule1Version());
+            await autoLoadRoadModule1OnSelectionChange();
+        });
+    }
+    DOM.roadEconomySelect.addEventListener('change', async () => {
+        if (roadModule1SuppressAutoLoad) return;
+        await autoLoadRoadModule1OnSelectionChange();
     });
 
     updateRoadModule1OptionalBackendUiState();
@@ -571,13 +586,11 @@ async function fetchRoadModule1StaticIndex() {
     return data;
 }
 
-async function loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario = 'Reference') {
+async function loadRoadModule1DefaultsFromStaticBundle(version, economy) {
     const safeVersion = sanitizeRoadStaticSegment(version);
     const safeEconomy = sanitizeRoadStaticSegment(economy);
-    const safeScenario = sanitizeRoadStaticSegment(scenario || 'Reference');
 
     const candidatePaths = [
-        `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}_${safeScenario}.json`,
         `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}.json`
     ];
 
@@ -588,6 +601,10 @@ async function loadRoadModule1DefaultsFromStaticBundle(version, economy, scenari
         if (!Array.isArray(data?.rows)) {
             throw new Error(`Static defaults file is malformed: ${path}`);
         }
+        data.rows = data.rows.map(row => ({
+            ...row,
+            Scenario: 'Current Accounts'
+        }));
         return {
             key_columns: Array.isArray(data?.key_columns) && data.key_columns.length
                 ? data.key_columns
@@ -597,7 +614,7 @@ async function loadRoadModule1DefaultsFromStaticBundle(version, economy, scenari
     }
 
     throw new Error(
-        `No packaged defaults file found for ${version}/${economy}/${scenario}. Expected one of: ${candidatePaths.join(' or ')}`
+        `No packaged defaults file found for ${version}/${economy}. Expected one of: ${candidatePaths.join(' or ')}`
     );
 }
 
@@ -725,24 +742,29 @@ async function populateRoadModule1Selectors() {
         const staticIndex = await fetchRoadModule1StaticIndex();
         const versions = getRoadStaticIndexVersions(staticIndex);
         if (versions.length > 0) {
+            roadModule1SuppressAutoLoad = true;
             DOM.roadVersionSelect.innerHTML = '';
             versions.forEach(version => {
                 DOM.roadVersionSelect.add(new Option(version, version));
             });
             DOM.roadVersionSelect.value = getRoadStaticIndexDefaultVersion(staticIndex, versions);
             await populateRoadModule1Economies(DOM.roadVersionSelect.value);
+            roadModule1SuppressAutoLoad = false;
             if (DOM.roadSaveStatus) {
                 DOM.roadSaveStatus.innerText = 'Using packaged static Road Module 1 selector metadata.';
             }
+            await autoLoadRoadModule1OnSelectionChange();
             return;
         }
     } catch (error) {
+        roadModule1SuppressAutoLoad = false;
         if (DOM.roadSaveStatus) {
             DOM.roadSaveStatus.innerText = `Static selector metadata unavailable. Using built-in selector defaults. (${error.message})`;
         }
     }
 
     seedRoadModule1FallbackSelectors();
+    await autoLoadRoadModule1OnSelectionChange();
 }
 
 async function populateRoadModule1Economies(version) {
@@ -750,12 +772,17 @@ async function populateRoadModule1Economies(version) {
         const staticIndex = await fetchRoadModule1StaticIndex();
         const economies = getRoadStaticEconomies(staticIndex, version);
         if (economies.length > 0) {
+            const previousEconomy = DOM.roadEconomySelect.value;
             DOM.roadEconomySelect.innerHTML = '';
             economies.forEach(item => {
                 DOM.roadEconomySelect.add(new Option(`${item.economy} (${item.economy_name})`, item.economy));
             });
-            if (DOM.roadEconomySelect.querySelector('option[value="20USA"]')) {
+            if (previousEconomy && DOM.roadEconomySelect.querySelector(`option[value="${previousEconomy}"]`)) {
+                DOM.roadEconomySelect.value = previousEconomy;
+            } else if (DOM.roadEconomySelect.querySelector('option[value="20USA"]')) {
                 DOM.roadEconomySelect.value = '20USA';
+            } else if (DOM.roadEconomySelect.options.length > 0) {
+                DOM.roadEconomySelect.value = DOM.roadEconomySelect.options[0].value;
             }
             return;
         }
@@ -766,9 +793,32 @@ async function populateRoadModule1Economies(version) {
     seedRoadModule1FallbackSelectors();
 }
 
-function getRoadModule1DraftKey(version = State.roadModule1.version, economy = State.roadModule1.economy, scenario = State.roadModule1.scenario) {
-    if (!version || !economy || !scenario) return null;
-    return `roadModule1Draft:${version}:${economy}:${scenario}`;
+async function autoLoadRoadModule1OnSelectionChange() {
+    if (roadModule1SuppressAutoLoad || roadModule1AutoLoadInFlight) return;
+
+    const version = getSelectedRoadModule1Version();
+    const economy = DOM.roadEconomySelect?.value;
+    if (!version || !economy) return;
+
+    const hasLoadedRows = Array.isArray(State.roadModule1.rows) && State.roadModule1.rows.length > 0;
+    const selectionChanged = (
+        State.roadModule1.version !== version
+        || State.roadModule1.economy !== economy
+    );
+
+    if (!selectionChanged && hasLoadedRows) return;
+
+    roadModule1AutoLoadInFlight = true;
+    try {
+        await loadRoadModule1Defaults();
+    } finally {
+        roadModule1AutoLoadInFlight = false;
+    }
+}
+
+function getRoadModule1DraftKey(version = State.roadModule1.version, economy = State.roadModule1.economy) {
+    if (!version || !economy) return null;
+    return `roadModule1Draft:${version}:${economy}`;
 }
 
 function buildRoadModule1OverrideMapKey(override) {
@@ -787,7 +837,7 @@ function serializeRoadModule1Draft() {
         savedAt: new Date().toISOString(),
         version: State.roadModule1.version,
         economy: State.roadModule1.economy,
-        scenario: State.roadModule1.scenario,
+        scenario: 'Current Accounts',
         overrides: Array.from(State.roadModule1.overrides.values()),
         activeFilter: State.roadModule1.activeFilter,
         structuredFilters: { ...State.roadModule1.structuredFilters },
@@ -799,8 +849,8 @@ function serializeRoadModule1Draft() {
     };
 }
 
-function readRoadModule1Draft(version, economy, scenario) {
-    const draftKey = getRoadModule1DraftKey(version, economy, scenario);
+function readRoadModule1Draft(version, economy) {
+    const draftKey = getRoadModule1DraftKey(version, economy);
     if (!draftKey) return null;
     if (typeof localStorage === 'undefined') return null;
     try {
@@ -833,8 +883,8 @@ function scheduleRoadModule1DraftSave() {
     roadModule1DraftSaveTimer = setTimeout(saveRoadModule1DraftNow, 350);
 }
 
-function clearRoadModule1Draft(version = State.roadModule1.version, economy = State.roadModule1.economy, scenario = State.roadModule1.scenario) {
-    const draftKey = getRoadModule1DraftKey(version, economy, scenario);
+function clearRoadModule1Draft(version = State.roadModule1.version, economy = State.roadModule1.economy) {
+    const draftKey = getRoadModule1DraftKey(version, economy);
     if (!draftKey) return;
     if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(draftKey);
@@ -846,7 +896,7 @@ function clearRoadModule1Draft(version = State.roadModule1.version, economy = St
 async function clearRoadModule1DraftForCurrentSelection() {
     const accepted = await showCustomConfirm(
         'Clear Saved Draft',
-        'Clear the browser-saved draft for the currently loaded Road model version, economy, and scenario?',
+        'Clear the browser-saved draft for the currently loaded Road model version and economy?',
         { confirmText: 'Clear Draft', isDanger: true }
     );
     if (!accepted) return;
@@ -924,34 +974,33 @@ function updateRoadModule1OverrideCount() {
 }
 
 async function loadRoadModule1Defaults() {
-    const version = DOM.roadVersionSelect.value;
-    const economy = DOM.roadEconomySelect.value;
-    const scenario = DOM.roadScenarioSelect.value;
+    const version = getSelectedRoadModule1Version();
+    const economy = DOM.roadEconomySelect?.value;
 
-    if (!version || !economy) {
-        showCustomToast("Select a road provided-values version and economy first.", "warning");
+    if (!economy) {
+        showCustomToast("Select an economy first.", "warning");
         return;
     }
 
     showLoading("Loading Road model Provided Values...");
     try {
-        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         const loadSourceLabel = 'packaged static defaults';
 
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
-        State.roadModule1.scenario = scenario;
+        State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = response.key_columns || ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
-        const draft = readRoadModule1Draft(version, economy, scenario);
+        const draft = readRoadModule1Draft(version, economy);
         if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
             const savedAtLabel = draft.savedAt ? new Date(draft.savedAt).toLocaleString('en-US') : 'an earlier time';
             const accepted = await showCustomConfirm(
                 'Restore Saved Draft',
-                `A browser-saved draft exists for this version/economy/scenario from ${savedAtLabel}.\n\nRestore it now?`,
+                `A browser-saved draft exists for this version/economy from ${savedAtLabel}.\n\nRestore it now?`,
                 { confirmText: 'Restore Draft', cancelText: 'Ignore' }
             );
             if (accepted) {
@@ -977,17 +1026,16 @@ async function handleRoadModule1ProvidedFileSelected(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
-    const version = DOM.roadVersionSelect.value;
-    const economy = DOM.roadEconomySelect.value;
-    const scenario = DOM.roadScenarioSelect.value;
-    if (!version || !economy) {
-        showCustomToast("Select a road provided-values version and economy first.", "warning");
+    const version = getSelectedRoadModule1Version();
+    const economy = DOM.roadEconomySelect?.value;
+    if (!economy) {
+        showCustomToast("Select an economy first.", "warning");
         event.target.value = '';
         return;
     }
 
     if (!State.roadModule1.rows || State.roadModule1.rows.length === 0) {
-        showCustomToast("Load provided values first, then upload a checkpoint/values file to overlay it in your browser state.", "warning", 5000);
+        showCustomToast("Defaults are not loaded yet. Change economy and wait, then upload your filled template.", "warning", 5000);
         event.target.value = '';
         return;
     }
@@ -999,15 +1047,15 @@ async function handleRoadModule1ProvidedFileSelected(event) {
 
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
-        State.roadModule1.scenario = scenario;
+        State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
-        clearRoadModule1Draft(version, economy, scenario);
+        clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
         DOM.roadSaveStatus.innerText = [
             `${overlayResult.appliedCount.toLocaleString('en-US')} row-year values applied from ${file.name}.`,
-            `${overlayResult.unmatchedCount.toLocaleString('en-US')} uploaded rows did not match this version/economy/scenario template.`,
+            `${overlayResult.unmatchedCount.toLocaleString('en-US')} uploaded rows did not match this version/economy template.`,
             `${overlayResult.validationIssueCount.toLocaleString('en-US')} value checks were flagged and skipped.`
         ].join('\n');
         renderRoadModule1Inputs();
@@ -1032,27 +1080,26 @@ async function handleRoadModule1ProvidedFileSelected(event) {
 }
 
 async function loadRoadModule1BuiltinProvidedValues() {
-    const version = DOM.roadVersionSelect.value;
-    const economy = DOM.roadEconomySelect.value;
-    const scenario = DOM.roadScenarioSelect.value;
+    const version = getSelectedRoadModule1Version();
+    const economy = DOM.roadEconomySelect?.value;
 
-    if (!version || !economy) {
-        showCustomToast("Select a road provided-values version and economy first.", "warning");
+    if (!economy) {
+        showCustomToast("Select an economy first.", "warning");
         return;
     }
 
     showLoading("Applying Built-In Provided Values...");
     try {
-        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
-        State.roadModule1.scenario = scenario;
+        State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = response.key_columns;
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
-        clearRoadModule1Draft(version, economy, scenario);
+        clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
         DOM.roadSaveStatus.innerText = `Loaded ${State.roadModule1.rows.length.toLocaleString('en-US')} rows from packaged static defaults.`;
         renderRoadModule1Inputs();
@@ -1065,26 +1112,24 @@ async function loadRoadModule1BuiltinProvidedValues() {
 }
 
 async function downloadRoadModule1ProvidedValuesTemplate() {
-    const version = DOM.roadVersionSelect.value;
-    const economy = DOM.roadEconomySelect.value;
-    const scenario = DOM.roadScenarioSelect.value;
+    const version = getSelectedRoadModule1Version();
+    const economy = DOM.roadEconomySelect?.value;
 
-    if (!version || !economy) {
-        showCustomToast("Select a road provided-values version and economy first.", "warning");
+    if (!economy) {
+        showCustomToast("Select an economy first.", "warning");
         return;
     }
 
-    showLoading("Preparing Provided Values Template...");
+    showLoading("Preparing Input CSV...");
     try {
-        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy, scenario);
+        const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         const safeVersion = sanitizeRoadStaticSegment(version);
-        const safeScenario = sanitizeRoadStaticSegment(scenario || 'Reference');
-        const fileName = `road_module1_provided_values_template_${economy}_${safeVersion}_${safeScenario}.xlsx`;
-        exportRoadModule1CheckpointWorkbookClientSide(response.rows, economy, fileName);
-        DOM.roadSaveStatus.innerText = `Provided values template exported from packaged static defaults (${version}/${economy}/${scenario}).`;
-        showCustomToast('Provided values template exported client-side.', 'success', 5000);
+        const fileName = `road_module1_default_filled_inputs_${economy}_${safeVersion}.csv`;
+        exportRoadModule1RowsCsvClientSide(response.rows, economy, fileName);
+        DOM.roadSaveStatus.innerText = `Input CSV downloaded for ${economy}.`;
+        showCustomToast('Input CSV downloaded.', 'success', 5000);
     } catch (error) {
-        showCustomToast("Failed to export provided values template: " + error.message, "error");
+        showCustomToast("Failed to download input CSV: " + error.message, "error");
     } finally {
         hideLoading();
     }
@@ -2065,7 +2110,7 @@ function handleRoadModule1SeriesInputChange(rowEl) {
 
 async function saveRoadModule1ResearcherOutput() {
     if (!State.roadModule1.version || !State.roadModule1.economy) {
-        showCustomToast("Load road provided values before exporting.", "warning");
+        showCustomToast("Defaults are not loaded yet. Select economy/scenario and wait.", "warning");
         return;
     }
 
@@ -2073,25 +2118,24 @@ async function saveRoadModule1ResearcherOutput() {
     const originalButtonText = DOM.roadSaveOutput.innerText;
 
     DOM.roadSaveOutput.disabled = true;
-    DOM.roadSaveOutput.innerText = "Exporting...";
-    DOM.roadSaveStatus.innerText = "Exporting checkpoint workbook from current browser state...";
-    showLoading("Exporting Checkpoint Workbook...");
+    DOM.roadSaveOutput.innerText = "Downloading...";
+    DOM.roadSaveStatus.innerText = "Preparing download from current values...";
+    showLoading("Preparing Download...");
     try {
         const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
-        exportRoadModule1CheckpointWorkbookClientSide(completedRows, State.roadModule1.economy);
+        exportRoadModule1RowsCsvClientSide(completedRows, State.roadModule1.economy);
 
         DOM.roadSaveStatus.innerText = [
-            'Checkpoint workbook exported from current browser state.',
-            `Rows included: ${completedRows.length.toLocaleString('en-US')}`,
-            `Checkpoint values applied: ${overrides.length.toLocaleString('en-US')}`,
-            'Download started in your browser.'
+            'CSV download started.',
+            `Rows: ${completedRows.length.toLocaleString('en-US')}`,
+            `Changed values: ${overrides.length.toLocaleString('en-US')}`
         ].join('\n');
 
         clearRoadModule1Draft();
-        showCustomToast('Checkpoint workbook exported client-side.', 'success', 5000);
+        showCustomToast('CSV downloaded.', 'success', 5000);
     } catch (error) {
-        showCustomToast("Failed to save checkpoint workbook: " + error.message, "error");
-        DOM.roadSaveStatus.innerText = "Failed to export checkpoint workbook: " + error.message;
+        showCustomToast("Failed to download CSV: " + error.message, "error");
+        DOM.roadSaveStatus.innerText = "Failed to download CSV: " + error.message;
     } finally {
         DOM.roadSaveOutput.disabled = false;
         DOM.roadSaveOutput.innerText = originalButtonText;
@@ -2168,7 +2212,7 @@ function normalizeRoadNumber(value) {
 
 function getRoadModule1UploadContextDefaults() {
     const version = State.roadModule1.version || DOM.roadVersionSelect.value || '';
-    const scenario = State.roadModule1.scenario || DOM.roadScenarioSelect.value || 'Reference';
+    const scenario = State.roadModule1.scenario || 'Current Accounts';
     const rows = Array.isArray(State.roadModule1.rows) ? State.roadModule1.rows : [];
     const regionFromLoadedRows = rows.length > 0 ? rows[0].Region : '';
     return {
@@ -2178,10 +2222,10 @@ function getRoadModule1UploadContextDefaults() {
     };
 }
 
-function getRoadRowsByVariableAndTransport(variableName, transportType = 'all', scenario = 'Reference') {
+function getRoadRowsByVariableAndTransport(variableName, transportType = 'all', scenario = 'Current Accounts') {
     const normalizedVariable = normalizeRoadTextToken(variableName);
     const normalizedTransport = normalizeRoadTextToken(transportType || 'all');
-    const normalizedScenario = normalizeRoadTextToken(scenario || 'Reference');
+    const normalizedScenario = normalizeRoadTextToken(scenario || 'Current Accounts');
 
     return (State.roadModule1.rows || []).filter(row => {
         if (normalizeRoadTextToken(row.Variable) !== normalizedVariable) return false;
@@ -2218,7 +2262,7 @@ function buildRoadRowsFromFactorsSheet(factorRows, contextDefaults) {
         if (numericValue === null) return;
 
         const transportType = normalizeRoadTextToken(rawRow['Transport Type'] || 'all');
-        const scenario = String(rawRow.Scenario || contextDefaults.scenario || 'Reference').trim();
+        const scenario = String(rawRow.Scenario || contextDefaults.scenario || 'Current Accounts').trim();
 
         const matchingRows = getRoadRowsByVariableAndTransport(variable, transportType, scenario);
         if (matchingRows.length === 0) {
@@ -2295,7 +2339,7 @@ function buildRoadRowsFromLifecycleLikeSheet(sheetRows, lifecycleType, contextDe
             const matchingRow = (State.roadModule1.rows || []).find(row =>
                 row['Branch Path'] === branchPath
                 && normalizeRoadTextToken(row.Variable) === normalizeRoadTextToken(variable)
-                && normalizeRoadTextToken(row.Scenario) === normalizeRoadTextToken(contextDefaults.scenario || 'Reference')
+                && normalizeRoadTextToken(row.Scenario) === normalizeRoadTextToken(contextDefaults.scenario || 'Current Accounts')
             );
 
             if (!matchingRow) {
@@ -2305,7 +2349,7 @@ function buildRoadRowsFromLifecycleLikeSheet(sheetRows, lifecycleType, contextDe
             generatedRows.push({
                 'Branch Path': branchPath,
                 'Variable': variable,
-                'Scenario': matchingRow?.Scenario || contextDefaults.scenario || 'Reference',
+                'Scenario': matchingRow?.Scenario || contextDefaults.scenario || 'Current Accounts',
                 'Region': matchingRow?.Region || contextDefaults.region || '',
                 [String(ROAD_MODULE1_BASE_YEAR)]: point.value
             });
@@ -2332,84 +2376,25 @@ function dedupeRoadUploadRows(rows) {
 async function readRoadModule1RowsFromUploadFile(file) {
     const fileName = String(file?.name || '').toLowerCase();
     const isCsv = fileName.endsWith('.csv');
-    const isWorkbook = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-
-    if (!isCsv && !isWorkbook) {
-        throw new Error('Use a CSV, XLSX, or XLS file with the same Module 1 columns.');
+    if (!isCsv) {
+        throw new Error('Use a CSV file in the downloaded input format.');
     }
 
-    if (isCsv) {
-        const text = await file.text();
-        const csvRows = parseCsvText(text);
-        return {
-            rows: csvRows,
-            summary: {
-                sourceSheet: 'CSV',
-                keyedInputRows: csvRows.length,
-                factorsMappedRows: 0,
-                lifecycleMappedRows: 0,
-                vintageMappedRows: 0,
-                unmappedItems: []
-            }
-        };
-    }
-
-    if (typeof XLSX === 'undefined') {
-        throw new Error('Workbook upload requires the SheetJS parser in static mode.');
-    }
-
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    const contextDefaults = getRoadModule1UploadContextDefaults();
-
-    const preferredSheet = workbook.SheetNames.includes('Details')
-        ? 'Details'
-        : (workbook.SheetNames.includes('Data') ? 'Data' : workbook.SheetNames[0]);
-
-    const preferredRows = XLSX.utils.sheet_to_json(workbook.Sheets[preferredSheet], { defval: '' });
-    const hasPreferredRowKeys = preferredRows.length > 0 && rowHasRoadModule1RequiredColumns(preferredRows[0]);
-    const keyedRowsFromPreferred = hasPreferredRowKeys ? preferredRows : [];
-
-    const factorsRows = workbook.SheetNames.includes('Factors')
-        ? XLSX.utils.sheet_to_json(workbook.Sheets.Factors, { defval: '' })
-        : [];
-    const lifecycleRows = workbook.SheetNames.includes('Lifecycle')
-        ? XLSX.utils.sheet_to_json(workbook.Sheets.Lifecycle, { defval: '' })
-        : [];
-    const vintageRows = workbook.SheetNames.includes('Vintage')
-        ? XLSX.utils.sheet_to_json(workbook.Sheets.Vintage, { defval: '' })
-        : [];
-
-    const generatedFromFactors = buildRoadRowsFromFactorsSheet(factorsRows, contextDefaults);
-    const generatedFromLifecycle = buildRoadRowsFromLifecycleLikeSheet(lifecycleRows, 'lifecycle', contextDefaults);
-    const generatedFromVintage = buildRoadRowsFromLifecycleLikeSheet(vintageRows, 'vintage', contextDefaults);
-
-    const mergedRows = dedupeRoadUploadRows([
-        ...keyedRowsFromPreferred,
-        ...generatedFromFactors.rows,
-        ...generatedFromLifecycle.rows,
-        ...generatedFromVintage.rows
-    ]);
-
-    if (mergedRows.length === 0) {
-        throw new Error(
-            'Workbook upload did not contain usable row-key data. Include Details/Data with key columns, or provide parseable Factors/Lifecycle/Vintage sheets.'
-        );
-    }
+    const text = await file.text();
+    const csvRows = parseCsvText(text).map(row => ({
+        ...row,
+        Scenario: 'Current Accounts'
+    }));
 
     return {
-        rows: mergedRows,
+        rows: csvRows,
         summary: {
-            sourceSheet: preferredSheet,
-            keyedInputRows: keyedRowsFromPreferred.length,
-            factorsMappedRows: generatedFromFactors.rows.length,
-            lifecycleMappedRows: generatedFromLifecycle.rows.length,
-            vintageMappedRows: generatedFromVintage.rows.length,
-            unmappedItems: [
-                ...generatedFromFactors.unmappedItems,
-                ...generatedFromLifecycle.unmappedItems,
-                ...generatedFromVintage.unmappedItems
-            ]
+            sourceSheet: 'CSV',
+            keyedInputRows: csvRows.length,
+            factorsMappedRows: 0,
+            lifecycleMappedRows: 0,
+            vintageMappedRows: 0,
+            unmappedItems: []
         }
     };
 }
@@ -2418,9 +2403,9 @@ function buildRoadUploadSummaryText(fileName, parseSummary, overlayResult) {
     const lines = [
         `File: ${fileName}`,
         '',
-        'Parsed workbook/file content:',
+        'Parsed file content:',
         `- Primary row-key source: ${parseSummary?.sourceSheet || 'Unknown'}`,
-        `- Row-key records read from Data/Details/primary sheet: ${(parseSummary?.keyedInputRows || 0).toLocaleString('en-US')}`,
+        `- Row-key records read from CSV: ${(parseSummary?.keyedInputRows || 0).toLocaleString('en-US')}`,
         `- Additional rows mapped from Factors: ${(parseSummary?.factorsMappedRows || 0).toLocaleString('en-US')}`,
         `- Additional rows mapped from Lifecycle: ${(parseSummary?.lifecycleMappedRows || 0).toLocaleString('en-US')}`,
         `- Additional rows mapped from Vintage: ${(parseSummary?.vintageMappedRows || 0).toLocaleString('en-US')}`,
@@ -2440,7 +2425,7 @@ function buildRoadUploadSummaryText(fileName, parseSummary, overlayResult) {
         }
     }
 
-    lines.push('', 'Recommendation: safest workflow is export checkpoint workbook, edit values while keeping exact structure/key columns, then upload again.');
+    lines.push('', 'Recommended workflow: download CSV, fill the core columns, then upload it back. Blanks and missing optional values are ignored.');
     return lines.join('\n');
 }
 
@@ -2566,31 +2551,34 @@ function buildRoadModule1CompletedRowsForCheckpoint() {
     return Array.from(rowsByKey.values());
 }
 
-function exportRoadModule1CheckpointWorkbookClientSide(completedRows, economyCode, fileNameOverride = '') {
-    if (typeof XLSX === 'undefined') {
-        throw new Error('Workbook export requires the SheetJS parser in static mode.');
-    }
+function exportRoadModule1RowsCsvClientSide(rows, economyCode, fileNameOverride = '') {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const headers = safeRows.length ? Object.keys(safeRows[0]) : [];
+    const escapeCsv = (value) => {
+        const text = value === null || value === undefined ? '' : String(value);
+        if (/[,"\n\r]/.test(text)) {
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    };
 
-    const detailsSheet = XLSX.utils.json_to_sheet(completedRows, { skipHeader: false });
-
-    const preferredDataColumns = ['Branch Path', 'Variable', 'Scenario', 'Region', 'Scale', 'Units', 'Per...', '2022', '2030', '2040', '2050'];
-    const existingColumns = completedRows.length ? Object.keys(completedRows[0]) : [];
-    const dataColumns = preferredDataColumns.filter(column => existingColumns.includes(column));
-    const dataRows = completedRows.map(row => {
-        const dataRow = {};
-        dataColumns.forEach(column => {
-            dataRow[column] = row[column] ?? '';
-        });
-        return dataRow;
+    const csvLines = [];
+    csvLines.push(headers.map(escapeCsv).join(','));
+    safeRows.forEach(row => {
+        csvLines.push(headers.map(header => escapeCsv(row?.[header])).join(','));
     });
-    const dataSheet = XLSX.utils.json_to_sheet(dataRows, { skipHeader: false });
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, dataSheet, 'Data');
-    XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Details');
-
-    const fileName = fileNameOverride || `road_module1_inputs_${economyCode}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const csvText = csvLines.join('\r\n');
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+    const fileName = fileNameOverride || `road_module1_default_filled_inputs_${economyCode}.csv`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
 }
 
 function buildRoadModule1ExportOverrides() {

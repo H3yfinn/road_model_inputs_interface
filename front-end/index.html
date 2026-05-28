@@ -288,17 +288,7 @@
                 <div>
                     <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Road model Provided Values</h2>
                     <div class="space-y-3">
-                        <div>
-                            <div class="flex items-center gap-1.5 mb-1">
-                                <label class="block text-xs font-semibold text-slate-500">Version</label>
-                                <div class="relative group flex-shrink-0">
-                                    <button class="road-help-button" aria-label="Explain Version">?</button>
-                                    <div class="road-help-tooltip road-version-tooltip">
-                                        <h4>Version</h4>
-                                        <p>Version is the dated provided-values package. It identifies the exact assumptions and source flags used for review and checkpoint export.</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="hidden" aria-hidden="true">
                             <select id="road-version-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none"></select>
                         </div>
                         <div>
@@ -314,68 +304,32 @@
                             </div>
                             <select id="road-economy-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none"></select>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-1.5 mb-1">
-                                <label class="block text-xs font-semibold text-slate-500">Scenario</label>
-                                <div class="relative group flex-shrink-0">
-                                    <button class="road-help-button" aria-label="Explain Scenario">?</button>
-                                    <div class="road-help-tooltip road-version-tooltip">
-                                        <h4>Scenario</h4>
-                                        <p>The scenario filters the provided-values rows before review. Reference is the current standard Road model scenario.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <select id="road-scenario-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none">
-                                <option value="Reference">Reference</option>
-                            </select>
-                        </div>
-                        <div class="road-action-with-help">
-                            <button id="road-load-defaults" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-md font-semibold text-sm shadow-sm">
-                                Load Provided Values
-                            </button>
-                            <div class="relative group flex-shrink-0">
-                                <button class="road-help-button" aria-label="Explain Load Provided Values">?</button>
-                                <div class="road-help-tooltip road-version-tooltip">
-                                    <h4>Load Provided Values</h4>
-                                    <p>Loads the provided-values package for the selected version, economy, and scenario from packaged static files.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="road-action-with-help">
-                            <button id="road-use-builtin-provided-values" type="button" class="w-full bg-white hover:bg-slate-50 text-slate-700 py-2 rounded-md font-semibold text-xs border border-slate-200 shadow-sm">
-                                Use Built-In Source Workbook
-                            </button>
-                            <div class="relative group flex-shrink-0">
-                                <button class="road-help-button" aria-label="Explain built-in source workbook">?</button>
-                                <div class="road-help-tooltip road-version-tooltip">
-                                    <h4>Built-In Source Workbook</h4>
-                                    <p>Loads the built-in provided values from packaged static files for the selected version/economy/scenario and resets current overrides.</p>
-                                </div>
-                            </div>
-                        </div>
                         <div class="road-action-with-help">
                             <button id="road-download-provided-template" type="button" class="w-full bg-white hover:bg-slate-50 text-slate-700 py-2 rounded-md font-semibold text-xs border border-slate-200 shadow-sm">
-                                Download Provided Values Template
+                                Download Input CSV
                             </button>
                             <div class="relative group flex-shrink-0">
                                 <button class="road-help-button" aria-label="Explain template download">?</button>
                                 <div class="road-help-tooltip road-version-tooltip">
-                                    <h4>Download Template</h4>
-                                    <p>Builds and downloads a provided-values workbook template directly in your browser from packaged static defaults. This is a starting point; use Export Checkpoint after entering values in the web tool.</p>
+                                    <h4>Download Input CSV</h4>
+                                        <p>Downloads the flat input CSV format for the selected economy. The scenario is fixed to <strong>Current Accounts</strong>.</p>
+                                        <p class="mt-2">Fill the core columns you care about: <strong>Branch Path</strong>, <strong>Variable</strong>, <strong>Region</strong>, <strong>Scale</strong>, <strong>Units</strong>, <strong>Per...</strong>, and <strong>2022</strong>.</p>
+                                        <p class="mt-2">Any other columns may be blank or missing. Blanks and non-existent values are ignored by the loader.</p>
                                 </div>
                             </div>
                         </div>
-                        <input id="road-provided-file-input" type="file" accept=".csv,.xlsx,.xls" class="hidden">
+                        <input id="road-provided-file-input" type="file" accept=".csv" class="hidden">
                         <div class="road-action-with-help">
                             <button id="road-upload-provided-values" type="button" class="w-full bg-white hover:bg-slate-50 text-slate-700 py-2 rounded-md font-semibold text-xs border border-slate-200 shadow-sm">
-                                Upload Checkpoint / Values File
+                                Upload Filled CSV
                             </button>
                             <div class="relative group flex-shrink-0">
                                 <button class="road-help-button" aria-label="Explain provided values upload">?</button>
                                 <div class="road-help-tooltip road-version-tooltip">
-                                    <h4>Upload Checkpoint / Values File</h4>
-                                    <p>Allowed files: <code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>. The upload must preserve the exact row-key structure (Branch Path, Variable, Scenario, Region) and include the base-year column. Workbook uploads may include <code>Details/Data</code> rows and optional <code>Factors</code>, <code>Lifecycle</code>, and <code>Vintage</code> sheets for mapped updates.</p>
-                                    <p class="mt-2">Recommended safest workflow: export a checkpoint/output from this tool, edit values while keeping the exact same structure and headers, then upload that file again.</p>
+                                    <h4>Upload Filled CSV</h4>
+                                        <p>Upload your edited CSV. The core row keys and base-year column are what matter most.</p>
+                                        <p class="mt-2">If only part of the file is filled in, that’s fine. Blank cells and missing optional columns are ignored.</p>
+                                        <p class="mt-2">Simple workflow: download CSV → edit values → upload filled CSV.</p>
                                 </div>
                             </div>
                         </div>
@@ -450,10 +404,7 @@
 
             <div class="p-5 mt-auto border-t border-slate-200 bg-white space-y-3">
                 <button id="road-save-output" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-md font-semibold text-sm shadow-sm disabled:bg-slate-300" disabled>
-                    Export Checkpoint Workbook
-                </button>
-                <button id="road-clear-draft" class="w-full bg-white hover:bg-slate-50 text-slate-600 py-2 rounded-md font-semibold text-xs border border-slate-200 shadow-sm disabled:text-slate-300" disabled>
-                    Clear Saved Draft
+                    Download Filled CSV
                 </button>
                 <div id="road-save-status" class="text-xs text-slate-500 break-words"></div>
             </div>
@@ -469,6 +420,9 @@
                             <div class="road-help-tooltip">
                                 <h4>Road input glossary</h4>
                                 <ul>
+                                    <li><strong>Core CSV fields:</strong> <code>Branch Path</code>, <code>Variable</code>, <code>Region</code>, <code>Scale</code>, <code>Units</code>, <code>Per...</code>, and <code>2022</code>. The scenario is always <strong>Current Accounts</strong>.</li>
+                                    <li><strong>Partial rows:</strong> Fine to leave some cells blank or omit non-essential columns entirely.</li>
+                                    <li><strong>Ignored values:</strong> Blank or non-existent values are skipped by the loader.</li>
                                     <li><strong>Stock:</strong> Base-year vehicle count for a branch.</li>
                                     <li><strong>Mileage:</strong> Annual distance travelled per vehicle.</li>
                                     <li><strong>Final On-Road Fuel Economy:</strong> Energy used per distance travelled.</li>
@@ -481,12 +435,12 @@
                                     <li><strong>PHEV Electric Driving Share:</strong> Shared PHEV road-sector series.</li>
                                     <li><strong>Survival Rate:</strong> Road-sector age series for remaining vehicle vintages.</li>
                                     <li><strong>Vintage Profile Share:</strong> Road-sector age distribution used for the stock profile.</li>
-                                    <li><strong>Blank fields:</strong> Export the grey provided base-year value unless you enter an override.</li>
+                                    <li><strong>Blank fields:</strong> Export the grey provided base-year value unless you enter an override. Missing optional fields are ignored.</li>
                                 </ul>
                             </div>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500">Blank fields use the grey provided base-year value. Later-year changes are handled in LEAP adjustment variables.</p>
+                    <p class="text-xs text-slate-500">Blank fields use the grey provided base-year value. Later-year changes are handled in LEAP adjustment variables, and missing optional values are ignored.</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="road-view-toggle">

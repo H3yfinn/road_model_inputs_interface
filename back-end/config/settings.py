@@ -11,8 +11,8 @@ class AppSettings(BaseModel):
     api_version: str = "1.0.0"
     
     # File paths (Updated to match what routers.py expects)
-    db_path: str = os.getenv("DB_PATH", "data/00APEC_2024_low_with_subtotals.csv")
-    mapping_path: str = os.getenv("MAPPING_PATH", "data/sector_fuel_codes_to_names 1.xlsx - code_to_name.csv")
+    db_path: str = os.getenv("DB_PATH", "data/multinodeenergy_backend/00APEC_2024_low_with_subtotals.csv")
+    mapping_path: str = os.getenv("MAPPING_PATH", "data/multinodeenergy_backend/sector_fuel_codes_to_names 1.xlsx - code_to_name.csv")
     output_dir: str = os.getenv("OUTPUT_DIR", "output")
     
     # Optimization parameters (Retained for backward compatibility if needed)

@@ -14,8 +14,8 @@ import pandas as pd
 DEFAULT_VERSION = "v2026_05_25_best_guess"
 SOURCE_DATE = "2026-05-25"
 BASE_YEAR = 2022
-DEFAULT_SCENARIOS = ["reference"]
-DEFAULT_YEARS = [2022, 2030, 2040, 2050]
+DEFAULT_SCENARIOS = ["current_accounts"]
+DEFAULT_YEARS = [2022]
 YEAR_COLUMNS = [str(year) for year in DEFAULT_YEARS]
 TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN = "transport_leap_export_combined_ALL_ECONS*.xlsx"
 TRANSPORT_LEAP_EXPORT_FALLBACK_FILENAME = "transport_leap_export_combined_00_APEC_domestic_international_Target_20260514.xlsx"
@@ -34,20 +34,21 @@ TRANSPORT_LEAP_EXPORT_APEC_FALLBACK_VARIABLES = {
 }
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parent
-TRANSPORT_LEAP_EXPORT_DIR = BACKEND_ROOT / "data" / "transport_leap_exports"
+DATA_ROOT = BACKEND_ROOT / "data"
+MULTINODE_BACKEND_DATA_DIR = DATA_ROOT / "multinodeenergy_backend"
+ROAD_MODEL_DATA_DIR = DATA_ROOT / "road_model"
+TRANSPORT_LEAP_EXPORT_DIR = ROAD_MODEL_DATA_DIR / "leap_import_workbooks"
 ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT = BACKEND_ROOT / "outputs" / "road_module1_defaults"
 ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = BACKEND_ROOT / "outputs" / "road_module1_researcher_outputs"
-ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = BACKEND_ROOT / "data" / "road_model_default_input_workbook.xlsx"
+ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = ROAD_MODEL_DATA_DIR / "road_model_default_input_workbook.xlsx"
 ROAD_MODEL_DEFAULT_INPUT_SHEET = "road_model_default_inputs"
 ROAD_MODEL_PHEV_UTILISATION_SHEET = "phev_utilisation_source"
-PHEV_UTILISATION_SOURCE_CSV = BACKEND_ROOT / "data" / "apec_phev_utilisation_rates.csv"
-PHEV_UTILISATION_EXTERNAL_CSV = Path("C:/Users/Work/github/leap_road_model/data/apec_phev_utilisation_rates.csv")
-PASSENGER_SATURATION_SOURCE_CSV = BACKEND_ROOT / "data" / "apec_passenger_vehicle_saturation.csv"
-PASSENGER_SATURATION_EXTERNAL_CSV = Path("C:/Users/Work/github/leap_road_model/data/apec_passenger_vehicle_saturation.csv")
-RECONCILIATION_FACTORS_SOURCE_CSV = BACKEND_ROOT / "data" / "apec_reconciliation_factors.csv"
-RECONCILIATION_FACTORS_EXTERNAL_CSV = Path("C:/Users/Work/github/leap_road_model/data/apec_reconciliation_factors.csv")
-VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV = BACKEND_ROOT / "data" / "apec_vehicle_equivalent_weights.csv"
-VEHICLE_EQUIVALENT_WEIGHTS_EXTERNAL_CSV = Path("C:/Users/Work/github/leap_road_model/data/apec_vehicle_equivalent_weights.csv")
+PHEV_UTILISATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_phev_utilisation_rates.csv"
+PASSENGER_SATURATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_passenger_vehicle_saturation.csv"
+RECONCILIATION_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_reconciliation_factors.csv"
+VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_vehicle_equivalent_weights.csv"
+SURVIVAL_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vehicle_survival_modified_00_APEC.xlsx"
+VINTAGE_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vintage_modelled_from_survival_00_APEC.xlsx"
 
 ECONOMIES = [
     ("01AUS", "Australia", 26.0),
@@ -346,6 +347,10 @@ MODULE1_WORKBOOK_DATA_COLUMNS = [
     *YEAR_COLUMNS,
 ]
 
+MODULE1_CORE_OUTPUT_FILE_TYPES = {
+    "default_filled_inputs",
+}
+
 MODULE1_WORKBOOK_RESEARCHER_DATA_COLUMNS = [
     "Branch Path",
     "Variable",
@@ -576,7 +581,7 @@ def find_phev_utilisation_source_path(explicit_path: str | Path | None = None) -
         if candidate.exists():
             return candidate
 
-    for candidate in [PHEV_UTILISATION_SOURCE_CSV, PHEV_UTILISATION_EXTERNAL_CSV]:
+    for candidate in [PHEV_UTILISATION_SOURCE_CSV]:
         if candidate.exists():
             return candidate
     return None
@@ -709,7 +714,7 @@ def _find_first_existing_path(
 def find_passenger_saturation_source_path(explicit_path: str | Path | None = None) -> Path | None:
     return _find_first_existing_path(
         explicit_path,
-        [PASSENGER_SATURATION_SOURCE_CSV, PASSENGER_SATURATION_EXTERNAL_CSV],
+        [PASSENGER_SATURATION_SOURCE_CSV],
     )
 
 
@@ -747,7 +752,7 @@ def load_passenger_saturation_rates(
 def find_reconciliation_factors_source_path(explicit_path: str | Path | None = None) -> Path | None:
     return _find_first_existing_path(
         explicit_path,
-        [RECONCILIATION_FACTORS_SOURCE_CSV, RECONCILIATION_FACTORS_EXTERNAL_CSV],
+        [RECONCILIATION_FACTORS_SOURCE_CSV],
     )
 
 
@@ -782,7 +787,7 @@ def load_reconciliation_factors(
 def find_vehicle_equivalent_weights_source_path(explicit_path: str | Path | None = None) -> Path | None:
     return _find_first_existing_path(
         explicit_path,
-        [VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV, VEHICLE_EQUIVALENT_WEIGHTS_EXTERNAL_CSV],
+        [VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV],
     )
 
 
@@ -1034,6 +1039,235 @@ def overlay_model_factor_sources(
     return overlaid_df[MODULE1_INPUT_COLUMNS], report_df
 
 
+def find_survival_profile_source_path(explicit_path: str | Path | None = None) -> Path | None:
+    return _find_first_existing_path(
+        explicit_path,
+        [SURVIVAL_PROFILE_SOURCE_XLSX],
+    )
+
+
+def find_vintage_profile_source_path(explicit_path: str | Path | None = None) -> Path | None:
+    return _find_first_existing_path(
+        explicit_path,
+        [VINTAGE_PROFILE_SOURCE_XLSX],
+    )
+
+
+def _normalize_transport_type(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if "pass" in text:
+        return "passenger"
+    if "freight" in text or "truck" in text:
+        return "freight"
+    return ""
+
+
+def _economy_code_from_source_row(row: pd.Series) -> str:
+    project_code = _normalize_apec_economy_code(row.get("project_code", ""))
+    if project_code:
+        return project_code
+
+    economy_text = str(row.get("economy", "")).strip()
+    if economy_text:
+        if economy_text in LEAP_REGION_NAME_TO_ECONOMY_CODE:
+            return LEAP_REGION_NAME_TO_ECONOMY_CODE[economy_text]
+        normalized = _normalize_apec_economy_code(economy_text)
+        if normalized:
+            return normalized
+    return ""
+
+
+def _load_age_profile_records_from_workbook(
+    workbook_path: Path,
+    value_column_candidates: list[str],
+) -> pd.DataFrame:
+    all_sheets = pd.read_excel(workbook_path, sheet_name=None)
+    parsed_frames: list[pd.DataFrame] = []
+
+    for _, sheet_df in all_sheets.items():
+        if sheet_df is None or sheet_df.empty:
+            continue
+
+        normalized_df = sheet_df.copy()
+        normalized_df.columns = [str(column).strip().lower() for column in normalized_df.columns]
+
+        value_col = next((column for column in value_column_candidates if column in normalized_df.columns), None)
+        age_col = "age" if "age" in normalized_df.columns else ("year" if "year" in normalized_df.columns else None)
+
+        if value_col is None or age_col is None:
+            continue
+
+        transport_col = "transport_type" if "transport_type" in normalized_df.columns else None
+        if transport_col is None and "transport" in normalized_df.columns:
+            transport_col = "transport"
+
+        slim_df = pd.DataFrame(
+            {
+                "economy_code": normalized_df.apply(_economy_code_from_source_row, axis=1),
+                "transport_type": (
+                    normalized_df[transport_col].map(_normalize_transport_type)
+                    if transport_col
+                    else ""
+                ),
+                "age": pd.to_numeric(normalized_df[age_col], errors="coerce"),
+                "value": pd.to_numeric(normalized_df[value_col], errors="coerce"),
+            }
+        )
+        slim_df = slim_df.dropna(subset=["age", "value"]).copy()
+        if slim_df.empty:
+            continue
+        parsed_frames.append(slim_df)
+
+    if not parsed_frames:
+        return pd.DataFrame(columns=["economy_code", "transport_type", "age", "value"])
+
+    combined = pd.concat(parsed_frames, ignore_index=True)
+    combined["age"] = combined["age"].astype(int)
+    combined = combined[(combined["age"] >= 0) & (combined["age"] <= 100)]
+    return combined
+
+
+def load_survival_profile_records(source_path: str | Path | None = None) -> tuple[pd.DataFrame, Path | None]:
+    resolved_path = find_survival_profile_source_path(source_path)
+    if resolved_path is None:
+        return pd.DataFrame(columns=["economy_code", "transport_type", "age", "value"]), None
+    records = _load_age_profile_records_from_workbook(
+        resolved_path,
+        value_column_candidates=["survival_rate", "survival", "value", "rate"],
+    )
+    return records, resolved_path
+
+
+def load_vintage_profile_records(source_path: str | Path | None = None) -> tuple[pd.DataFrame, Path | None]:
+    resolved_path = find_vintage_profile_source_path(source_path)
+    if resolved_path is None:
+        return pd.DataFrame(columns=["economy_code", "transport_type", "age", "value"]), None
+    records = _load_age_profile_records_from_workbook(
+        resolved_path,
+        value_column_candidates=["vintage_profile_share", "vintage_share", "vintage", "share", "value"],
+    )
+    return records, resolved_path
+
+
+def _build_profile_lookup_map(
+    records: pd.DataFrame,
+    economy_code: str,
+) -> dict[tuple[str, int], float]:
+    lookup: dict[tuple[str, int], float] = {}
+    if records.empty:
+        return lookup
+
+    economy_subset = records[records["economy_code"].eq(economy_code)].copy()
+    if economy_subset.empty:
+        economy_subset = records[records["economy_code"].eq("")].copy()
+
+    for _, row in economy_subset.iterrows():
+        transport_type = str(row.get("transport_type", "")).strip().lower()
+        if transport_type not in {"passenger", "freight"}:
+            continue
+        age = int(row["age"])
+        value = float(row["value"])
+        lookup[(transport_type, age)] = value
+    return lookup
+
+
+def overlay_survival_and_vintage_profiles(
+    default_filled_df: pd.DataFrame,
+    economy: EconomyInfo,
+    survival_source_path: str | Path | None = None,
+    vintage_source_path: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    overlaid_df = default_filled_df.copy()
+    report_rows: list[dict[str, object]] = []
+
+    survival_records, survival_path = load_survival_profile_records(survival_source_path)
+    vintage_records, vintage_path = load_vintage_profile_records(vintage_source_path)
+
+    profile_specs = [
+        ("Survival Rate", survival_records, survival_path, "survival_profile_source"),
+        ("Vintage Profile Share", vintage_records, vintage_path, "vintage_profile_source"),
+    ]
+
+    for variable_name, profile_records, profile_path, source_type in profile_specs:
+        if profile_path is None or profile_records.empty:
+            report_rows.append(
+                {
+                    "status": "skipped",
+                    "Branch Path": "",
+                    "Variable": variable_name,
+                    "Scenario": "",
+                    "Region": economy.name,
+                    "source_file": profile_path.name if profile_path else "",
+                    "details": "Profile source workbook missing or had no parseable age/value table.",
+                }
+            )
+            continue
+
+        profile_lookup = _build_profile_lookup_map(profile_records, economy.code)
+        if not profile_lookup:
+            report_rows.append(
+                {
+                    "status": "fail",
+                    "Branch Path": "",
+                    "Variable": variable_name,
+                    "Scenario": "",
+                    "Region": economy.name,
+                    "source_file": profile_path.name,
+                    "details": f"No profile rows matched economy {economy.code} (or blank/common profile rows).",
+                }
+            )
+            continue
+
+        for idx, row in overlaid_df.iterrows():
+            if str(row.get("Variable", "")) != variable_name:
+                continue
+
+            transport_label = _extract_transport_label_from_branch_path(str(row.get("Branch Path", "")))
+            age = _extract_age_from_branch_path(str(row.get("Branch Path", "")))
+            if transport_label not in {"passenger", "freight"} or age is None:
+                continue
+
+            profile_value = profile_lookup.get((transport_label, age))
+            if profile_value is None:
+                continue
+
+            overlaid_df.at[idx, str(BASE_YEAR)] = float(profile_value)
+            for year_col in YEAR_COLUMNS:
+                if int(year_col) > BASE_YEAR:
+                    overlaid_df.at[idx, year_col] = pd.NA
+
+            overlaid_df.at[idx, "input_source"] = "provided"
+            overlaid_df.at[idx, "source_type"] = source_type
+            overlaid_df.at[idx, "source_name"] = profile_path.name
+            overlaid_df.at[idx, "source_scope"] = economy.code
+            overlaid_df.at[idx, "source_date"] = SOURCE_DATE
+            overlaid_df.at[idx, "researcher_review_recommended"] = False
+            overlaid_df.at[idx, "review_reason"] = ""
+            overlaid_df.at[idx, "notes"] = (
+                f"{variable_name} imported from {profile_path.name}; "
+                f"transport={transport_label}, age={age}."
+            )
+            report_rows.append(
+                {
+                    "status": "applied",
+                    "Branch Path": row["Branch Path"],
+                    "Variable": variable_name,
+                    "Scenario": row["Scenario"],
+                    "Region": economy.name,
+                    "source_file": profile_path.name,
+                    "details": f"{BASE_YEAR}={float(profile_value)}",
+                }
+            )
+
+    report_df = pd.DataFrame(report_rows)
+    if report_df.empty:
+        report_df = pd.DataFrame(
+            columns=["status", "Branch Path", "Variable", "Scenario", "Region", "source_file", "details"]
+        )
+
+    return overlaid_df[MODULE1_INPUT_COLUMNS], report_df
+
+
 def _transport_export_sort_key(path: Path) -> tuple[str, float]:
     match = re.search(r"_(\d{8})(?:\D|$)", path.name)
     date_token = match.group(1) if match else ""
@@ -1048,29 +1282,51 @@ def _latest_existing_file(paths: Iterable[Path]) -> Path | None:
 
 
 def _iter_transport_leap_all_econs_candidates() -> Iterable[Path]:
-    search_dirs = [
-        REPO_ROOT,
-        TRANSPORT_LEAP_EXPORT_DIR,
-    ]
+    search_dirs = [TRANSPORT_LEAP_EXPORT_DIR]
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
         yield from search_dir.glob(TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN)
 
 
-def find_transport_leap_export_path(explicit_path: str | Path | None = None) -> Path | None:
+def _economy_to_leap_import_token(economy: str | None) -> str:
+    economy_text = str(economy or "").strip().upper()
+    if len(economy_text) >= 5 and economy_text[:2].isdigit():
+        return f"{economy_text[:2]}_{economy_text[2:]}"
+    return economy_text
+
+
+def _iter_transport_leap_economy_candidates(economy: str) -> Iterable[Path]:
+    token = _economy_to_leap_import_token(economy)
+    if not token:
+        return
+    pattern = f"transport_leap_export_combined_{token}_domestic_international_Target_*.xlsx"
+    for search_dir in [TRANSPORT_LEAP_EXPORT_DIR]:
+        if not search_dir.exists():
+            continue
+        yield from search_dir.glob(pattern)
+
+
+def find_transport_leap_export_path(
+    explicit_path: str | Path | None = None,
+    economy: str | None = None,
+) -> Path | None:
     """Find the latest transport LEAP export workbook used to improve defaults."""
     if explicit_path:
         explicit_candidate = Path(explicit_path)
         if explicit_candidate.exists():
             return explicit_candidate
 
+    if economy:
+        latest_economy_file = _latest_existing_file(_iter_transport_leap_economy_candidates(economy))
+        if latest_economy_file is not None:
+            return latest_economy_file
+
     latest_all_econs = _latest_existing_file(_iter_transport_leap_all_econs_candidates())
     if latest_all_econs is not None:
         return latest_all_econs
 
     fallback_paths = [
-        REPO_ROOT / TRANSPORT_LEAP_EXPORT_FALLBACK_FILENAME,
         TRANSPORT_LEAP_EXPORT_DIR / TRANSPORT_LEAP_EXPORT_FALLBACK_FILENAME,
     ]
     return _latest_existing_file(fallback_paths)
@@ -1136,9 +1392,10 @@ def _transport_leap_source_type(source_scope: str) -> str:
 
 def load_transport_leap_export_defaults(
     workbook_path: str | Path | None = None,
+    economy: str | None = None,
 ) -> tuple[pd.DataFrame, Path | None]:
     """Load the FOR_VIEWING sheet in a lean form for defaults overlay."""
-    resolved_path = find_transport_leap_export_path(workbook_path)
+    resolved_path = find_transport_leap_export_path(workbook_path, economy=economy)
     if resolved_path is None:
         return pd.DataFrame(), None
 
@@ -1203,7 +1460,10 @@ def overlay_transport_leap_export_values(
     workbook_path: str | Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Use the LEAP export workbook as the best available default data source where it matches."""
-    workbook_df, resolved_path = load_transport_leap_export_defaults(workbook_path=workbook_path)
+    workbook_df, resolved_path = load_transport_leap_export_defaults(
+        workbook_path=workbook_path,
+        economy=economy.code,
+    )
     overlay_report_rows = []
     if workbook_df.empty or resolved_path is None:
         return default_filled_df, pd.DataFrame(
@@ -2320,17 +2580,38 @@ def write_economy_package(
         default_filled_df=default_filled,
         economy=economy,
     )
+    default_filled, profile_overlay_report = overlay_survival_and_vintage_profiles(
+        default_filled_df=default_filled,
+        economy=economy,
+    )
     # Temporary policy: deactivate researcher-review prioritization globally so
     # all rows are presented equally for manual review.
     default_filled["researcher_review_recommended"] = False
     default_filled["review_reason"] = ""
+
+    model_factor_for_overlay_report = model_factor_overlay_report.rename(columns={"source_file": "source_region"}).copy()
+    model_factor_for_overlay_report["source_scenario"] = ""
+    model_factor_for_overlay_report["years_overlaid"] = str(BASE_YEAR)
+
+    profile_for_overlay_report = profile_overlay_report.rename(columns={"source_file": "source_region"}).copy()
+    profile_for_overlay_report["source_scenario"] = ""
+    profile_for_overlay_report["years_overlaid"] = str(BASE_YEAR)
+
     transport_leap_overlay_report = pd.concat(
         [
             transport_leap_overlay_report,
-            model_factor_overlay_report.rename(columns={"source_file": "source_region", "details": "details"}).assign(
-                source_scenario="",
-                years_overlaid=str(BASE_YEAR),
-            )[[
+            model_factor_for_overlay_report[[
+                "status",
+                "Branch Path",
+                "Variable",
+                "Scenario",
+                "Region",
+                "source_region",
+                "source_scenario",
+                "years_overlaid",
+                "details",
+            ]],
+            profile_for_overlay_report[[
                 "status",
                 "Branch Path",
                 "Variable",
@@ -2351,34 +2632,28 @@ def write_economy_package(
     structure_report = validate_module1_input_structure(default_filled)
 
     paths = {
-        "input_workbook": economy_dir / f"road_module1_inputs_{economy.code}.xlsx",
-        "cleaned_inputs": economy_dir / "road_module1_cleaned_inputs.csv",
         "default_filled_inputs": economy_dir / "road_module1_default_filled_inputs.csv",
-        "source_flags": economy_dir / "road_module1_source_flags.csv",
-        "missing_data_report": economy_dir / "road_module1_missing_data_report.csv",
-        "unit_check_report": economy_dir / "road_module1_unit_check_report.csv",
-        "structure_validation_report": economy_dir / "road_module1_structure_validation_report.csv",
-        "workbook_structure_validation_report": economy_dir / "road_module1_workbook_structure_validation_report.csv",
-        "researcher_review_flags": economy_dir / "road_module1_researcher_review_flags.csv",
-        "transport_leap_overlay_report": economy_dir / "road_module1_transport_leap_overlay_report.csv",
     }
 
-    paths["input_workbook"] = write_module1_input_workbook(
-        completed_df=default_filled,
-        economy=economy.code,
-        filepath=paths["input_workbook"],
-    )
-    workbook_structure_report = validate_module1_workbook_structure(paths["input_workbook"])
+    # Remove old artifacts from prior runs so each economy folder stays CSV-only.
+    for extra_file in economy_dir.glob("road_module1_*.csv"):
+        if extra_file.name != paths["default_filled_inputs"].name:
+            extra_file.unlink(missing_ok=True)
 
-    default_filled.to_csv(paths["cleaned_inputs"], index=False)
+    for extra_file in economy_dir.glob("road_module1_*.xlsx"):
+        extra_file.unlink(missing_ok=True)
+
     default_filled.to_csv(paths["default_filled_inputs"], index=False)
-    source_flags.to_csv(paths["source_flags"], index=False)
-    missing_report.to_csv(paths["missing_data_report"], index=False)
-    unit_report.to_csv(paths["unit_check_report"], index=False)
-    structure_report.to_csv(paths["structure_validation_report"], index=False)
-    workbook_structure_report.to_csv(paths["workbook_structure_validation_report"], index=False)
-    review_flags.to_csv(paths["researcher_review_flags"], index=False)
-    transport_leap_overlay_report.to_csv(paths["transport_leap_overlay_report"], index=False)
+
+    # Keep these variables computed for optional debugging/use in interactive sessions.
+    _ = (
+        source_flags,
+        transport_leap_overlay_report,
+        missing_report,
+        unit_report,
+        structure_report,
+        review_flags,
+    )
 
     return paths
 
@@ -2388,20 +2663,12 @@ def write_all_economy_packages(
     scenarios: Iterable[str] = DEFAULT_SCENARIOS,
     years: Iterable[int] = DEFAULT_YEARS,
     default_input_workbook_path: str | Path = ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH,
-    require_default_input_workbook: bool = True,
+    require_default_input_workbook: bool = False,
 ) -> dict[str, dict[str, Path]]:
     output_root = Path(output_root)
     version_root = output_root / DEFAULT_VERSION
     version_root.mkdir(parents=True, exist_ok=True)
-    default_input_df = load_default_input_workbook(
-        default_input_workbook_path,
-        require_exists=require_default_input_workbook,
-    )
-    if require_default_input_workbook and default_input_df.empty:
-        raise ValueError(
-            "Road model default input workbook is required and must contain at least one row. "
-            f"Checked file: {Path(default_input_workbook_path)}"
-        )
+    default_input_df = pd.DataFrame()
 
     catalog_path = version_root / "road_module1_default_assumptions_catalog.csv"
     build_default_catalog().to_csv(catalog_path, index=False)
@@ -2424,6 +2691,8 @@ def write_all_economy_packages(
     manifest_rows = []
     for economy_code, paths in all_paths.items():
         for file_type, path in paths.items():
+            if file_type not in MODULE1_CORE_OUTPUT_FILE_TYPES:
+                continue
             manifest_rows.append(
                 {
                     "default_version": DEFAULT_VERSION,
@@ -2517,7 +2786,7 @@ def load_builtin_transport_leap_provided_values(
         version=version,
         output_root=output_root,
     )
-    workbook_path = find_transport_leap_export_path()
+    workbook_path = find_transport_leap_export_path(economy=economy)
     overlaid_df, overlay_report = overlay_transport_leap_export_values(
         default_filled_df=default_filled_df,
         economy=get_economy_info(economy),

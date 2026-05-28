@@ -1,0 +1,41 @@
+# -----------------------------
+# Python / local environment
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
+env/
+
+# Large local environment snapshot (never commit)
+env_multinode_energy_balance/
+
+# -----------------------------
+# Local logs / artifacts
+# -----------------------------
+*.log
+archive/logs/
+archive/input_snapshots/
+
+# -----------------------------
+# Road Module 1 raw inputs & generated backend outputs
+# Keep these local; regenerate static bundle before commit.
+# -----------------------------
+back-end/data/**
+back-end/outputs/**
+
+# Keep lightweight docs/readmes if present under ignored trees
+!back-end/data/**/README.md
+!back-end/outputs/**/README.md
+
+# -----------------------------
+# Static bundle is the committed artifact for frontend use
+# -----------------------------
+!front-end/road-module1-static/
+!front-end/road-module1-static/**

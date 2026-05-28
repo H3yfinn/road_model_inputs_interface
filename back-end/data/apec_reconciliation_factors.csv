@@ -1,3 +1,0 @@
-transport_type,reconciliation_bound_lower,reconciliation_bound_upper,reconciliation_weight,data_year,source_note,estimation_status
-passenger,0.85,1.15,1.0,2026,APERC initial reconciliation defaults for Module 1,synthetic_estimate
-freight,0.85,1.15,1.0,2026,APERC initial reconciliation defaults for Module 1,synthetic_estimate

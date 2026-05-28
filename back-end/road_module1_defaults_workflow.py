@@ -74,58 +74,21 @@ def write_frontend_static_bundle(
             version=version,
             output_root=output_root,
         )
-        if "Scenario" not in defaults_df.columns:
-            continue
+        if "Scenario" in defaults_df.columns:
+            defaults_df = defaults_df.copy()
+            defaults_df["Scenario"] = "Current Accounts"
 
-        available_scenarios = {
-            str(s).strip()
-            for s in defaults_df["Scenario"].dropna().astype(str).tolist()
-            if str(s).strip()
+        payload = {
+            "key_columns": MODULE1_KEY_COLUMNS,
+            "rows": [
+                {key: _json_safe_value(value) for key, value in record.items()}
+                for record in defaults_df.to_dict(orient="records")
+            ],
         }
 
-        requested_scenarios = [scenario for scenario in scenarios if scenario in available_scenarios]
-        if not requested_scenarios:
-            requested_scenarios = sorted(available_scenarios)
-
-        fallback_payload = None
-
-        for scenario in requested_scenarios:
-            scenario_safe = _sanitize_static_segment(scenario)
-            scenario_rows_df = defaults_df[defaults_df["Scenario"].astype(str).eq(scenario)].copy()
-            if scenario_rows_df.empty:
-                continue
-
-            payload = {
-                "key_columns": MODULE1_KEY_COLUMNS,
-                "rows": [
-                    {key: _json_safe_value(value) for key, value in record.items()}
-                    for record in scenario_rows_df.to_dict(orient="records")
-                ],
-            }
-
-            scenario_path = version_root / f"{economy_safe}_{scenario_safe}.json"
-            scenario_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-            defaults_files_written += 1
-
-            if scenario == "Reference":
-                fallback_payload = payload
-
-        if fallback_payload is None and requested_scenarios:
-            first_scenario = requested_scenarios[0]
-            first_rows_df = defaults_df[defaults_df["Scenario"].astype(str).eq(first_scenario)].copy()
-            if not first_rows_df.empty:
-                fallback_payload = {
-                    "key_columns": MODULE1_KEY_COLUMNS,
-                    "rows": [
-                        {key: _json_safe_value(value) for key, value in record.items()}
-                        for record in first_rows_df.to_dict(orient="records")
-                    ],
-                }
-
-        if fallback_payload is not None:
-            fallback_path = version_root / f"{economy_safe}.json"
-            fallback_path.write_text(json.dumps(fallback_payload, ensure_ascii=False), encoding="utf-8")
-            defaults_files_written += 1
+        fallback_path = version_root / f"{economy_safe}.json"
+        fallback_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        defaults_files_written += 1
 
     versions_index = []
     available_versions = [
@@ -196,21 +159,22 @@ WRITE_FRONTEND_STATIC_BUNDLE = True
 
 
 # --- Run blocks ---
-if GENERATE_ALL_ECONOMY_DEFAULTS:
-    GENERATED_PATHS = generate_module1_default_packages(
-        output_root=OUTPUT_ROOT,
-        scenarios=SCENARIOS_TO_WRITE,
-        years=YEARS_TO_WRITE,
-    )
-    print_generation_summary(GENERATED_PATHS)
-
-    if WRITE_FRONTEND_STATIC_BUNDLE:
-        STATIC_BUNDLE_SUMMARY = write_frontend_static_bundle(
+if __name__ == "__main__":
+    if GENERATE_ALL_ECONOMY_DEFAULTS:
+        GENERATED_PATHS = generate_module1_default_packages(
             output_root=OUTPUT_ROOT,
-            static_root=FRONTEND_STATIC_BUNDLE_ROOT,
-            version=DEFAULT_VERSION,
             scenarios=SCENARIOS_TO_WRITE,
+            years=YEARS_TO_WRITE,
         )
-        print_static_bundle_summary(STATIC_BUNDLE_SUMMARY)
+        print_generation_summary(GENERATED_PATHS)
+
+        if WRITE_FRONTEND_STATIC_BUNDLE:
+            STATIC_BUNDLE_SUMMARY = write_frontend_static_bundle(
+                output_root=OUTPUT_ROOT,
+                static_root=FRONTEND_STATIC_BUNDLE_ROOT,
+                version=DEFAULT_VERSION,
+                scenarios=SCENARIOS_TO_WRITE,
+            )
+            print_static_bundle_summary(STATIC_BUNDLE_SUMMARY)
 
 #%%

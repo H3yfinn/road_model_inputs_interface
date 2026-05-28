@@ -1,211 +1,167 @@
-# Multinode Energy Modeler
+# Road Model Inputs Interface (Module 1)
 
-> **Current Road Module 1 structure guide:**
-> `docs/new model/multinode_road_module1_repo_guide.md`
->
-> Use that document as the source of truth for the current Road Module 1 folder
-> layout, static bundle packaging, and archive conventions.
+This repository hosts the **researcher-facing site for Road Module 1** in the APEC road transport modeling workflow.
 
-An interactive full-stack modeling and mathematical optimization platform designed to reconcile bottom-up user-defined energy demand structures with top-down macroeconomic energy datasets. Developed for **APEC (Asia-Pacific Economic Cooperation)** and **APERC (Asia Pacific Energy Research Centre)**, this application allows energy modelers to define customizable sector hierarchies, assign relative weights and physical fuel shares, check for mass balances, mathematically optimize weights to match macro targets, and export ready-to-use configurations directly to the **LEAP (Low Emissions Analysis Platform)** software.
+In plain English: this site is where researchers review defaults, provide/override base-year road input values, and export a structured package that downstream road modules consume.
 
 ---
 
-## Table of Contents
-1. [Overview & What It Does](#overview--what-it-does)
-2. [Key Features & Capabilities](#key-features--capabilities)
-3. [Directory Architecture](#directory-architecture)
-4. [Technology Stack](#technology-stack)
-5. [How to Run (Back-End Setup)](#how-to-run-back-end-setup)
-6. [How to Run (Front-End Setup)](#how-to-run-front-end-setup)
-7. [Mathematical Optimization Framework](#mathematical-optimization-framework)
-8. [Typical Modeler Workflow](#typical-modeler-workflow)
+## What this site is for
+
+`road_model_inputs_interface` is the **Module 1 input collection and packaging layer** for `leap_road_model`.
+
+It is designed to:
+
+- present default road-model inputs by economy/version/scenario;
+- let researchers review and edit key inputs (primarily base year);
+- preserve source/audit context;
+- validate row keys and value constraints;
+- export one flat CSV per economy in the expected Module 1 contract format.
+
+For researcher review and handoff, the important columns are:
+
+- `Branch Path`
+- `Variable`
+- `Scenario`
+- `Region`
+- `Scale`
+- `Units`
+- `Per...`
+- `2022`
+
+As long as those columns are filled in for the rows you care about, the other
+columns do not need specific values. Partial files are acceptable too: blanks
+and non-existent values are ignored by the loader, so you only need to fill in
+the rows and fields that actually matter for the review.
+
+If you only remember one thing: **this is the canonical handoff tool for Road Module 1 outputs**, not just a UI demo.
 
 ---
 
-## Overview & What It Does
+## Where it fits in the multi-repo workflow
 
-In energy planning, reconciling detailed, bottom-up demand sector assumptions (e.g., appliances, heating methods, transport usage) with top-down official statistics (like those from the APEC Energy Statistics database) is a challenging task. Imbalances between bottom-up aggregates and top-down targets are common.
-
-The **Multinode Energy Modeler** solves this by bridging the two approaches:
-1. **Macro Baseline Seeding:** It queries an official APEC macroeconomic energy balance database (`00APEC_2024_low_with_subtotals.csv`) to set top-down targets for a chosen economy (e.g., USA, Japan, China), sector/flow (e.g., Residential, Transport, Commercial), and year.
-2. **Interactive Hierarchical Modeling:** Modelers build a nested tree structure of sub-branches representing the economy's energy distribution. Leaf nodes are populated with real-world physical fuels.
-3. **Imbalance Analysis:** It cascades energy values down through the user's weights to the fuels and flags differences against the database's actual macro fuel targets.
-4. **SLSQP Optimization:** Utilizing SciPy, it adjusts the tree's relative weights mathematically (respecting optional user-defined minimum and maximum weight bounds) to eliminate physical fuel imbalances.
-5. **Structured LEAP Export:** Once optimized and validated, it exports the balanced model tree along with custom socio-economic drivers (such as Households, Floor Area, or Occupancy Rates) to an Excel workbook formatted for direct import into the LEAP energy planning platform.
+| Repo | Role |
+| --- | --- |
+| `transport_model_9th_edition` | Original upstream transport model outputs. |
+| `leap_transport` | Transforms/matches those outputs toward LEAP and Module 1 needs. |
+| `road_model_inputs_interface` | **Module 1 writer**: collect defaults + researcher inputs, validate, export package. |
+| `leap_road_model` | Reads Module 1 package and runs downstream Modules 2-7. |
 
 ---
 
-## Key Features & Capabilities
+## Core purpose of the site (researcher workflow)
 
-- 📊 **APEC Database Preloading:** Optimized O(1) / O(log N) data slicing using a Pandas MultiIndex on a 36MB+ database.
-- 🌳 **Dynamic Tree Constructor:** Interactive, responsive drag-free nested node tree editing (add sub-branches, change node names, attach fuels, customize efficiencies).
-- ⚖️ **Validation Engine:** Real-time visual progress bars showing current fuel energy allocations vs. top-down targets.
-- ⚙️ **SLSQP Optimization Solver:** Runs sequential least-squares programming under mathematical equality constraints (sibling weights sum to 1.0) and boundary constraints (user-defined min/max weights).
-- 🧬 **Automated Balancing Node Injection:** Instantly injects an "Other Demand" / "Unspecified Uses" balancing node to capture left-over target residuals.
-- 📈 **Custom Socio-Economic Drivers:** Create, configure, and bind custom macro-drivers (GDP, Households, Floor Area) dynamically to individual branches.
-- 📁 **LEAP Integration:** One-click automated rendering of structured Excel files for LEAP integration.
+1. Select **version**, **economy**, and **scenario**.
+2. Load default values (static bundle first, optional backend fallback).
+3. Review/edit researcher-provided values (base-year-first workflow).
+4. Upload checkpoint/value files when continuing prior work.
+5. Run validation checks on structure and values.
+6. Export `road_module1_default_filled_inputs.csv`-style output as the Module 1 handoff.
 
----
-
-## Directory Architecture
-
-```text
-v8/
-├── back-end/
-│   ├── api/
-│   │   ├── main.py                 # FastAPI initialization, CORS, global exceptions
-│   │   ├── routers.py              # API endpoint routes (Initialize, Validate, Optimize, Export)
-│   │   └── schemas.py              # Pydantic schemas for strict request/response validation
-│   ├── config/
-│   │   ├── constants.py            # Global constant definitions
-│   │   ├── default_weights.py      # Standard baseline weight templates
-│   │   └── settings.py             # Environment settings & filepath configurations
-│   ├── core/
-│   │   ├── data_ingestion.py       # APEC Database loader using Pandas MultiIndex slicing
-│   │   ├── leap_exporter.py        # Structured Excel sheet compiler for LEAP imports
-│   │   ├── logger.py               # Centralized logging configuration
-│   │   ├── optimization_engine.py  # SciPy SLSQP optimization & imbalance validation logic
-│   │   └── tree_components.py      # Object-oriented tree, node, and fuel data structures
-│   ├── data/
-│   │   ├── 00APEC_2024_low_with_subtotals.csv                 # Core APEC energy database
-│   │   └── sector_fuel_codes_to_names 1.xlsx - code_to_name.csv  # Internal code mappings
-│   └── run.py                      # Master Python script to boot the Uvicorn server
-│
-├── front-end/
-│   ├── index.html                  # Main dashboard layout (Tailwind CSS, clean font styling)
-│   ├── styles.css                  # Custom styles, transitions, animations, and scrollbars
-│   ├── api.js                      # HTTP fetch client wrapping API communication
-│   └── app.js                      # Core UI rendering, interactive tree building, and state manager
-│
-├── requirements.txt                # Back-end dependencies
-└── README.md                       # Comprehensive project documentation
-```
+That flat CSV is what downstream road modeling should consume.
 
 ---
 
-## Technology Stack
+## Runtime model (important)
 
-### Back-End:
-- **Core Framework:** Python 3.10+ / FastAPI
-- **Data Engineering:** Pandas & NumPy
-- **Mathematical Solver:** SciPy (`scipy.optimize.minimize` using `SLSQP`)
-- **Excel Generation:** OpenPyXL
-- **Server:** Uvicorn
+Default operation is **static-first**:
 
-### Front-End:
-- **Core Structure:** HTML5 (Semantic elements, modern viewport standards)
-- **Styling:** CSS3 & Tailwind CSS (Loaded via CDN)
-- **Logic & API Communication:** Vanilla ES6+ JavaScript (Fetch API, dynamic DOM rendering, state management)
+- the frontend is expected to run as a static site;
+- packaged defaults and selector metadata are loaded from `front-end/road-module1-static/`;
+- backend routes are optional helpers for local workflows.
+
+This means the site can run without a persistent server in many normal use cases.
 
 ---
 
-## How to Run (Back-End Setup)
+## What is considered the source of truth
 
-Follow these steps to run the high-performance FastAPI server locally:
+For full technical details (folder policy, output contract, overlays, validation behavior, and roadmap), use:
 
-### 1. Prerequisites
-Ensure you have **Python 3.10 or 3.11** installed on your system.
+- `docs/new model/multinode_road_module1_repo_guide.md`
 
-### 2. Navigate and Create a Virtual Environment
-Open your terminal in the project root directory and navigate to the `back-end` directory:
-```bash
-cd back-end
-```
-
-Create a virtual environment (highly recommended):
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-Install all the required Python packages from the root `requirements.txt`:
-```bash
-pip install -r ../requirements.txt
-```
-
-### 4. Start the Application
-Run the master script to start the Uvicorn server:
-```bash
-python run.py
-```
-
-The terminal will display that Uvicorn is running successfully:
-```text
-INFO:     Started server process [12345]
-INFO:     Waiting for application startup.
-INFO:     API boot sequence initiated: Eagerly pre-loading APEC macroeconomic database...
-INFO:     Successfully loaded database mappings.
-INFO:     APEC macroeconomic database successfully cached in memory.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-```
-
-> [!TIP]
-> Once running, you can explore and test the interactive API documentation directly via **Swagger UI** at `http://localhost:8000/docs` or **Redoc** at `http://localhost:8000/redoc`.
+That guide is the detailed implementation/source-of-truth document.
 
 ---
 
-## How to Run (Front-End Setup)
+## Quick start
 
-Since the frontend consists of static vanilla files (`index.html`, `styles.css`, `api.js`, `app.js`) communicating directly with the backend at `http://localhost:8000`, running it is incredibly simple. Choose any of the following options:
+### Frontend (typical)
 
-### Option 1: Serve via Python (Recommended)
-You can quickly host the static files on a lightweight web server using Python's built-in HTTP module. Open a new terminal in the project root folder and execute:
-```bash
-python -m http.server 3000 --directory front-end
-```
-Then, open your web browser and navigate to: **`http://localhost:3000`**
+Serve `front-end/` with any simple static server and open it in your browser.
 
-### Option 2: Serve via Node.js
-If you have Node.js installed, you can use the standard `http-server` or `live-server` modules:
-```bash
-npx http-server front-end -p 3000
-```
-Then, open your web browser and navigate to: **`http://localhost:3000`**
+### Optional backend
 
-### Option 3: Direct File Execution
-You can double-click **`front-end/index.html`** to open it directly in a browser (utilizing the `file://` protocol). 
+Backend is available for local helper flows (API routes, optional save/export paths), but is **not required** for static-first usage.
 
-> [!NOTE]
-> The backend server has CORSMiddleware fully enabled with `allow_origins=["*"]`, allowing it to receive requests from local files (`null` origin) smoothly. However, serving via **Option 1** or **Option 2** is recommended to prevent any strict browser restrictions.
+Install Python dependencies from `requirements.txt`, then run `back-end/run.py` if you need backend-assisted behavior.
 
 ---
 
-## Mathematical Optimization Framework
+## Git data policy (recommended)
 
-The core backend solver formulates the weight-balancing problem as a **constrained non-linear minimization** using **Sequential Least Squares Programming (SLSQP)**.
+To keep repository size healthy, this repo is configured to:
 
-### Variables ($x$)
-The optimization variables represent the relative weights of the active sub-branches and physical fuels throughout the hierarchical tree structure.
+- **not track** heavy raw input datasets and generated backend output files under:
+  - `back-end/data/`
+  - `back-end/outputs/`
+- **track** the frontend static defaults bundle under:
+  - `front-end/road-module1-static/`
 
-### Constraints
-1. **Sum-to-One Sibling Constraints (Equality):**
-   For any group of sibling nodes (or fuels) sharing a single parent node, their relative weights must sum up to exactly $1.0$ ($100\%$):
-   $$\sum_{i \in \text{siblings}} w_i = 1.0$$
-2. **User-Defined Boundaries (Inequality):**
-   Modelers can input explicit minimum ($min\_weight$) and maximum ($max\_weight$) bounds on individual nodes. If unspecified, they default to standard boundary limits:
-   $$0.0 \le w_i \le 1.0$$
+### Recommended pre-commit refresh process
 
-### Objective Function
-The engine minimizes the **Sum of Squared Normalized Errors (SSE)** between the calculated energy allocations ($\hat{E}$) and the top-down macroeconomic APEC/ESTO target limits ($E$) for all active fuels ($F$):
-$$\min_{x} \sum_{f \in F} \left( \frac{\hat{E}_f(x) - E_f}{\max(E_f, 10^{-6})} \right)^2$$
+Before committing/pushing Road Module 1 default updates:
 
-This formulation ensures that the optimizer prioritizes matching larger fuel flows accurately while keeping relative adjustments balanced.
+1. Rebuild static defaults JSON bundle:
+   - run `back-end/build_road_model_static_defaults.py`
+2. Review changed files under `front-end/road-module1-static/`
+3. Commit only code/docs + static JSON changes needed for the release.
+
+This keeps Git history focused on deployable artifacts while allowing local raw-data refresh workflows.
 
 ---
 
-## Typical Modeler Workflow
+## Output contract (high level)
 
-1. **Initialize Environment:** Select your target **Economy** (e.g. `20USA`), **Year** (e.g. `2022`), and **Sector Flow** (e.g. `16.02 Residential`), then click **Initialize Model**. This locks the environment and pre-loads top-down macroeconomic fuel thresholds.
-2. **Build Your Tree:** Use `+ Add Root Branch` and `+ Sub-Branch` to outline your demand tree structure (e.g. Space Heating, Air Conditioning, Lighting).
-3. **Assign Fuels:** Click `+ Fuel` on leaf nodes to attach physical fuels and input baseline efficiencies (e.g., standard heat pumps have $\eta = 3.0$, gas furnaces have $\eta = 0.9$).
-4. **Input Custom Drivers:** Add macro-driver parameters (GDP, Households) in the left panel and bind them to specific branches.
-5. **Check Balance:** Click **Check Balance** to run the forward energy allocation pass and inspect imbalances. If imbalances are found, the app will offer to inject a **Balancing Node** to catch missing residuals.
-6. **Mathematically Optimize:** Click **Optimize Weights** to run the SLSQP algorithm. The solver will automatically adjust weights within your bounds to perfectly match APEC/ESTO targets.
-7. **Export to LEAP:** Click **Export to LEAP** to generate the Excel configuration workbook, saving it in the `output/` directory, ready to be imported into LEAP!
+Expected Module 1 handoff artifact:
+
+- `road_module1_default_filled_inputs.csv`
+
+This flat CSV is intended to carry the core row keys and the base-year value.
+Downstream consumers should ignore blank cells and missing optional fields, and
+they should not rely on extra columns being present.
+
+---
+
+## Current focus and boundaries
+
+This repo owns Module 1 concerns:
+
+- defaults and overlays;
+- researcher input capture;
+- validation and diagnostics;
+- Module 1 workbook export.
+
+This repo does **not** own downstream road simulation logic (Modules 2-7); that belongs in `leap_road_model`.
+
+---
+
+## Notes for contributors
+
+- Keep the researcher workflow base-year-first unless the contract changes deliberately.
+- Prefer explicit validation/reporting over silent fallbacks.
+- Preserve source metadata when values are overlaid or overridden.
+- Update the guide doc when behavior/contracts change.
+
+---
+
+## Documentation index
+
+- Main Module 1 guide:
+  - `docs/new model/multinode_road_module1_repo_guide.md`
+- Backend implementation entry points:
+  - `back-end/core/road_module1_defaults_workflow.py`
+  - `back-end/api/routers.py`
+- Frontend implementation entry points:
+  - `front-end/app.js`
+  - `front-end/api.js`

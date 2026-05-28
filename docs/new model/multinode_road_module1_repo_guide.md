@@ -112,13 +112,13 @@ between repos stays simple and stable.
 The target interface is:
 
 ```text
-one workbook per economy
-road_module1_inputs_{ECONOMY}.xlsx
+one flat CSV per economy
+road_module1_default_filled_inputs.csv
 ```
 
-where `{ECONOMY}` uses the no-underscore code used in this repo, for example
-`20USA`. `leap_road_model` can convert this to canonical codes such as
-`20_USA` when needed.
+where the CSV contains the core Module 1 row keys and the base-year value.
+`leap_road_model` can convert this to canonical codes such as `20_USA` when
+needed.
 
 ---
 
@@ -158,28 +158,29 @@ back-end/outputs/road_module1_researcher_outputs/{version}/{economy}/
 
 ### Current output shape
 
-Current default packages are workbook-first, with optional CSV diagnostics.
+Current default packages are CSV-first, with optional workbook-style diagnostics
+only where they are useful for local review.
 
 Primary artifact per economy:
 
-- `road_module1_inputs_{ECONOMY}.xlsx`
+- `road_module1_default_filled_inputs.csv`
 
 Default-package diagnostic CSVs are optional debug artifacts and can be ignored
 for normal workflows. Use them only when troubleshooting data quality,
 validation, or overlay issues.
 
-Current researcher output is one workbook per economy:
+Current researcher output is one flat CSV per economy:
 
-- `road_module1_inputs_{ECONOMY}.xlsx`
+- `road_module1_default_filled_inputs.csv`
 
-Legacy researcher CSV/lifecycle sidecars are now treated as transitional and
-are cleaned up by the current writer.
+Legacy workbook-style sidecars are transitional only and are cleaned up by the
+current writer.
 
 ### Target output shape
 
-The intended target is to consolidate those pieces into one workbook per
-economy. CSV sidecars may still be useful for debugging, but they should not be
-the primary handoff contract.
+The intended target is to consolidate those pieces into one flat CSV per
+economy. Workbook-style sidecars may still be useful for debugging, but they
+should not be the primary handoff contract.
 
 ### 3.1 Repo folder structure and archive policy
 
@@ -231,8 +232,8 @@ The Module 1 process should be understood as this sequence:
 3. Serve default-filled rows to the researcher UI.
 4. Let the researcher review and override base-year values.
 5. Validate the completed input package.
-6. Export one structured workbook per economy.
-7. Let `leap_road_model` read that workbook as Module 1 input.
+6. Export one structured flat CSV per economy.
+7. Let `leap_road_model` read that CSV as Module 1 input.
 
 ### 4.1 Default assumptions
 
@@ -334,15 +335,15 @@ processed by backend routes for local tooling workflows.
 
 ### 4.5 Checkpoint export and reupload
 
-The researcher UI supports a workbook checkpoint workflow. At the end of a work
+The researcher UI supports a CSV checkpoint workflow. At the end of a work
 session, the researcher can export the current values as
-`road_module1_inputs_{ECONOMY}.xlsx`. On a later day, they can select the same
-version, economy, and scenario, then upload that workbook through
-`Upload Checkpoint / Values File`.
+`road_module1_default_filled_inputs.csv`. On a later day, they can select the
+same version, economy, and scenario, then upload that CSV through `Upload
+Checkpoint / Values File`.
 
 This is intended to be the portable record between sessions. Browser drafts can
-help during one local browser session, but the checkpoint workbook is the file
-that can be moved between computers, emailed, archived, and reloaded.
+help during one local browser session, but the checkpoint CSV is the file that
+can be moved between computers, emailed, archived, and reloaded.
 
 Checkpoint export behavior (static/client-side-first):
 
@@ -356,6 +357,13 @@ Checkpoint export behavior (static/client-side-first):
   before export, unless a detailed row override is present.
 - Upload compatibility and value-bound checks are run client-side before values
   are applied.
+- Only the core columns need to be populated for a row to matter: `Branch
+  Path`, `Variable`, `Scenario`, `Region`, `Scale`, `Units`, `Per...`, and
+  `2022`.
+- Extra columns may be blank or absent. Blanks and non-existent values are not
+  used by the loader.
+- Partial files are allowed: if only some rows or some columns are filled in,
+  the loader uses the populated values and ignores the rest.
 
 Upload behavior:
 
@@ -365,11 +373,11 @@ Upload behavior:
   and mapped into canonical row-key updates before overlay is applied.
 - CSV files are read directly.
 - The file must keep the key columns:
-  `Branch Path`, `Variable`, `Scenario`, `Region`.
-- The file must include the base-year column, currently `2022`.
-- For workbook uploads, if `Details`/`Data` is absent or partial, mapped updates
-  from `Factors`/`Lifecycle`/`Vintage` can still contribute updates for matching
-  canonical Module 1 rows.
+  `Branch Path`, `Variable`, `Scenario`, `Region`, `Scale`, `Units`, `Per...`,
+  and `2022`.
+- For workbook-style uploads, if other sheets or columns are absent or partial,
+  mapped updates can still contribute updates for matching canonical Module 1
+  rows.
 - Future-year columns may be present, but the current researcher workflow is
   base-year first; later-year changes are handled in LEAP adjustment variables.
 - Uploaded checkpoint values are overlaid client-side onto the currently loaded
@@ -444,28 +452,28 @@ measures, but the standard mode should stay deliberately simpler.
 
 ---
 
-## 6. Target Workbook Contract
+## 6. Target CSV Contract
 
-The target Module 1 handoff is one workbook per economy:
+The target Module 1 handoff is one flat CSV per economy:
 
 ```text
-road_module1_inputs_{ECONOMY}.xlsx
+road_module1_default_filled_inputs.csv
 ```
 
 Example:
 
 ```text
-road_module1_inputs_20USA.xlsx
+road_module1_default_filled_inputs.csv
 ```
 
-This workbook is the primary contract between `multinode_energy_balance` and
+This flat CSV is the primary contract between `multinode_energy_balance` and
 `leap_road_model`.
 
 ### Sheet: `Data`
 
 Purpose: LEAP-compatible scalar/base-year input rows.
 
-This sheet should contain the rows that downstream modules need as tabular road
+This CSV should contain the rows that downstream modules need as tabular road
 inputs. It should avoid audit-only metadata columns.
 
 Columns:
@@ -480,7 +488,16 @@ Columns:
 | `Units` | Unit string. |
 | `Per...` | Denominator unit where needed. |
 | `2022` | Base-year value. |
-| `2030`, `2040`, `2050` | Optional viewing/projection columns where applicable. |
+| `2030`, `2040`, `2050` | Optional viewing/projection columns where applicable. These may be blank or absent and will not be used when not needed. |
+
+Advice for filling rows:
+
+- As long as the core columns above are filled in, other cells do not need to
+  be specific values.
+- Partial rows are fine when the intent is clear; blanks and missing optional
+  values are ignored.
+- Do not invent values just to satisfy unused columns.
+- If a row is not relevant, leave it blank or omit it entirely.
 
 Rows that belong in `Data`:
 
