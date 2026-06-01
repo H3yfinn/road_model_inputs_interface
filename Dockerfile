@@ -17,7 +17,12 @@ WORKDIR /app
 COPY requirements.txt ./interface-requirements.txt
 
 ARG LEAP_ROAD_MODEL_REPO=https://github.com/asia-pacific-energy-research-centre/leap_road_model
-RUN git clone ${LEAP_ROAD_MODEL_REPO} /app/leap_road_model
+# LEAP_ROAD_MODEL_VERSION pins the clone to a specific commit so the cache is
+# busted automatically when leap_road_model changes. Update this to the latest
+# commit SHA after pushing new data or code to leap_road_model.
+ARG LEAP_ROAD_MODEL_VERSION=4a66c55
+RUN git clone ${LEAP_ROAD_MODEL_REPO} /app/leap_road_model \
+    && cd /app/leap_road_model && git checkout ${LEAP_ROAD_MODEL_VERSION}
 
 RUN pip install --no-cache-dir \
     -r interface-requirements.txt \
