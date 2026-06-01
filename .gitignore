@@ -39,18 +39,20 @@ archive/
 back-end/outputs/
 
 # ===========================
-# Large data files — too big for plain git
+# Large data files — too big for HF Spaces (10 MB limit)
 #
-# DO commit (small, needed on HF Spaces at runtime):
-#   back-end/data/multinodeenergy_backend/   APEC CSV + fuel mapping
+# DO commit (small CSVs, needed by road module backend):
 #   back-end/data/road_model/*.csv           small parameter CSVs
+#   back-end/data/multinodeenergy_backend/sector_fuel_codes_to_names*.csv
 #
-# Do NOT commit (large, regenerate locally):
-#   back-end/data/road_model/*.xlsx          seed workbooks (~10 MB each)
-#   back-end/data/road_model/leap_import_workbooks/  transport LEAP exports (~130 MB total)
+# Do NOT commit (too large or regenerated locally):
+#   APEC energy database (>10 MB) — energy-model tab unavailable on HF; startup is graceful
+#   Seed workbooks and transport LEAP export workbooks (~130 MB total)
 # ===========================
+back-end/data/multinodeenergy_backend/00APEC_2024_low_with_subtotals.csv
 back-end/data/road_model/*.xlsx
 back-end/data/road_model/leap_import_workbooks/
+back-end/data/transport_leap_exports/
 
 # ===========================
 # Static bundle IS committed — it is the deployed frontend artifact
