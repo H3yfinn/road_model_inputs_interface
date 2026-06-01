@@ -36,6 +36,8 @@ ENV MPLBACKEND=Agg
 ENV PORT=7860
 ENV RELOAD=false
 ENV LEAP_ROAD_MODEL_DIR=/app/leap_road_model
+ENV ROAD_MODEL_ESTO_CSV=/app/leap_road_model/input_data/esto_transport_2000_2022.csv
+ENV ROAD_MODEL_MACRO_CSV=/app/leap_road_model/input_data/9th_macro_data.csv
 
 WORKDIR /app/back-end
 
