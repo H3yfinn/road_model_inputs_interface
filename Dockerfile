@@ -4,7 +4,7 @@
 # leap_road_model is cloned from GitHub during the build.
 # Override LEAP_ROAD_MODEL_REPO via HF Space build args if the URL ever changes.
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # git is needed to clone leap_road_model; libgomp1 is needed by numpy/scipy
 RUN apt-get update \
