@@ -1,6 +1,6 @@
-# -----------------------------
-# Python / local environment
-# -----------------------------
+# ===========================
+# Python
+# ===========================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -8,34 +8,50 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
 
+# ===========================
+# Virtual environments
+# ===========================
 .venv/
 venv/
 env/
-
-# Large local environment snapshot (never commit)
 env_multinode_energy_balance/
 
-# -----------------------------
-# Local logs / artifacts
-# -----------------------------
+# ===========================
+# IDE / OS
+# ===========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Logs and local artifacts
+# ===========================
 *.log
-archive/logs/
-archive/input_snapshots/
+archive/
 
-# -----------------------------
-# Road Module 1 raw inputs & generated backend outputs
-# Keep these local; regenerate static bundle before commit.
-# -----------------------------
-back-end/data/**
-back-end/outputs/**
+# ===========================
+# Backend generated outputs
+# Regenerate with build scripts; not committed to keep repo clean.
+# ===========================
+back-end/outputs/
 
-# Keep lightweight docs/readmes if present under ignored trees
-!back-end/data/**/README.md
-!back-end/outputs/**/README.md
+# ===========================
+# Large data files — too big for plain git
+#
+# DO commit (small, needed on HF Spaces at runtime):
+#   back-end/data/multinodeenergy_backend/   APEC CSV + fuel mapping
+#   back-end/data/road_model/*.csv           small parameter CSVs
+#
+# Do NOT commit (large, regenerate locally):
+#   back-end/data/road_model/*.xlsx          seed workbooks (~10 MB each)
+#   back-end/data/road_model/leap_import_workbooks/  transport LEAP exports (~130 MB total)
+# ===========================
+back-end/data/road_model/*.xlsx
+back-end/data/road_model/leap_import_workbooks/
 
-# -----------------------------
-# Static bundle is the committed artifact for frontend use
-# -----------------------------
-!front-end/road-module1-static/
-!front-end/road-module1-static/**
+# ===========================
+# Static bundle IS committed — it is the deployed frontend artifact
+# ===========================

@@ -1,4 +1,14 @@
-# Road Model Inputs Interface (Module 1)
+---
+title: Road Model Inputs Interface
+emoji: 🚗
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+## Road Model Inputs Interface (Module 1)
 
 This repository hosts the **researcher-facing site for Road Module 1** in the APEC road transport modeling workflow.
 

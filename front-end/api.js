@@ -4,7 +4,10 @@
  * Engineered using native Fetch API to eliminate external dependency overhead.
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/energy-model';
+// Use relative URLs when served from a real server; fall back to localhost
+// only when the file is opened directly (file:// protocol, local dev without server).
+const _API_ORIGIN = location.protocol === 'file:' ? 'http://localhost:8000' : '';
+const API_BASE_URL = `${_API_ORIGIN}/api/v1/energy-model`;
 
 class EnergyModelAPI {
     

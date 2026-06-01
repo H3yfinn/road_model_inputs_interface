@@ -128,7 +128,8 @@ def main() -> None:
         output_root=OUTPUT_ROOT,
         scenarios=list(DEFAULT_SCENARIOS),
         years=list(DEFAULT_YEARS),
-        require_default_input_workbook=False,
+        require_default_input_workbook=True,
+        enforce_source_backed_values=True,
     )
 
     static_summary = write_frontend_static_bundle(

@@ -32,14 +32,24 @@ TRANSPORT_LEAP_EXPORT_APEC_FALLBACK_VARIABLES = {
     "Final On-Road Mileage",
     "Fuel Economy",
 }
+
+import os
+
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parent
-DATA_ROOT = BACKEND_ROOT / "data"
+
+# Support env var overrides for web deployment; default to local paths
+_data_root_env = os.getenv("ROAD_MODEL_DATA_ROOT")
+DATA_ROOT = Path(_data_root_env) if _data_root_env else BACKEND_ROOT / "data"
+
+_output_root_env = os.getenv("ROAD_MODEL_OUTPUT_ROOT")
+_output_root = Path(_output_root_env) if _output_root_env else BACKEND_ROOT / "outputs"
+
 MULTINODE_BACKEND_DATA_DIR = DATA_ROOT / "multinodeenergy_backend"
 ROAD_MODEL_DATA_DIR = DATA_ROOT / "road_model"
 TRANSPORT_LEAP_EXPORT_DIR = ROAD_MODEL_DATA_DIR / "leap_import_workbooks"
-ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT = BACKEND_ROOT / "outputs" / "road_module1_defaults"
-ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = BACKEND_ROOT / "outputs" / "road_module1_researcher_outputs"
+ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT = _output_root / "road_module1_defaults"
+ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = _output_root / "road_module1_researcher_outputs"
 ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = ROAD_MODEL_DATA_DIR / "road_model_default_input_workbook.xlsx"
 ROAD_MODEL_DEFAULT_INPUT_SHEET = "road_model_default_inputs"
 ROAD_MODEL_PHEV_UTILISATION_SHEET = "phev_utilisation_source"
@@ -49,6 +59,7 @@ RECONCILIATION_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_reconciliation_f
 VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_vehicle_equivalent_weights.csv"
 SURVIVAL_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vehicle_survival_modified_00_APEC.xlsx"
 VINTAGE_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vintage_modelled_from_survival_00_APEC.xlsx"
+LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_lifecycle_profile_factors.csv"
 
 ECONOMIES = [
     ("01AUS", "Australia", 26.0),
@@ -205,6 +216,8 @@ DEFAULT_DRIVE_SHARES = {
     },
 }
 
+DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE = 0.10
+
 # Explicitly constrain which drive types are valid for each vehicle type in
 # Module 1 default generation. This prevents placeholder rows for combinations
 # that are out of scope in the current road data tree.
@@ -243,6 +256,8 @@ VALID_DRIVES_BY_VEHICLE_TYPE = {
     "motorcycle": {
         "ice_gasoline",
         "bev",
+        "phev_gasoline",
+        "fcev",
     },
     "light_commercial_vehicle": {
         "ice_gasoline",
@@ -442,6 +457,7 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "base_year_stock": "Stock",
     "current_sales_share": "Sales Share",
     "efficiency": "Fuel Economy",
+    "gasoline_diesel_share_tolerance": "Gasoline/Diesel Share Tolerance",
     "mileage": "Mileage",
     "passenger_saturation": "Passenger Vehicle Saturation",
     "phev_electric_driving_share": "PHEV Electric Driving Share",
@@ -449,6 +465,8 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "reconciliation_bound_upper": "Reconciliation Bound Upper",
     "reconciliation_weight": "Reconciliation Weight",
     "survival_rate": "Survival Rate",
+    "turnover_rate_bound_lower": "Turnover Rate Bound Lower",
+    "turnover_rate_bound_upper": "Turnover Rate Bound Upper",
     "vehicle_equivalent_weight": "Vehicle Equivalent Weight",
     "vintage_profile_share": "Vintage Profile Share",
 }
@@ -457,6 +475,7 @@ PARAMETER_TO_LEAP_METADATA = {
     "base_year_stock": ("", "Device", ""),
     "current_sales_share": ("%", "Share", ""),
     "efficiency": ("", "MJ/100 km", ""),
+    "gasoline_diesel_share_tolerance": ("%", "Share", ""),
     "mileage": ("", "Kilometer", ""),
     "passenger_saturation": ("", "Device", "1000 people"),
     "phev_electric_driving_share": ("%", "Share", ""),
@@ -464,6 +483,8 @@ PARAMETER_TO_LEAP_METADATA = {
     "reconciliation_bound_upper": ("%", "Share", ""),
     "reconciliation_weight": ("", "Weight", ""),
     "survival_rate": ("%", "Share", ""),
+    "turnover_rate_bound_lower": ("%", "Share", ""),
+    "turnover_rate_bound_upper": ("%", "Share", ""),
     "vehicle_equivalent_weight": ("", "Vehicle equivalent", ""),
     "vintage_profile_share": ("%", "Share", ""),
 }
@@ -482,6 +503,11 @@ MODULE1_VALUE_VALIDATION_RULES = {
         "min": 0,
         "max": 100,
         "description": "Sales Share must be between 0 and 100.",
+    },
+    "Gasoline/Diesel Share Tolerance": {
+        "min": 0,
+        "max": 100,
+        "description": "Gasoline/Diesel Share Tolerance must be between 0 and 100.",
     },
     "Fuel Economy": {
         "min": 0,
@@ -693,6 +719,132 @@ def overlay_phev_utilisation_rates(
                 "details": f"{BASE_YEAR}={float(rate)}",
             }
         )
+
+    return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
+
+
+def load_lifecycle_profile_factors(source_path: str | Path | None = None) -> tuple[pd.DataFrame, Path | None]:
+    """Load APEC-wide and economy-level lifecycle calibration factors from the source CSV."""
+    resolved_path: Path | None = None
+    if source_path is not None:
+        resolved_path = Path(source_path) if Path(source_path).exists() else None
+    else:
+        if LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV.exists():
+            resolved_path = LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV
+
+    if resolved_path is None:
+        return pd.DataFrame(), None
+
+    df = pd.read_csv(resolved_path)
+    numeric_cols = [
+        "data_year",
+        "turnover_rate_lower",
+        "turnover_rate_upper",
+        "scale_age_band_age_min",
+        "scale_age_band_age_max",
+        "scale_age_band_factor",
+        "smoothing_window",
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in ["project_code", "economy", "transport_type", "fit_mode"]:
+        if col in df.columns:
+            df[col] = df[col].fillna("").astype(str).str.strip()
+    return df, resolved_path
+
+
+def overlay_lifecycle_profile_factors(
+    default_filled_df: pd.DataFrame,
+    economy: "EconomyInfo",
+    source_path: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Update Turnover Rate Bound Lower / Upper rows using apec_lifecycle_profile_factors.csv.
+
+    Economy-specific rows (matched by project_code) take priority over blank APEC defaults.
+    """
+    lf_df, resolved_path = load_lifecycle_profile_factors(source_path)
+    if lf_df.empty or resolved_path is None:
+        return default_filled_df, pd.DataFrame(
+            [
+                {
+                    "status": "skipped",
+                    "Variable": "Turnover Rate Bound",
+                    "Region": economy.name,
+                    "details": "Lifecycle profile factors CSV was not found.",
+                }
+            ]
+        )
+
+    economy_norm = economy.code.replace("_", "").upper()
+    economy_rows = lf_df[lf_df["project_code"].str.replace("_", "").str.upper() == economy_norm]
+    apec_rows = lf_df[lf_df["project_code"] == ""]
+
+    report_rows = []
+    overlaid_df = default_filled_df.copy()
+
+    for transport_type in ["passenger", "freight"]:
+        # Economy-specific overrides APEC default for this transport type
+        econ_tt = economy_rows[economy_rows["transport_type"] == transport_type]
+        apec_tt = apec_rows[apec_rows["transport_type"] == transport_type]
+        source_row_candidates = econ_tt if not econ_tt.empty else apec_tt
+        if source_row_candidates.empty:
+            report_rows.append(
+                {
+                    "status": "skipped",
+                    "Variable": "Turnover Rate Bound",
+                    "Region": economy.name,
+                    "transport_type": transport_type,
+                    "details": "No lifecycle factors row found.",
+                }
+            )
+            continue
+
+        source_row = source_row_candidates.iloc[0]
+        lower = source_row.get("turnover_rate_lower")
+        upper = source_row.get("turnover_rate_upper")
+        data_year = source_row.get("data_year")
+        evidence_grade = source_row.get("evidence_grade", "")
+        estimation_status = source_row.get("estimation_status", "")
+
+        road_branch = "Passenger road" if transport_type == "passenger" else "Freight road"
+        note = (
+            f"Lifecycle calibration bounds from {resolved_path.name}; "
+            f"data_year {int(data_year) if not pd.isna(data_year) else ''}; "
+            f"evidence_grade {evidence_grade}; {estimation_status}. "
+            f"Used by Module 4 to calibrate survival curves to implied turnover rate."
+        )
+
+        for variable, value in [
+            ("Turnover Rate Bound Lower", lower),
+            ("Turnover Rate Bound Upper", upper),
+        ]:
+            if pd.isna(value):
+                continue
+            target_mask = (
+                overlaid_df["Variable"].eq(variable)
+                & overlaid_df["Branch Path"].astype(str).str.startswith(f"Demand\\{road_branch}")
+            )
+            for idx in overlaid_df[target_mask].index:
+                overlaid_df.at[idx, str(BASE_YEAR)] = float(value)
+                overlaid_df.at[idx, "input_source"] = "provided"
+                overlaid_df.at[idx, "source_type"] = "apec_lifecycle_profile_factors"
+                overlaid_df.at[idx, "source_name"] = resolved_path.name
+                overlaid_df.at[idx, "source_scope"] = economy.code
+                overlaid_df.at[idx, "source_date"] = str(int(data_year)) if not pd.isna(data_year) else ""
+                overlaid_df.at[idx, "researcher_review_recommended"] = False
+                overlaid_df.at[idx, "review_reason"] = ""
+                overlaid_df.at[idx, "notes"] = note
+                report_rows.append(
+                    {
+                        "status": "applied",
+                        "Variable": variable,
+                        "Region": economy.name,
+                        "transport_type": transport_type,
+                        "details": f"{BASE_YEAR}={float(value)}",
+                    }
+                )
 
     return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
 
@@ -1077,6 +1229,62 @@ def _economy_code_from_source_row(row: pd.Series) -> str:
     return ""
 
 
+def _load_age_profile_records_from_leap_style_sheet(sheet_df: pd.DataFrame) -> pd.DataFrame:
+    """Parse LEAP-style lifecycle blocks (Area/Profile/Year/Value) from a sheet."""
+    if sheet_df is None or sheet_df.empty or sheet_df.shape[1] < 2:
+        return pd.DataFrame(columns=["economy_code", "transport_type", "age", "value"])
+
+    rows: list[dict[str, object]] = []
+    current_area = ""
+    current_profile = ""
+    in_data_block = False
+
+    for idx in range(len(sheet_df)):
+        col0_raw = sheet_df.iloc[idx, 0]
+        col1_raw = sheet_df.iloc[idx, 1]
+
+        col0_text = str(col0_raw).strip() if not pd.isna(col0_raw) else ""
+        col1_text = str(col1_raw).strip() if not pd.isna(col1_raw) else ""
+        col0_lower = col0_text.lower()
+
+        if col0_lower == "area:":
+            current_area = col1_text
+            in_data_block = False
+            continue
+
+        if col0_lower == "profile:":
+            current_profile = col1_text
+            in_data_block = False
+            continue
+
+        if col0_lower == "year" and col1_text.lower() == "value":
+            in_data_block = True
+            continue
+
+        if not in_data_block:
+            continue
+
+        age = pd.to_numeric(col0_raw, errors="coerce")
+        value = pd.to_numeric(col1_raw, errors="coerce")
+        if pd.isna(age) or pd.isna(value):
+            continue
+
+        transport_hint = current_profile if current_profile else current_area
+        rows.append(
+            {
+                "economy_code": _normalize_apec_economy_code(current_area),
+                "transport_type": _normalize_transport_type(transport_hint),
+                "age": int(age),
+                "value": float(value),
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame(columns=["economy_code", "transport_type", "age", "value"])
+
+    return pd.DataFrame(rows)
+
+
 def _load_age_profile_records_from_workbook(
     workbook_path: Path,
     value_column_candidates: list[str],
@@ -1087,6 +1295,10 @@ def _load_age_profile_records_from_workbook(
     for _, sheet_df in all_sheets.items():
         if sheet_df is None or sheet_df.empty:
             continue
+
+        leap_style_df = _load_age_profile_records_from_leap_style_sheet(sheet_df)
+        if not leap_style_df.empty:
+            parsed_frames.append(leap_style_df)
 
         normalized_df = sheet_df.copy()
         normalized_df.columns = [str(column).strip().lower() for column in normalized_df.columns]
@@ -1160,14 +1372,24 @@ def _build_profile_lookup_map(
     economy_subset = records[records["economy_code"].eq(economy_code)].copy()
     if economy_subset.empty:
         economy_subset = records[records["economy_code"].eq("")].copy()
+    if economy_subset.empty:
+        economy_subset = records.copy()
+
+    generic_by_age: dict[int, float] = {}
 
     for _, row in economy_subset.iterrows():
         transport_type = str(row.get("transport_type", "")).strip().lower()
-        if transport_type not in {"passenger", "freight"}:
-            continue
         age = int(row["age"])
         value = float(row["value"])
-        lookup[(transport_type, age)] = value
+        if transport_type in {"passenger", "freight"}:
+            lookup[(transport_type, age)] = value
+        else:
+            generic_by_age[age] = value
+
+    if generic_by_age:
+        for transport_type in ("passenger", "freight"):
+            for age, value in generic_by_age.items():
+                lookup.setdefault((transport_type, age), value)
     return lookup
 
 
@@ -1534,6 +1756,7 @@ def overlay_transport_leap_export_values(
             economy=economy,
         )
         source_type = _transport_leap_source_type(source_scope)
+        overlaid_df.at[idx, "input_source"] = "provided"
         overlaid_df.at[idx, "source_type"] = source_type
         overlaid_df.at[idx, "source_name"] = source_filename
         overlaid_df.at[idx, "source_scope"] = source_scope
@@ -1772,6 +1995,32 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                     value=1.0,
                 )
             )
+            rows.append(
+                _row(
+                    economy=economy,
+                    scenario=scenario,
+                    year=BASE_YEAR,
+                    transport_type=transport_type,
+                    vehicle_type="all",
+                    drive="all",
+                    fuel="all",
+                    parameter="turnover_rate_bound_lower",
+                    value=0.05,
+                )
+            )
+            rows.append(
+                _row(
+                    economy=economy,
+                    scenario=scenario,
+                    year=BASE_YEAR,
+                    transport_type=transport_type,
+                    vehicle_type="all",
+                    drive="all",
+                    fuel="all",
+                    parameter="turnover_rate_bound_upper",
+                    value=0.09,
+                )
+            )
             if transport_type == "passenger":
                 rows.append(
                     _row(
@@ -1923,6 +2172,26 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                             value=EFFICIENCY_MJ_PER_KM[drive] * 100 * _year_multiplier(year, -0.006),
                         )
                     )
+
+            if "ice_gasoline" in drive_shares and "ice_diesel" in drive_shares:
+                paired_share_note = (
+                    "Paired gasoline/diesel share control at the top-level vehicle type only; "
+                    "excludes alternative fuels such as biogasoline and other non-conventional blends."
+                )
+                rows.append(
+                    _row(
+                        economy=economy,
+                        scenario=scenario,
+                        year=BASE_YEAR,
+                        transport_type=transport_type,
+                        vehicle_type=vehicle_type,
+                        drive="all",
+                        fuel="all",
+                        parameter="gasoline_diesel_share_tolerance",
+                        value=DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE,
+                        notes=paired_share_note,
+                    )
+                )
 
     long_df = pd.DataFrame(rows)
     return _long_defaults_to_wide(long_df)
@@ -2517,12 +2786,59 @@ def build_default_catalog() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _placeholder_default_value_rows(default_filled_df: pd.DataFrame) -> pd.DataFrame:
+    """Return rows that still carry placeholder default values after source overlays."""
+    df = default_filled_df.copy()
+    year_values = df[YEAR_COLUMNS].apply(pd.to_numeric, errors="coerce")
+    has_any_year_value = year_values.notna().any(axis=1)
+    source_type = df["source_type"].astype(str).str.strip().str.lower()
+
+    placeholder_mask = has_any_year_value & source_type.eq("default_best_guess")
+    return df[placeholder_mask].copy()
+
+
+def _raise_if_placeholder_defaults_remain(default_filled_df: pd.DataFrame, economy: EconomyInfo) -> None:
+    remaining_defaults = _placeholder_default_value_rows(default_filled_df)
+    if remaining_defaults.empty:
+        return
+
+    grouped = (
+        remaining_defaults
+        .groupby(["Variable", "input_source", "source_type"], dropna=False)
+        .size()
+        .reset_index(name="row_count")
+        .sort_values(["row_count", "Variable"], ascending=[False, True])
+    )
+    summary_lines = [
+        f"- {row.Variable} | input_source={row.input_source} | source_type={row.source_type} | rows={int(row.row_count)}"
+        for row in grouped.itertuples(index=False)
+    ]
+
+    sample_cols = ["Branch Path", "Variable", "Scenario", "Region", "input_source", "source_type"]
+    sample_rows = remaining_defaults[sample_cols].head(25)
+    sample_lines = [
+        f"- {row['Variable']} | {row['Branch Path']} | {row['Scenario']} | {row['Region']} | {row['input_source']} | {row['source_type']}"
+        for _, row in sample_rows.iterrows()
+    ]
+
+    raise ValueError(
+        "Strict source-backed generation failed for "
+        f"{economy.code}: {len(remaining_defaults)} rows still use placeholder defaults. "
+        "Update source files or loader logic so all values come from real inputs.\n\n"
+        "Counts by variable/source:\n"
+        + "\n".join(summary_lines)
+        + "\n\nSample affected rows:\n"
+        + "\n".join(sample_lines)
+    )
+
+
 def write_economy_package(
     economy: EconomyInfo,
     output_root: Path,
     scenarios: Iterable[str] = DEFAULT_SCENARIOS,
     years: Iterable[int] = DEFAULT_YEARS,
     default_input_df: pd.DataFrame | None = None,
+    enforce_source_backed_values: bool = True,
 ) -> dict[str, Path]:
     economy_dir = output_root / DEFAULT_VERSION / economy.code
     economy_dir.mkdir(parents=True, exist_ok=True)
@@ -2531,14 +2847,38 @@ def write_economy_package(
         source_regions = _transport_leap_source_regions(economy)
         default_filled = default_input_df[default_input_df["Region"].isin(source_regions)].copy()
         scenario_names = {_format_leap_scenario(scenario) for scenario in scenarios}
-        default_filled = default_filled[default_filled["Scenario"].isin(scenario_names)].copy()
+        scenario_aliases = set(scenario_names)
+        if "Current Accounts" in scenario_names:
+            scenario_aliases.add("Reference")
+        if "Reference" in scenario_names:
+            scenario_aliases.add("Current Accounts")
+        default_filled = default_filled[default_filled["Scenario"].isin(scenario_aliases)].copy()
         if default_filled.empty:
             raise ValueError(f"No Road model default input workbook rows found for {economy.code}.")
         default_filled["Region"] = economy.name
+        workbook_source_name = Path(ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH).name
+        default_filled["input_source"] = "provided"
+        default_filled.loc[
+            default_filled["source_type"].astype(str).str.strip().str.lower().eq("default_best_guess"),
+            "source_type",
+        ] = "default_input_workbook"
+        default_filled.loc[
+            default_filled["source_name"].astype(str).str.strip().eq(""),
+            "source_name",
+        ] = workbook_source_name
+        default_filled.loc[
+            default_filled["source_scope"].astype(str).str.strip().eq(""),
+            "source_scope",
+        ] = economy.code
+        default_filled.loc[
+            default_filled["source_date"].astype(str).str.strip().eq(""),
+            "source_date",
+        ] = SOURCE_DATE
         default_filled = default_filled[MODULE1_INPUT_COLUMNS]
     else:
         default_filled = build_default_assumptions(economy=economy, scenarios=scenarios, years=years)
         default_filled, _ = overlay_phev_utilisation_rates(default_filled_df=default_filled, economy=economy)
+        default_filled, _ = overlay_lifecycle_profile_factors(default_filled_df=default_filled, economy=economy)
 
     # Harmonize legacy naming/scopes from seed workbooks to the current policy:
     # - Use Fuel Economy variable name.
@@ -2554,12 +2894,14 @@ def write_economy_package(
         r"\\PHEV(?:\\|$)",
         regex=True,
     )
-    is_motorcycle_invalid_drive = (
+    # HEV is out of scope for Motorcycles (LPV-only policy), but PHEV and FCEV
+    # are in scope — they should appear with 0 stock in the base year.
+    is_motorcycle_hev = (
         branch_series.str.startswith("Demand\\Passenger road\\Motorcycles\\")
-        & branch_series.str.contains(r"\\(?:HEV|PHEV|FCEV)(?:\\|$)", regex=True)
+        & branch_series.str.contains(r"\\HEV(?:\\|$)", regex=True)
     )
     default_filled = default_filled[
-        ~((is_hev_or_erev & ~is_lpv_branch) | is_truck_phev | is_motorcycle_invalid_drive)
+        ~((is_hev_or_erev & ~is_lpv_branch) | is_truck_phev | is_motorcycle_hev)
     ].copy()
 
     # Vehicle equivalent weights are only required for passenger branches.
@@ -2588,6 +2930,9 @@ def write_economy_package(
     # all rows are presented equally for manual review.
     default_filled["researcher_review_recommended"] = False
     default_filled["review_reason"] = ""
+
+    if enforce_source_backed_values:
+        _raise_if_placeholder_defaults_remain(default_filled, economy)
 
     model_factor_for_overlay_report = model_factor_overlay_report.rename(columns={"source_file": "source_region"}).copy()
     model_factor_for_overlay_report["source_scenario"] = ""
@@ -2632,7 +2977,7 @@ def write_economy_package(
     structure_report = validate_module1_input_structure(default_filled)
 
     paths = {
-        "default_filled_inputs": economy_dir / "road_module1_default_filled_inputs.csv",
+        "default_filled_inputs": economy_dir / _default_filled_inputs_filename(economy.code),
     }
 
     # Remove old artifacts from prior runs so each economy folder stays CSV-only.
@@ -2664,11 +3009,21 @@ def write_all_economy_packages(
     years: Iterable[int] = DEFAULT_YEARS,
     default_input_workbook_path: str | Path = ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH,
     require_default_input_workbook: bool = False,
+    enforce_source_backed_values: bool = True,
 ) -> dict[str, dict[str, Path]]:
     output_root = Path(output_root)
     version_root = output_root / DEFAULT_VERSION
     version_root.mkdir(parents=True, exist_ok=True)
-    default_input_df = pd.DataFrame()
+    default_input_df = load_default_input_workbook(
+        workbook_path=default_input_workbook_path,
+        require_exists=require_default_input_workbook,
+    )
+
+    if enforce_source_backed_values and default_input_df.empty:
+        raise ValueError(
+            "Strict source-backed generation requires a populated Road model default input workbook. "
+            f"Expected data at: {default_input_workbook_path}"
+        )
 
     catalog_path = version_root / "road_module1_default_assumptions_catalog.csv"
     build_default_catalog().to_csv(catalog_path, index=False)
@@ -2684,6 +3039,7 @@ def write_all_economy_packages(
             scenarios=scenarios,
             years=years,
             default_input_df=default_input_df,
+            enforce_source_backed_values=enforce_source_backed_values,
         )
         all_paths[economy.code]["default_catalog"] = catalog_path
         all_paths[economy.code]["input_schema_contract"] = schema_contract_path
@@ -2735,6 +3091,10 @@ def list_default_economies(
     return economies
 
 
+def _default_filled_inputs_filename(economy: str) -> str:
+    return f"road_module1_default_filled_inputs_{economy}.csv"
+
+
 def load_default_filled_inputs(
     economy: str,
     version: str = DEFAULT_VERSION,
@@ -2746,8 +3106,16 @@ def load_default_filled_inputs(
         return _normalize_module1_input_columns(workbook_df)
 
     filepath = get_default_filled_inputs_path(economy=economy, version=version, output_root=output_root)
+    legacy_filepath = filepath.with_name("road_module1_default_filled_inputs.csv")
+
+    if not filepath.exists() and legacy_filepath.exists():
+        filepath = legacy_filepath
+
     if not filepath.exists():
-        raise FileNotFoundError(f"Default-filled Road model input workbook or CSV not found: {workbook_path} / {filepath}")
+        raise FileNotFoundError(
+            "Default-filled Road model input workbook or CSV not found: "
+            f"{workbook_path} / {filepath} / {legacy_filepath}"
+        )
     return pd.read_csv(filepath)
 
 
@@ -2766,7 +3134,7 @@ def get_default_filled_inputs_path(
     output_root: str | Path = "outputs/road_module1_defaults",
 ) -> Path:
     output_root = ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT if output_root == "outputs/road_module1_defaults" else Path(output_root)
-    return output_root / version / economy / "road_module1_default_filled_inputs.csv"
+    return output_root / version / economy / _default_filled_inputs_filename(economy)
 
 
 def get_economy_info(economy_code: str) -> EconomyInfo:
@@ -3274,7 +3642,11 @@ def apply_researcher_overrides(
         completed_df.at[target_idx, "researcher_review_recommended"] = False
         completed_df.at[target_idx, "review_reason"] = ""
         if comment:
-            completed_df.at[target_idx, "notes"] = comment
+            existing_notes = str(completed_df.at[target_idx, "notes"] or "").strip()
+            if not existing_notes:
+                completed_df.at[target_idx, "notes"] = comment
+            elif comment not in existing_notes:
+                completed_df.at[target_idx, "notes"] = f"{existing_notes} {comment}".strip()
 
         applied_rows.append(
             {

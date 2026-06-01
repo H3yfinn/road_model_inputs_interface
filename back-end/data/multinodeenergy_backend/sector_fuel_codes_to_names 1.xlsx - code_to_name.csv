@@ -1,0 +1,108 @@
+flows,products
+01 Production,01 Coal
+02 Imports,01.01 Coking coal
+03 Exports,01.02 Other bituminous coal
+04 International marine bunkers,01.03 Sub-bituminous coal
+05 International aviation bunkers,01.04 Anthracite
+06 Stock changes,01.05 Lignite
+07 Total primary energy supply,01.99 Coal nonspecified
+08 Transfers,02 Coal products
+08.01 Recycled products,02.01 Coke oven coke
+08.02 Interproduct transfers,02.02 Gas coke
+08.03 Products transferred,02.03 Coke oven gas
+08.04 Gas separation,02.04 Blast furnace gas
+08.99 Transformation nonspecified,02.05 Other recovered gases
+09 Total transformation sector,02.06 Patent fuel
+09.01 Main activity producer,02.07 Coal tar
+09.01.01 Electricity plants,02.08 BKB/PB
+09.01.02 CHP plants,03 Peat
+09.01.03 Heat plants,04 Peat products
+09.02 Autoproducers,05 Oil shale and oil sands
+09.02.01 Electricity plants,06 Crude oil & NGL
+09.02.02 CHP plants,06.01 Crude oil
+09.02.03 Heat plants,06.02 Natural gas liquids
+09.03 Heat pumps,06.03 Refinery feedstocks
+09.04 Electric boilers,06.04 Additives/  oxygenates
+09.05 Chemical heat for electricity production,06.05 Other hydrocarbons
+09.06 Gas processing plants,07 Petroleum products
+09.06.01 Gas works plants,07.01 Motor gasoline
+09.06.02 Liquefaction/regasification plants,07.02 Aviation gasoline
+09.06.03 Natural gas blending plants,07.03 Naphtha
+09.06.04 Gas-to-liquids plants,07.04 Gasoline type jet fuel
+09.07 Oil refineries,07.05 Kerosene type jet fuel
+09.08 Coal transformation,07.06 Kerosene
+09.08.01 Coke ovens,07.07 Gas/diesel oil
+09.08.02 Blast furnaces,07.08 Fuel oil
+09.08.03 Patent fuel plants,07.09 LPG
+09.08.04 BKB/PB plants,07.10 Refinery gas (not liquefied)
+09.08.05 Liquefaction (coal to oil),07.11 Ethane
+09.09 Petrochemical industry,07.12 White spirit SBP
+09.10 Biofuels processing,07.13 Lubricants
+09.11 Charcoal processing,07.14 Bitumen
+09.12 Non-specified transformation,07.15 Paraffin  waxes
+10 Losses & own use,07.16 Petroleum coke
+10.01 Own Use,07.17 Other products
+"10.01.01 Electricity, CHP and heat plants",07.99 PetProd nonspecified
+10.01.02 Gas works plants,08 Gas
+10.01.03 Liquefaction/regasification plants,08.01 Natural gas
+10.01.04 Gas-to-liquids plants,08.02 LNG
+10.01.05 Coke ovens,08.03 Gas works gas
+10.01.06 Coal mines,08.99 Gas nonspecified
+10.01.07 Blast furnaces,09 Nuclear
+10.01.08 Patent fuel plants,10 Hydro
+10.01.09 BKB/PB plants,11 Geothermal
+10.01.10 Liquefaction plants (Coal to Oil),12 Solar
+10.01.11 Oil refineries,12.01 of which: Photovoltaics
+10.01.12 Oil and gas extraction,12.99 Solar nonspecified
+10.01.13 Pump storage plants,"13 Tide, wave, ocean"
+10.01.14 Nuclear industry,14 Wind
+10.01.15 Charcoal production plants,15 Solid biomass
+10.01.16 Gasification plants for biogases,15.01 Fuelwood & woodwaste
+10.01.17 Non-specified own uses,15.02 Bagasse
+10.02 Transmission and distribution losses,15.03 Charcoal
+11 Statistical discrepancy,15.04 Black liqour
+12 Total final consumption,15.05 Other biomass
+13 Total final energy consumption,16 Others
+14 Industry sector,16.01 Biogas
+14.01 Mining and quarrying,16.02 Industrial waste
+14.02 Construction,16.03 Municipal solid waste (renewable)
+14.03 Manufacturing,16.04 Municipal solid waste (non-renewable)
+14.03.01 Iron and steel,16.05 Biogasoline
+14.03.02 Chemical (incl. petrochemical),16.06 Biodiesel
+14.03.03 Non ferrous metals,16.07 Bio jet kerosene
+14.03.04 Non-metallic mineral products,16.08 Other liquid biofuels
+14.03.05 Transportation equipment,16.09 Other sources
+14.03.06 Machinery,17 Electricity
+"14.03.07 Food, beverages and tobacco",18 Heat
+"14.03.08 Pulp, paper and printing",19 Total
+14.03.09 Wood and wood products,20 Total Renewables
+14.03.10 Textiles and leather,21 Modern renewables
+14.03.11 Non-specified industry,
+15 Transport sector,
+15.01 Domestic air transport,
+15.02 Road,
+15.03 Rail,
+15.04 Domestic navigation,
+15.05 Pipeline transport,
+15.06 Non-specified transport,
+16 Other sector,
+16.01 Commercial and public services,
+16.02 Residential,
+16.03 Agriculture,
+16.04 Fishing,
+16.05 Non-specified others,
+17 Non-energy use,
+17.01 Transformation sector,
+17.02 Industry sector,
+17.03 Transport sector,
+17.04 Other sector,
+18 Electricity output in GWh,
+18.01 MAP electricity plants,
+18.02 MAP CHP plants,
+18.03 AP electricity plants,
+18.04 AP CHP plants,
+19 Heat output in PJ,
+19.01 MAP CHP plants,
+19.02 MAP heat plants,
+19.03 AP CHP plants,
+19.04 AP heat plants,

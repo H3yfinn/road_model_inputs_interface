@@ -533,66 +533,49 @@
 #road-left-panel {
     height: 100%;
     max-width: 560px;
-    min-width: 300px;
+    min-width: 60px;
     overflow-x: visible;
     overflow-y: auto;
-    resize: horizontal;
-    transition: width 260ms ease, transform 260ms ease;
+    transition: width 120ms ease;
     will-change: width;
-}
-
-#road-left-panel.is-collapsed {
-    min-width: 18px;
-    overflow: visible;
-    resize: none;
-    width: 18px !important;
 }
 
 #road-left-panel > div {
     overflow: visible;
 }
 
-#road-left-panel.is-collapsed > :not(.road-left-toggle) {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.road-left-toggle {
-    align-items: center;
-    background: white;
-    border: 1px solid #cbd5e1;
-    border-left: 0;
-    border-radius: 0 0.375rem 0.375rem 0;
-    box-shadow: 0 4px 8px rgba(15, 23, 42, 0.08);
-    color: #64748b;
-    cursor: pointer;
-    display: flex;
-    font-size: 1rem;
-    font-weight: 900;
-    height: 72px;
-    justify-content: center;
+.road-left-resizer {
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translate(50%, -50%);
-    width: 26px;
-    z-index: 90;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 95;
+    background: transparent;
 }
 
-#road-left-panel.is-collapsed .road-left-toggle {
-    border-left: 1px solid #cbd5e1;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
-    left: auto;
+.road-left-resizer::before {
+    content: '';
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translate(50%, -50%);
-    z-index: 1000;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 1px;
+    background: transparent;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.road-left-toggle:hover {
-    border-color: #60a5fa;
-    color: #2563eb;
+.road-left-resizer:hover::before,
+#road-left-panel.is-resizing .road-left-resizer::before {
+    background: #60a5fa;
+    box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.25);
+}
+
+body.road-panel-resizing,
+body.road-panel-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
 }
 
 #road-input-container {
@@ -1112,9 +1095,60 @@
     font-size: 0.78rem;
     font-weight: 800;
     line-height: 1.25;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.road-info-tip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 900;
+    font-style: normal;
+    cursor: help;
+    position: relative;
+    border: none;
+    padding: 0;
+    line-height: 1;
+}
+
+.road-info-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #f1f5f9;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.375rem;
+    white-space: pre-wrap;
+    max-width: 240px;
+    min-width: 140px;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+    text-align: left;
+    line-height: 1.45;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.road-info-tip:hover::after,
+.road-info-tip:focus::after {
+    display: block;
 }
 
 .road-row-meta,
@@ -1132,8 +1166,32 @@
 }
 
 .road-review-note {
-    color: #b45309;
-    margin-top: 0.25rem;
+    display: none;
+}
+
+.road-transport-params-measures {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.road-transport-param-measure {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.road-transport-param-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .road-year-grid {
@@ -1143,12 +1201,20 @@
 }
 
 .road-year-input label {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     color: #64748b;
     font-size: 0.62rem;
     font-weight: 900;
     line-height: 1;
     margin-bottom: 0.3rem;
+}
+
+.road-year-input label .road-info-tip {
+    width: 0.9rem;
+    height: 0.9rem;
+    font-size: 0.56rem;
 }
 
 .road-value-input,

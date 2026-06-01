@@ -281,9 +281,7 @@
 
     <main id="road-module1-main" class="hidden flex-1 overflow-hidden bg-slate-100">
         <aside id="road-left-panel" class="w-[360px] bg-white border-r border-slate-200 flex flex-col shadow-sm flex-shrink-0 relative">
-            <button id="road-toggle-left-panel" class="road-left-toggle" title="Collapse settings panel" aria-label="Collapse settings panel">
-                &lt;
-            </button>
+            <div id="road-left-resizer" class="road-left-resizer" role="separator" aria-orientation="vertical" aria-label="Resize settings panel"></div>
             <div class="p-5 border-b border-slate-200 bg-slate-50 space-y-4">
                 <div>
                     <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Road model Provided Values</h2>
@@ -354,20 +352,8 @@
                             <select id="road-filter-drive" class="road-filter-select"></select>
                         </div>
                         <div>
-                            <label>Fuel type</label>
-                            <select id="road-filter-fuel" class="road-filter-select"></select>
-                        </div>
-                        <div>
                             <label>Measure</label>
                             <select id="road-filter-measure" class="road-filter-select"></select>
-                        </div>
-                        <div>
-                            <label>Review</label>
-                            <select id="road-filter-review" class="road-filter-select">
-                                <option value="">All</option>
-                                <option value="needs-review">Needs review</option>
-                                <option value="not-needed">Not flagged</option>
-                            </select>
                         </div>
                         <div>
                             <label>Sort by</label>
@@ -389,22 +375,15 @@
                             </select>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-white border border-slate-200 rounded p-2">
-                            <div class="text-slate-400 font-bold uppercase text-[9px]">Rows</div>
-                            <div id="road-row-count" class="font-black text-slate-800">0</div>
-                        </div>
-                        <div class="bg-white border border-slate-200 rounded p-2">
-                            <div class="text-slate-400 font-bold uppercase text-[9px]">Overrides</div>
-                            <div id="road-override-count" class="font-black text-blue-700">0</div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <div class="p-5 mt-auto border-t border-slate-200 bg-white space-y-3">
                 <button id="road-save-output" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-md font-semibold text-sm shadow-sm disabled:bg-slate-300" disabled>
                     Download Filled CSV
+                </button>
+                <button id="road-run-model" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-md font-semibold text-sm shadow-sm disabled:bg-slate-300" disabled>
+                    Run Road Model
                 </button>
                 <div id="road-save-status" class="text-xs text-slate-500 break-words"></div>
             </div>
@@ -490,6 +469,25 @@
                 <div class="flex justify-end mt-3">
                     <button id="road-upload-summary-dismiss" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all">Done</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Road Model Run Log Modal -->
+    <div id="road-run-log-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center hidden opacity-0 transition-opacity duration-200" role="dialog" aria-modal="true" aria-labelledby="road-run-log-title">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <span id="road-run-log-spinner" class="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+                    <h3 id="road-run-log-title" class="text-base font-bold text-slate-800">Running Road Model</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="road-run-log-dashboard" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all">Open Dashboard</button>
+                    <button id="road-run-log-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>Close</button>
+                </div>
+            </div>
+            <div class="p-5">
+                <pre id="road-run-log-output" class="w-full h-96 text-xs border border-slate-200 rounded-md p-3 font-mono text-slate-700 bg-slate-950 text-green-400 overflow-auto whitespace-pre-wrap break-words" aria-label="Road model run log" aria-live="polite"></pre>
             </div>
         </div>
     </div>

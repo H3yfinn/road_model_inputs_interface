@@ -1,0 +1,22 @@
+project_code,economy,data_year,saturation_vehicles_per_1000,lower_bound,upper_bound,evidence_grade,estimation_status
+01AUS,Australia,2024,860,780,920,B,synthetic_estimate
+02BD,Brunei Darussalam,2024,780,700,850,B,synthetic_estimate
+03CDA,Canada,2024,840,760,900,B,synthetic_estimate
+04CHL,Chile,2024,560,470,650,B,synthetic_estimate
+05PRC,China (People's Republic of China),2024,550,460,650,B,synthetic_estimate
+06HKC,Hong Kong China,2024,110,90,135,B,synthetic_estimate
+07INA,Indonesia,2024,230,170,310,B,synthetic_estimate
+08JPN,Japan,2024,600,540,660,B,synthetic_estimate
+09ROK,Republic of Korea,2024,560,500,630,C,synthetic_estimate
+10MAS,Malaysia,2024,650,580,730,B,synthetic_estimate
+11MEX,Mexico,2024,600,520,690,B,synthetic_estimate
+12NZ,New Zealand,2024,820,740,880,B,synthetic_estimate
+13PNG,Papua New Guinea,2024,110,60,170,D,synthetic_estimate
+14PE,Peru,2024,280,200,360,C,synthetic_estimate
+15PHL,Philippines,2024,230,170,300,B,synthetic_estimate
+16RUS,Russia,2024,560,470,650,C,synthetic_estimate
+17SGP,Singapore,2024,135,120,155,B,synthetic_estimate
+18CT,Chinese Taipei,2024,500,430,570,C,synthetic_estimate
+19THA,Thailand,2024,430,360,520,B,synthetic_estimate
+20USA,United States of America,2024,890,830,940,B,synthetic_estimate
+21VN,Viet Nam,2024,360,300,440,B,synthetic_estimate

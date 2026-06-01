@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
+import os
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Imported data_ingestor alongside the router to handle eager loading
 from api.routers import router, road_router, data_ingestor
+from api.run_model_router import road_run_router
 from core.logger import get_logger
 
 # Initialize logger
@@ -22,6 +26,10 @@ async def lifespan(app: FastAPI):
     try:
         data_ingestor.load_data()
         logger.info("APEC macroeconomic database successfully cached in memory.")
+    except FileNotFoundError as e:
+        # Data file not present (e.g. on HF Spaces before data is committed).
+        # The energy-model tab will be unavailable, but Road Module 1 still works.
+        logger.warning(f"APEC database not found — energy-model tab will be unavailable. ({e})")
     except Exception as e:
         logger.critical(f"Critical failure during API boot sequence: Database failed to load. Details: {str(e)}", exc_info=True)
         raise e
@@ -45,6 +53,28 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(road_router)
+app.include_router(road_run_router)
+
+# --- STATIC FILE SERVING ---
+# _interface_dir works for both layouts:
+#   local:     .../road_model_inputs_interface/back-end/api/main.py  → parent×3
+#   HF Spaces: /app/back-end/api/main.py                             → parent×3 = /app/
+_interface_dir = Path(__file__).resolve().parent.parent.parent
+
+# leap_road_model path: env var wins (set in Dockerfile), falls back to sibling repo for local dev.
+_road_model_repo = Path(
+    os.getenv("LEAP_ROAD_MODEL_DIR") or str(_interface_dir.parent / "leap_road_model")
+)
+
+# Serve leap_road_model results over HTTP so the dashboard can be opened from the browser.
+_results_dir = _road_model_repo / "results"
+_results_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/road-results", StaticFiles(directory=str(_results_dir)), name="road-results")
+
+# Serve the frontend — must be last so API routes take precedence.
+_frontend_dir = _interface_dir / "front-end"
+if _frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")
 
 # --- GLOBAL EXCEPTION HANDLERS ---
 

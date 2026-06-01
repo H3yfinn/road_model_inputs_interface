@@ -113,7 +113,7 @@ The target interface is:
 
 ```text
 one flat CSV per economy
-road_module1_default_filled_inputs.csv
+road_module1_default_filled_inputs_<ECONOMY>.csv
 ```
 
 where the CSV contains the core Module 1 row keys and the base-year value.
@@ -163,7 +163,7 @@ only where they are useful for local review.
 
 Primary artifact per economy:
 
-- `road_module1_default_filled_inputs.csv`
+- `road_module1_default_filled_inputs_<ECONOMY>.csv`
 
 Default-package diagnostic CSVs are optional debug artifacts and can be ignored
 for normal workflows. Use them only when troubleshooting data quality,
@@ -171,7 +171,7 @@ validation, or overlay issues.
 
 Current researcher output is one flat CSV per economy:
 
-- `road_module1_default_filled_inputs.csv`
+- `road_module1_default_filled_inputs_<ECONOMY>.csv`
 
 Legacy workbook-style sidecars are transitional only and are cleaned up by the
 current writer.
@@ -181,6 +181,17 @@ current writer.
 The intended target is to consolidate those pieces into one flat CSV per
 economy. Workbook-style sidecars may still be useful for debugging, but they
 should not be the primary handoff contract.
+
+### Downstream integration status (`leap_road_model`)
+
+`leap_road_model` now includes an adapter and orchestrator wiring that treat
+Module 1 defaults as the default upstream source for base-year assumptions in
+`codebase/road_workflow.py`.
+
+Current adapter behavior supports both naming conventions during transition:
+
+- `road_module1_default_filled_inputs_<ECONOMY>.csv` (current writer default)
+- `road_module1_default_filled_inputs.csv` (legacy compatibility)
 
 ### 3.1 Repo folder structure and archive policy
 
