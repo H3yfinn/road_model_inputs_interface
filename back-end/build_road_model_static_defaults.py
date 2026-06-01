@@ -55,6 +55,7 @@ REQUIRED_CSV_COLUMNS = {
         "upper_bound",
         "evidence_grade",
         "estimation_status",
+        "reached_saturation_lenient",
     ],
     "apec_reconciliation_factors.csv": [
         "transport_type",
@@ -66,6 +67,8 @@ REQUIRED_CSV_COLUMNS = {
     "apec_vehicle_equivalent_weights.csv": [
         "vehicle_type",
         "vehicle_equivalent_weight",
+        "lower_bound",
+        "upper_bound",
         "data_year",
     ],
 }

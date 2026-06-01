@@ -314,12 +314,15 @@ EXPECTED_UNITS = {
     "efficiency": "MJ_per_100km",
     "mileage": "vehicle_km_per_vehicle",
     "passenger_saturation": "vehicles_per_1000_people",
+    "passenger_saturation_reached": "boolean",
     "phev_electric_driving_share": "share",
     "reconciliation_bound_lower": "share",
     "reconciliation_bound_upper": "share",
     "reconciliation_weight": "weight",
     "survival_rate": "share",
     "vehicle_equivalent_weight": "vehicle_equivalent",
+    "vehicle_equivalent_weight_lower_bound": "vehicle_equivalent",
+    "vehicle_equivalent_weight_upper_bound": "vehicle_equivalent",
     "vintage_profile_share": "share",
 }
 
@@ -460,6 +463,7 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "gasoline_diesel_share_tolerance": "Gasoline/Diesel Share Tolerance",
     "mileage": "Mileage",
     "passenger_saturation": "Passenger Vehicle Saturation",
+    "passenger_saturation_reached": "Passenger Saturation Reached",
     "phev_electric_driving_share": "PHEV Electric Driving Share",
     "reconciliation_bound_lower": "Reconciliation Bound Lower",
     "reconciliation_bound_upper": "Reconciliation Bound Upper",
@@ -468,6 +472,8 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "turnover_rate_bound_lower": "Turnover Rate Bound Lower",
     "turnover_rate_bound_upper": "Turnover Rate Bound Upper",
     "vehicle_equivalent_weight": "Vehicle Equivalent Weight",
+    "vehicle_equivalent_weight_lower_bound": "Vehicle Equivalent Weight Lower Bound",
+    "vehicle_equivalent_weight_upper_bound": "Vehicle Equivalent Weight Upper Bound",
     "vintage_profile_share": "Vintage Profile Share",
 }
 
@@ -478,6 +484,7 @@ PARAMETER_TO_LEAP_METADATA = {
     "gasoline_diesel_share_tolerance": ("%", "Share", ""),
     "mileage": ("", "Kilometer", ""),
     "passenger_saturation": ("", "Device", "1000 people"),
+    "passenger_saturation_reached": ("", "Boolean", ""),
     "phev_electric_driving_share": ("%", "Share", ""),
     "reconciliation_bound_lower": ("%", "Share", ""),
     "reconciliation_bound_upper": ("%", "Share", ""),
@@ -486,6 +493,8 @@ PARAMETER_TO_LEAP_METADATA = {
     "turnover_rate_bound_lower": ("%", "Share", ""),
     "turnover_rate_bound_upper": ("%", "Share", ""),
     "vehicle_equivalent_weight": ("", "Vehicle equivalent", ""),
+    "vehicle_equivalent_weight_lower_bound": ("", "Vehicle equivalent", ""),
+    "vehicle_equivalent_weight_upper_bound": ("", "Vehicle equivalent", ""),
     "vintage_profile_share": ("%", "Share", ""),
 }
 
@@ -521,6 +530,11 @@ MODULE1_VALUE_VALIDATION_RULES = {
         "min": 0,
         "description": "Passenger Vehicle Saturation cannot be negative.",
     },
+    "Passenger Saturation Reached": {
+        "min": 0,
+        "max": 1,
+        "description": "Passenger Saturation Reached must be 0 or 1.",
+    },
     "PHEV Electric Driving Share": {
         "min": 0,
         "max": 100,
@@ -546,6 +560,14 @@ MODULE1_VALUE_VALIDATION_RULES = {
     "Vehicle Equivalent Weight": {
         "min": 0,
         "description": "Vehicle Equivalent Weight cannot be negative.",
+    },
+    "Vehicle Equivalent Weight Lower Bound": {
+        "min": 0,
+        "description": "Vehicle Equivalent Weight Lower Bound cannot be negative.",
+    },
+    "Vehicle Equivalent Weight Upper Bound": {
+        "min": 0,
+        "description": "Vehicle Equivalent Weight Upper Bound cannot be negative.",
     },
     "Vintage Profile Share": {
         "min": 0,
@@ -887,6 +909,7 @@ def load_passenger_saturation_rates(
         "upper_bound",
         "evidence_grade",
         "estimation_status",
+        "reached_saturation_lenient",
     ]
     missing_columns = [column for column in required_columns if column not in saturation_df.columns]
     if missing_columns:
@@ -898,6 +921,14 @@ def load_passenger_saturation_rates(
     saturation_df["economy_code"] = saturation_df["project_code"].map(_normalize_apec_economy_code)
     for column in ["data_year", "saturation_vehicles_per_1000", "lower_bound", "upper_bound"]:
         saturation_df[column] = pd.to_numeric(saturation_df[column], errors="coerce")
+    saturation_df["reached_saturation_lenient"] = (
+        saturation_df["reached_saturation_lenient"]
+        .fillna(False)
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .isin({"true", "1", "yes", "y", "reached", "saturated"})
+    )
     return saturation_df, resolved_path
 
 
@@ -951,7 +982,7 @@ def load_vehicle_equivalent_weights(
         return pd.DataFrame(), None
 
     weights_df = pd.read_csv(resolved_path)
-    required_columns = ["vehicle_type", "vehicle_equivalent_weight", "data_year"]
+    required_columns = ["vehicle_type", "vehicle_equivalent_weight", "lower_bound", "upper_bound", "data_year"]
     missing_columns = [column for column in required_columns if column not in weights_df.columns]
     if missing_columns:
         raise ValueError(
@@ -960,7 +991,7 @@ def load_vehicle_equivalent_weights(
 
     weights_df = weights_df.copy()
     weights_df["vehicle_type"] = weights_df["vehicle_type"].fillna("").astype(str).str.strip().str.lower()
-    for column in ["vehicle_equivalent_weight", "data_year"]:
+    for column in ["vehicle_equivalent_weight", "lower_bound", "upper_bound", "data_year"]:
         weights_df[column] = pd.to_numeric(weights_df[column], errors="coerce")
     return weights_df, resolved_path
 
@@ -1016,6 +1047,7 @@ def overlay_model_factor_sources(
         else:
             source_row = source_rows.iloc[0]
             saturation_value = source_row["saturation_vehicles_per_1000"]
+            reached_saturation_value = 1.0 if bool(source_row["reached_saturation_lenient"]) else 0.0
             if pd.isna(saturation_value):
                 raise ValueError(f"Passenger saturation is missing for {economy.code}.")
 
@@ -1052,6 +1084,67 @@ def overlay_model_factor_sources(
                         "Region": economy.name,
                         "source_file": saturation_path.name,
                         "details": f"{BASE_YEAR}={float(saturation_value)}",
+                    }
+                )
+
+            reached_target_mask = (
+                overlaid_df["Variable"].eq("Passenger Saturation Reached")
+                & overlaid_df["Branch Path"].eq("Demand\\Passenger road")
+            )
+            if not reached_target_mask.any():
+                scenarios = overlaid_df.loc[target_mask, "Scenario"].dropna().unique().tolist()
+                if not scenarios:
+                    scenarios = overlaid_df["Scenario"].dropna().unique().tolist()
+                new_rows = []
+                for scenario in scenarios:
+                    new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                    new_row.update(
+                        {
+                            "Branch Path": "Demand\\Passenger road",
+                            "Variable": "Passenger Saturation Reached",
+                            "Scenario": scenario,
+                            "Region": economy.name,
+                            "Scale": "",
+                            "Units": "Boolean",
+                            "Per...": "",
+                            str(BASE_YEAR): reached_saturation_value,
+                        }
+                    )
+                    new_rows.append(new_row)
+                if new_rows:
+                    overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
+                    reached_target_mask = (
+                        overlaid_df["Variable"].eq("Passenger Saturation Reached")
+                        & overlaid_df["Branch Path"].eq("Demand\\Passenger road")
+                    )
+
+            for idx in overlaid_df[reached_target_mask].index:
+                overlaid_df.at[idx, str(BASE_YEAR)] = reached_saturation_value
+                for year_col in YEAR_COLUMNS:
+                    if int(year_col) > BASE_YEAR:
+                        overlaid_df.at[idx, year_col] = pd.NA
+                overlaid_df.at[idx, "input_source"] = "provided"
+                overlaid_df.at[idx, "source_type"] = "apec_passenger_saturation"
+                overlaid_df.at[idx, "source_name"] = saturation_path.name
+                overlaid_df.at[idx, "source_scope"] = economy.code
+                overlaid_df.at[idx, "source_date"] = (
+                    str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
+                )
+                overlaid_df.at[idx, "researcher_review_recommended"] = False
+                overlaid_df.at[idx, "review_reason"] = ""
+                overlaid_df.at[idx, "notes"] = (
+                    f"Lenient passenger saturation reached flag from {saturation_path.name}; "
+                    f"reached_saturation_lenient={bool(source_row['reached_saturation_lenient'])}."
+                )
+                report_rows.append(
+                    {
+                        "status": "applied",
+                        "Branch Path": overlaid_df.at[idx, "Branch Path"],
+                        "Variable": "Passenger Saturation Reached",
+                        "Scenario": overlaid_df.at[idx, "Scenario"],
+                        "Region": economy.name,
+                        "source_file": saturation_path.name,
+                        "details": f"{BASE_YEAR}={reached_saturation_value}",
                     }
                 )
 
@@ -1143,14 +1236,65 @@ def overlay_model_factor_sources(
             row["vehicle_type"]: row
             for _, row in vehicle_weights_df.iterrows()
         }
+        vehicle_key_to_branch_path = {
+            "bus": "Demand\\Passenger road\\Buses",
+            "passenger_car": "Demand\\Passenger road\\LPVs\\Passenger cars",
+            "suv_light_truck": "Demand\\Passenger road\\LPVs\\SUV and light trucks",
+            "motorcycle": "Demand\\Passenger road\\Motorcycles",
+        }
+        scenarios = (
+            overlaid_df.loc[overlaid_df["Variable"].eq("Vehicle Equivalent Weight"), "Scenario"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+        for vehicle_key, source_row in weights_by_vehicle.items():
+            branch_path = vehicle_key_to_branch_path.get(vehicle_key)
+            if not branch_path:
+                continue
+            for variable, source_column in {
+                "Vehicle Equivalent Weight Lower Bound": "lower_bound",
+                "Vehicle Equivalent Weight Upper Bound": "upper_bound",
+            }.items():
+                if pd.isna(source_row[source_column]):
+                    continue
+                for scenario in scenarios:
+                    exists = (
+                        overlaid_df["Branch Path"].eq(branch_path)
+                        & overlaid_df["Variable"].eq(variable)
+                        & overlaid_df["Scenario"].eq(scenario)
+                    ).any()
+                    if exists:
+                        continue
+                    new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                    new_row.update(
+                        {
+                            "Branch Path": branch_path,
+                            "Variable": variable,
+                            "Scenario": scenario,
+                            "Region": economy.name,
+                            "Scale": "",
+                            "Units": "Vehicle equivalent",
+                            "Per...": "",
+                            str(BASE_YEAR): float(source_row[source_column]),
+                        }
+                    )
+                    overlaid_df = pd.concat([overlaid_df, pd.DataFrame([new_row])], ignore_index=True)
         for idx, target_row in overlaid_df.iterrows():
-            if str(target_row.get("Variable", "")) != "Vehicle Equivalent Weight":
+            variable = str(target_row.get("Variable", ""))
+            source_column_by_variable = {
+                "Vehicle Equivalent Weight": "vehicle_equivalent_weight",
+                "Vehicle Equivalent Weight Lower Bound": "lower_bound",
+                "Vehicle Equivalent Weight Upper Bound": "upper_bound",
+            }
+            source_column = source_column_by_variable.get(variable)
+            if source_column is None:
                 continue
             vehicle_key = _vehicle_type_from_weight_branch_path(str(target_row.get("Branch Path", "")))
             source_row = weights_by_vehicle.get(vehicle_key)
             if source_row is None:
                 continue
-            source_value = source_row["vehicle_equivalent_weight"]
+            source_value = source_row[source_column]
             if pd.isna(source_value):
                 continue
 
@@ -1168,13 +1312,13 @@ def overlay_model_factor_sources(
             overlaid_df.at[idx, "researcher_review_recommended"] = False
             overlaid_df.at[idx, "review_reason"] = ""
             overlaid_df.at[idx, "notes"] = (
-                f"Vehicle equivalent weight from {vehicle_weights_path.name} ({vehicle_key})."
+                f"{variable} from {vehicle_weights_path.name} ({vehicle_key})."
             )
             report_rows.append(
                 {
                     "status": "applied",
                     "Branch Path": target_row["Branch Path"],
-                    "Variable": "Vehicle Equivalent Weight",
+                    "Variable": variable,
                     "Scenario": target_row["Scenario"],
                     "Region": economy.name,
                     "source_file": vehicle_weights_path.name,
@@ -2035,6 +2179,19 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         value=420,
                     )
                 )
+                rows.append(
+                    _row(
+                        economy=economy,
+                        scenario=scenario,
+                        year=BASE_YEAR,
+                        transport_type=transport_type,
+                        vehicle_type="all",
+                        drive="all",
+                        fuel="all",
+                        parameter="passenger_saturation_reached",
+                        value=0,
+                    )
+                )
             for year in years:
                 rows.append(
                     _row(
@@ -2089,6 +2246,12 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
 
         for transport_type, vehicle_type, vehicle_equivalent_weight, stock_share in VEHICLE_TYPES:
             if transport_type == "passenger":
+                lower_bound, upper_bound = {
+                    "passenger_car": (1.0, 1.0),
+                    "suv_light_truck": (1.0, 1.5),
+                    "bus": (8.0, 80.0),
+                    "motorcycle": (0.05, 0.80),
+                }.get(vehicle_type, (vehicle_equivalent_weight, vehicle_equivalent_weight))
                 rows.append(
                     _row(
                         economy=economy,
@@ -2100,6 +2263,32 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         fuel="all",
                         parameter="vehicle_equivalent_weight",
                         value=vehicle_equivalent_weight,
+                    )
+                )
+                rows.append(
+                    _row(
+                        economy=economy,
+                        scenario=scenario,
+                        year=BASE_YEAR,
+                        transport_type=transport_type,
+                        vehicle_type=vehicle_type,
+                        drive="all",
+                        fuel="all",
+                        parameter="vehicle_equivalent_weight_lower_bound",
+                        value=lower_bound,
+                    )
+                )
+                rows.append(
+                    _row(
+                        economy=economy,
+                        scenario=scenario,
+                        year=BASE_YEAR,
+                        transport_type=transport_type,
+                        vehicle_type=vehicle_type,
+                        drive="all",
+                        fuel="all",
+                        parameter="vehicle_equivalent_weight_upper_bound",
+                        value=upper_bound,
                     )
                 )
 
