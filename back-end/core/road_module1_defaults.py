@@ -465,9 +465,13 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "passenger_saturation": "Passenger Vehicle Saturation",
     "passenger_saturation_reached": "Passenger Saturation Reached",
     "phev_electric_driving_share": "PHEV Electric Driving Share",
-    "reconciliation_bound_lower": "Reconciliation Bound Lower",
-    "reconciliation_bound_upper": "Reconciliation Bound Upper",
-    "reconciliation_weight": "Reconciliation Weight",
+    "reconciliation_weight_stock": "Reconciliation Weight Stock",
+    "reconciliation_weight_mileage": "Reconciliation Weight Mileage",
+    "reconciliation_weight_efficiency": "Reconciliation Weight Efficiency",
+    "reconciliation_bound_lower_mileage": "Reconciliation Bound Lower Mileage",
+    "reconciliation_bound_upper_mileage": "Reconciliation Bound Upper Mileage",
+    "reconciliation_bound_lower_efficiency": "Reconciliation Bound Lower Efficiency",
+    "reconciliation_bound_upper_efficiency": "Reconciliation Bound Upper Efficiency",
     "survival_rate": "Survival Rate",
     "turnover_rate_bound_lower": "Turnover Rate Bound Lower",
     "turnover_rate_bound_upper": "Turnover Rate Bound Upper",
@@ -486,9 +490,13 @@ PARAMETER_TO_LEAP_METADATA = {
     "passenger_saturation": ("", "Device", "1000 people"),
     "passenger_saturation_reached": ("", "Boolean", ""),
     "phev_electric_driving_share": ("%", "Share", ""),
-    "reconciliation_bound_lower": ("%", "Share", ""),
-    "reconciliation_bound_upper": ("%", "Share", ""),
-    "reconciliation_weight": ("", "Weight", ""),
+    "reconciliation_weight_stock": ("", "Weight", ""),
+    "reconciliation_weight_mileage": ("", "Weight", ""),
+    "reconciliation_weight_efficiency": ("", "Weight", ""),
+    "reconciliation_bound_lower_mileage": ("%", "Share", ""),
+    "reconciliation_bound_upper_mileage": ("%", "Share", ""),
+    "reconciliation_bound_lower_efficiency": ("%", "Share", ""),
+    "reconciliation_bound_upper_efficiency": ("%", "Share", ""),
     "survival_rate": ("%", "Share", ""),
     "turnover_rate_bound_lower": ("%", "Share", ""),
     "turnover_rate_bound_upper": ("%", "Share", ""),
@@ -947,13 +955,17 @@ def load_reconciliation_factors(
         return pd.DataFrame(), None
 
     factors_df = pd.read_csv(resolved_path)
-    required_columns = [
-        "transport_type",
-        "reconciliation_bound_lower",
-        "reconciliation_bound_upper",
-        "reconciliation_weight",
+    _RECONCILIATION_NUMERIC_COLUMNS = [
+        "weight_stock",
+        "weight_mileage",
+        "weight_efficiency",
+        "bound_lower_mileage",
+        "bound_upper_mileage",
+        "bound_lower_efficiency",
+        "bound_upper_efficiency",
         "data_year",
     ]
+    required_columns = ["transport_type"] + _RECONCILIATION_NUMERIC_COLUMNS
     missing_columns = [column for column in required_columns if column not in factors_df.columns]
     if missing_columns:
         raise ValueError(
@@ -962,7 +974,7 @@ def load_reconciliation_factors(
 
     factors_df = factors_df.copy()
     factors_df["transport_type"] = factors_df["transport_type"].fillna("").astype(str).str.strip().str.lower()
-    for column in ["reconciliation_bound_lower", "reconciliation_bound_upper", "reconciliation_weight", "data_year"]:
+    for column in _RECONCILIATION_NUMERIC_COLUMNS:
         factors_df[column] = pd.to_numeric(factors_df[column], errors="coerce")
     return factors_df, resolved_path
 
@@ -1154,7 +1166,7 @@ def overlay_model_factor_sources(
             {
                 "status": "skipped",
                 "Branch Path": "Demand\\Passenger road;Demand\\Freight road",
-                "Variable": "Reconciliation Bound Lower/Upper/Weight",
+                "Variable": "Reconciliation Weight/Bound per component",
                 "Scenario": "",
                 "Region": economy.name,
                 "source_file": "",
@@ -1162,6 +1174,15 @@ def overlay_model_factor_sources(
             }
         )
     else:
+        _LEAP_VAR_TO_CSV_COL = {
+            "Reconciliation Weight Stock": "weight_stock",
+            "Reconciliation Weight Mileage": "weight_mileage",
+            "Reconciliation Weight Efficiency": "weight_efficiency",
+            "Reconciliation Bound Lower Mileage": "bound_lower_mileage",
+            "Reconciliation Bound Upper Mileage": "bound_upper_mileage",
+            "Reconciliation Bound Lower Efficiency": "bound_lower_efficiency",
+            "Reconciliation Bound Upper Efficiency": "bound_upper_efficiency",
+        }
         reconciliation_by_transport = {
             row["transport_type"]: row
             for _, row in reconciliation_df.iterrows()
@@ -1169,23 +1190,15 @@ def overlay_model_factor_sources(
         }
         for idx, target_row in overlaid_df.iterrows():
             variable = str(target_row.get("Variable", ""))
-            if variable not in {
-                "Reconciliation Bound Lower",
-                "Reconciliation Bound Upper",
-                "Reconciliation Weight",
-            }:
+            csv_col = _LEAP_VAR_TO_CSV_COL.get(variable)
+            if csv_col is None:
                 continue
             transport_type = _extract_transport_label_from_branch_path(str(target_row.get("Branch Path", "")))
             source_row = reconciliation_by_transport.get(transport_type)
             if source_row is None:
                 continue
 
-            if variable == "Reconciliation Bound Lower":
-                source_value = source_row["reconciliation_bound_lower"]
-            elif variable == "Reconciliation Bound Upper":
-                source_value = source_row["reconciliation_bound_upper"]
-            else:
-                source_value = source_row["reconciliation_weight"]
+            source_value = source_row[csv_col]
 
             if pd.isna(source_value):
                 continue
@@ -2100,45 +2113,28 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
 
     for scenario in scenarios:
         for transport_type in ["passenger", "freight"]:
-            rows.append(
-                _row(
-                    economy=economy,
-                    scenario=scenario,
-                    year=BASE_YEAR,
-                    transport_type=transport_type,
-                    vehicle_type="all",
-                    drive="all",
-                    fuel="all",
-                    parameter="reconciliation_bound_lower",
-                    value=0.85,
+            for parameter, default_value in [
+                ("reconciliation_weight_stock", 0.50),
+                ("reconciliation_weight_mileage", 0.25),
+                ("reconciliation_weight_efficiency", 0.25),
+                ("reconciliation_bound_lower_mileage", 0.85),
+                ("reconciliation_bound_upper_mileage", 1.15),
+                ("reconciliation_bound_lower_efficiency", 0.90),
+                ("reconciliation_bound_upper_efficiency", 1.10),
+            ]:
+                rows.append(
+                    _row(
+                        economy=economy,
+                        scenario=scenario,
+                        year=BASE_YEAR,
+                        transport_type=transport_type,
+                        vehicle_type="all",
+                        drive="all",
+                        fuel="all",
+                        parameter=parameter,
+                        value=default_value,
+                    )
                 )
-            )
-            rows.append(
-                _row(
-                    economy=economy,
-                    scenario=scenario,
-                    year=BASE_YEAR,
-                    transport_type=transport_type,
-                    vehicle_type="all",
-                    drive="all",
-                    fuel="all",
-                    parameter="reconciliation_bound_upper",
-                    value=1.15,
-                )
-            )
-            rows.append(
-                _row(
-                    economy=economy,
-                    scenario=scenario,
-                    year=BASE_YEAR,
-                    transport_type=transport_type,
-                    vehicle_type="all",
-                    drive="all",
-                    fuel="all",
-                    parameter="reconciliation_weight",
-                    value=1.0,
-                )
-            )
             rows.append(
                 _row(
                     economy=economy,

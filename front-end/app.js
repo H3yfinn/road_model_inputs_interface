@@ -192,6 +192,7 @@ const DOM = {
     roadRunLogOutput: document.getElementById('road-run-log-output'),
     roadRunLogClose: document.getElementById('road-run-log-close'),
     roadRunLogDashboard: document.getElementById('road-run-log-dashboard'),
+    roadRunLogWorkbook: document.getElementById('road-run-log-workbook'),
     roadValidationSummary: document.getElementById('road-validation-summary'),
     roadInputContainer: document.getElementById('road-input-container'),
     roadUploadSummaryModal: document.getElementById('road-upload-summary-modal'),
@@ -1328,18 +1329,28 @@ function getRoadPairedFuelShareRowRefs(rows) {
 function isRoadReconciliationControlRow(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
     return [
-        normalizeRoadTextToken('Reconciliation Bound Lower'),
-        normalizeRoadTextToken('Reconciliation Bound Upper'),
-        normalizeRoadTextToken('Reconciliation Weight')
+        'reconciliation weight stock',
+        'reconciliation weight mileage',
+        'reconciliation weight efficiency',
+        'reconciliation bound lower mileage',
+        'reconciliation bound upper mileage',
+        'reconciliation bound lower efficiency',
+        'reconciliation bound upper efficiency',
     ].includes(variable);
 }
 
 function getRoadReconciliationControlRole(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
-    if (variable === normalizeRoadTextToken('Reconciliation Bound Lower')) return 'lower';
-    if (variable === normalizeRoadTextToken('Reconciliation Bound Upper')) return 'upper';
-    if (variable === normalizeRoadTextToken('Reconciliation Weight')) return 'weight';
-    return '';
+    const roleMap = {
+        'reconciliation weight stock': 'weight_stock',
+        'reconciliation weight mileage': 'weight_mileage',
+        'reconciliation weight efficiency': 'weight_efficiency',
+        'reconciliation bound lower mileage': 'bound_lower_mileage',
+        'reconciliation bound upper mileage': 'bound_upper_mileage',
+        'reconciliation bound lower efficiency': 'bound_lower_efficiency',
+        'reconciliation bound upper efficiency': 'bound_upper_efficiency',
+    };
+    return roleMap[variable] || '';
 }
 
 function getRoadReconciliationBranchPath(row) {
@@ -1908,9 +1919,9 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
     const groupTitle = group.groupType === 'paired-fuel-share'
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
-            ? 'Reconciliation controls'
+            ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? 'Transport parameters'
+                ? (groupRows.some(r => getRoadTransportParamRole(r) === 'pvs') ? 'Vehicle ownership' : 'Fleet weighting')
                 : first.Variable));
     return `
         <section class="road-group-card road-tree-editor" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
@@ -2015,55 +2026,61 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
         if (role) rowsByRole.set(role, row);
     });
 
-    const lowerRow = rowsByRole.get('lower') || null;
-    const upperRow = rowsByRole.get('upper') || null;
-    const weightRow = rowsByRole.get('weight') || null;
-    const referenceRow = lowerRow || upperRow || weightRow || group.rows[0];
-    const rowRefs = getRoadReconciliationRowRefs([lowerRow, upperRow, weightRow].filter(Boolean));
-    const serializableRowRefs = rowRefs.map(({ role, rowKey, year, keyPayload, variable }) => ({ role, rowKey, year, keyPayload, variable }));
+    const referenceRow = group.rows[0];
+    const rowRefs = getRoadReconciliationRowRefs(group.rows);
+    const serializableRowRefs = rowRefs.map(({ role, rowKey, year, keyPayload }) => ({ role, rowKey, year, keyPayload }));
     const comment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
 
-    const lookupRef = (role) => rowRefs.find(ref => ref.role === role) || null;
-    const valueInput = (role, label) => {
-        const ref = lookupRef(role);
+    const valueInput = (role, label, helpText) => {
+        const row = rowsByRole.get(role) || null;
+        if (!row) return '';
+        const ref = rowRefs.find(r => r.role === role);
         if (!ref) return '';
-        const defaultValue = getRoadDefaultValue(ref.row, ref.year);
+        const defaultValue = getRoadDefaultValue(row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
         const inputValue = override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
-            ? override.value
-            : '';
-        const boundsAttrs = getRoadModule1InputBoundsAttrs(ref.row.Variable);
-        const roleHelp = role === 'lower'
-            ? 'Lower bound: minimum reconciliation value allowed for this transport type.'
-            : (role === 'upper'
-                ? 'Upper bound: maximum reconciliation value allowed for this transport type.'
-                : 'Weight: controls how strongly reconciliation adjustments are applied.');
+            ? override.value : '';
+        const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
             <div class="road-year-input road-reconciliation-input" data-reconciliation-role="${role}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
-                ${buildRoadCellLabelHtml(label, roleHelp)}
+                ${buildRoadCellLabelHtml(label, helpText)}
                 <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
     };
 
-    const transportLabel = getRoadReconciliationBranchPath(referenceRow).split('\\').filter(Boolean).slice(-1)[0] || 'Transport';
-    const title = `Reconciliation controls — ${escapeHtml(transportLabel)}`;
-    const rowMeta = `${escapeHtml(referenceRow.Scenario || 'Current Accounts')} | ${escapeHtml(referenceRow.Region || '')}`;
+    const componentSection = (label, weightRole, lowerRole, upperRole, helpWeight, helpLower, helpUpper) => {
+        const weightHtml = valueInput(weightRole, 'Weight', helpWeight);
+        const lowerHtml = lowerRole ? valueInput(lowerRole, 'Min adjustment', helpLower) : '';
+        const upperHtml = upperRole ? valueInput(upperRole, 'Max adjustment', helpUpper) : '';
+        if (!weightHtml && !lowerHtml && !upperHtml) return '';
+        return `
+            <div class="road-reconciliation-component">
+                <div class="road-reconciliation-component-label">${escapeHtml(label)}</div>
+                <div class="road-year-grid">
+                    ${weightHtml}${lowerHtml}${upperHtml}
+                </div>
+            </div>
+        `;
+    };
 
     return `
         <div class="road-input-row road-reconciliation-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}">
-            <div class="road-row-label">
-                <div class="road-row-title">${title} ${buildRoadInfoTooltip('Lower/upper bounds and reconciliation weight are combined for this transport type.')}</div>
-                <div class="road-row-meta">${rowMeta}</div>
-            </div>
-            <div class="road-year-grid">
-                ${valueInput('lower', 'Bound lower')}
-                ${valueInput('upper', 'Bound upper')}
-                ${valueInput('weight', 'Weight')}
+            <div class="road-reconciliation-components">
+                ${componentSection('Stock', 'weight_stock', null, null,
+                    'Share of the energy correction applied by adjusting vehicle stock. Unbounded — stock absorbs any residual the other components cannot.')}
+                ${componentSection('Mileage', 'weight_mileage', 'bound_lower_mileage', 'bound_upper_mileage',
+                    'Share of the energy correction applied by adjusting annual km per vehicle.',
+                    'Minimum allowed mileage adjustment factor (e.g. 0.85 = −15%).',
+                    'Maximum allowed mileage adjustment factor (e.g. 1.15 = +15%).')}
+                ${componentSection('Efficiency', 'weight_efficiency', 'bound_lower_efficiency', 'bound_upper_efficiency',
+                    'Share of the energy correction applied by adjusting fuel economy.',
+                    'Minimum allowed efficiency adjustment factor (e.g. 0.90 = −10%).',
+                    'Maximum allowed efficiency adjustment factor (e.g. 1.10 = +10%).')}
             </div>
             <div class="road-row-actions">
                 <span class="road-source-badge">combined</span>
-                <button type="button" class="road-reset-button" title="Reset reconciliation controls" aria-label="Reset reconciliation controls">&#8634;</button>
+                <button type="button" class="road-reset-button" title="Reset fuel reconciliation" aria-label="Reset fuel reconciliation">&#8634;</button>
                 <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
             </div>
         </div>
@@ -2081,7 +2098,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
     const pvsRow = rowsByRole.get('pvs') || null;
     const referenceRow = vewRow || pvsRow || group.rows[0];
 
-    const roleLabel = { vew: 'Vehicle Equivalent Weight', pvs: 'Passenger Vehicle Saturation' };
+    const roleLabel = { vew: 'Vehicle equivalence weight', pvs: 'Ownership saturation' };
 
     const paramSection = (role, row) => {
         if (!row) return '';
@@ -2113,10 +2130,6 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
     const allYears = [vewRow, pvsRow].filter(Boolean).flatMap(r => getRoadYearColumns(r));
     const comment = getRoadCommentForKeys(allRowKeys, allYears);
 
-    const transportLabel = getRoadTransportParamBranchPath(referenceRow).split('\\').filter(Boolean).slice(-1)[0] || 'Transport';
-    const title = `Transport parameters — ${escapeHtml(transportLabel)}`;
-    const rowMeta = `${escapeHtml(referenceRow.Scenario || 'Current Accounts')} | ${escapeHtml(referenceRow.Region || '')}`;
-
     const rowRefs = [
         vewRow ? { role: 'vew', rowKey: buildRoadModule1Key(vewRow), year: getRoadBaseYearColumn(vewRow), keyPayload: roadModule1KeyPayload(vewRow) } : null,
         pvsRow ? { role: 'pvs', rowKey: buildRoadModule1Key(pvsRow), year: getRoadBaseYearColumn(pvsRow), keyPayload: roadModule1KeyPayload(pvsRow) } : null
@@ -2124,10 +2137,6 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
 
     return `
         <div class="road-input-row road-transport-params-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
-            <div class="road-row-label">
-                <div class="road-row-title">${title}</div>
-                <div class="road-row-meta">${rowMeta}</div>
-            </div>
             <div class="road-transport-params-measures">
                 ${paramSection('vew', vewRow)}
                 ${paramSection('pvs', pvsRow)}
@@ -2325,9 +2334,9 @@ function buildRoadModule1ListGroupHtml(group) {
     const groupTitle = group.groupType === 'paired-fuel-share'
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
-            ? 'Reconciliation controls'
+            ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? 'Transport parameters'
+                ? (groupRows.some(r => getRoadTransportParamRole(r) === 'pvs') ? 'Vehicle ownership' : 'Fleet weighting')
                 : first.Variable));
     return `
         <section class="road-group-card">
@@ -2961,6 +2970,7 @@ async function runRoadModel() {
 
     if (DOM.roadRunLogOutput) DOM.roadRunLogOutput.innerHTML = '';
     if (DOM.roadRunLogDashboard) DOM.roadRunLogDashboard.classList.add('hidden');
+    if (DOM.roadRunLogWorkbook) DOM.roadRunLogWorkbook.classList.add('hidden');
     _setRoadRunStatus('running');
     showRoadRunLogModal();
 
@@ -3023,6 +3033,12 @@ async function runRoadModel() {
                     DOM.roadRunLogDashboard.classList.remove('hidden');
                     DOM.roadRunLogDashboard.onclick = () => window.open(dashUrl, '_blank');
                     _appendRoadRunLog(`Dashboard: ${dashUrl || data.dashboard_url}`);
+                }
+                if (data.workbook_url && DOM.roadRunLogWorkbook) {
+                    const wbUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${data.workbook_url}`;
+                    DOM.roadRunLogWorkbook.classList.remove('hidden');
+                    DOM.roadRunLogWorkbook.href = wbUrl;
+                    _appendRoadRunLog(`LEAP workbook: ${wbUrl}`);
                 }
             } else {
                 _setRoadRunStatus('error');

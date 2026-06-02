@@ -131,8 +131,19 @@ async def _sse_generator(run_id: str):
                     f"/road-results/{economy_canonical}/diagnostics/dashboard/index.html"
                 )
 
+        workbook_url: str | None = None
+        if return_code == 0:
+            wb_candidate = (
+                _ROAD_MODEL_REPO / "results" / economy_canonical
+                / "module6" / f"{economy_canonical}_leap_import.xlsx"
+            )
+            if wb_candidate.exists():
+                workbook_url = (
+                    f"/road-results/{economy_canonical}/module6/{economy_canonical}_leap_import.xlsx"
+                )
+
         yield (
-            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url})}\n\n"
+            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url, 'workbook_url': workbook_url})}\n\n"
         )
 
 

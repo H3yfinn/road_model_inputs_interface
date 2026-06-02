@@ -1176,6 +1176,31 @@ body.road-panel-resizing * {
     min-width: 0;
 }
 
+.road-reconciliation-components {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.road-reconciliation-component {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.road-reconciliation-component-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 .road-transport-param-measure {
     display: flex;
     flex-direction: column;
