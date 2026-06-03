@@ -53,6 +53,12 @@ ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = _output_root / "road_module1_researcher_ou
 ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = ROAD_MODEL_DATA_DIR / "road_model_default_input_workbook.xlsx"
 ROAD_MODEL_DEFAULT_INPUT_SHEET = "road_model_default_inputs"
 ROAD_MODEL_PHEV_UTILISATION_SHEET = "phev_utilisation_source"
+ROAD_MODEL_DEFAULT_ASSUMPTIONS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_assumptions.csv"
+ROAD_MODEL_DEFAULT_VEHICLE_TYPES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_vehicle_types.csv"
+ROAD_MODEL_DEFAULT_DRIVE_SHARES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_drive_shares.csv"
+ROAD_MODEL_VALID_DRIVES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_valid_drives_by_vehicle_type.csv"
+ROAD_MODEL_DEFAULT_MILEAGE_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_mileage_km_per_year.csv"
+ROAD_MODEL_DEFAULT_EFFICIENCY_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_efficiency_mj_per_km.csv"
 PHEV_UTILISATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_phev_utilisation_rates.csv"
 PASSENGER_SATURATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_passenger_vehicle_saturation.csv"
 RECONCILIATION_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_reconciliation_factors.csv"
@@ -61,29 +67,116 @@ SURVIVAL_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vehicle_survival_modified_
 VINTAGE_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vintage_modelled_from_survival_00_APEC.xlsx"
 LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_lifecycle_profile_factors.csv"
 
-ECONOMIES = [
-    ("01AUS", "Australia", 26.0),
-    ("02BD", "Brunei Darussalam", 0.45),
-    ("03CDA", "Canada", 39.0),
-    ("04CHL", "Chile", 20.0),
-    ("05PRC", "China", 1410.0),
-    ("06HKC", "Hong Kong, China", 7.5),
-    ("07INA", "Indonesia", 275.0),
-    ("08JPN", "Japan", 125.0),
-    ("09ROK", "Korea", 52.0),
-    ("10MAS", "Malaysia", 34.0),
-    ("11MEX", "Mexico", 128.0),
-    ("12NZ", "New Zealand", 5.2),
-    ("13PNG", "Papua New Guinea", 10.0),
-    ("14PE", "Peru", 34.0),
-    ("15PHL", "Philippines", 114.0),
-    ("16RUS", "Russia", 144.0),
-    ("17SGP", "Singapore", 5.6),
-    ("18CT", "Chinese Taipei", 23.5),
-    ("19THA", "Thailand", 71.0),
-    ("20USA", "United States", 333.0),
-    ("21VN", "Viet Nam", 99.0),
-]
+
+def _read_required_csv(path: Path, required_columns: list[str]) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(
+            "Required Road Module 1 source file was not found: "
+            f"{path}. Populate back-end/data/road_model before generating defaults."
+        )
+    df = pd.read_csv(path)
+    missing = [column for column in required_columns if column not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{path.name} is missing required columns: {', '.join(missing)}"
+        )
+    return df
+
+
+def _load_default_assumptions(path: Path = ROAD_MODEL_DEFAULT_ASSUMPTIONS_SOURCE_CSV) -> dict[str, float]:
+    df = _read_required_csv(path, ["key", "value"])
+    df = df.copy()
+    df["key"] = df["key"].fillna("").astype(str).str.strip()
+    df = df[df["key"].ne("")]
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df = df.dropna(subset=["value"])
+    return {
+        row["key"]: float(row["value"])
+        for _, row in df.iterrows()
+    }
+
+
+def _assumption_value(key: str, default: float = 0.0) -> float:
+    return float(_DEFAULT_ASSUMPTIONS.get(key, default))
+
+
+def _load_default_vehicle_types(
+    path: Path = ROAD_MODEL_DEFAULT_VEHICLE_TYPES_SOURCE_CSV,
+) -> list[tuple[str, str, float, float]]:
+    df = _read_required_csv(path, ["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"])
+    df = df.copy()
+    for numeric_col in ["vehicle_equivalent_weight", "stock_share"]:
+        df[numeric_col] = pd.to_numeric(df[numeric_col], errors="coerce")
+    df = df.dropna(subset=["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"])
+    return [
+        (
+            str(row["transport_type"]).strip(),
+            str(row["vehicle_type"]).strip(),
+            float(row["vehicle_equivalent_weight"]),
+            float(row["stock_share"]),
+        )
+        for _, row in df.iterrows()
+    ]
+
+
+def _load_default_drive_shares(
+    path: Path = ROAD_MODEL_DEFAULT_DRIVE_SHARES_SOURCE_CSV,
+) -> dict[str, dict[str, float]]:
+    df = _read_required_csv(path, ["vehicle_type", "drive", "share"])
+    df = df.copy()
+    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
+    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
+    df["share"] = pd.to_numeric(df["share"], errors="coerce")
+    df = df[df["vehicle_type"].ne("") & df["drive"].ne("") & df["share"].notna()]
+    result: dict[str, dict[str, float]] = {}
+    for _, row in df.iterrows():
+        result.setdefault(str(row["vehicle_type"]), {})[str(row["drive"])] = float(row["share"])
+    return result
+
+
+def _load_valid_drives_by_vehicle_type(
+    path: Path = ROAD_MODEL_VALID_DRIVES_SOURCE_CSV,
+) -> dict[str, set[str]]:
+    df = _read_required_csv(path, ["vehicle_type", "drive"])
+    df = df.copy()
+    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
+    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
+    df = df[df["vehicle_type"].ne("") & df["drive"].ne("")]
+    result: dict[str, set[str]] = {}
+    for _, row in df.iterrows():
+        result.setdefault(str(row["vehicle_type"]), set()).add(str(row["drive"]))
+    return result
+
+
+def _load_default_mileage_km_per_year(
+    path: Path = ROAD_MODEL_DEFAULT_MILEAGE_SOURCE_CSV,
+) -> dict[str, float]:
+    df = _read_required_csv(path, ["vehicle_type", "mileage_km_per_year"])
+    df = df.copy()
+    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
+    df["mileage_km_per_year"] = pd.to_numeric(df["mileage_km_per_year"], errors="coerce")
+    df = df[df["vehicle_type"].ne("") & df["mileage_km_per_year"].notna()]
+    return {
+        str(row["vehicle_type"]): float(row["mileage_km_per_year"])
+        for _, row in df.iterrows()
+    }
+
+
+def _load_default_efficiency_mj_per_km(
+    path: Path = ROAD_MODEL_DEFAULT_EFFICIENCY_SOURCE_CSV,
+) -> dict[str, float]:
+    df = _read_required_csv(path, ["drive", "efficiency_mj_per_km"])
+    df = df.copy()
+    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
+    df["efficiency_mj_per_km"] = pd.to_numeric(df["efficiency_mj_per_km"], errors="coerce")
+    df = df[df["drive"].ne("") & df["efficiency_mj_per_km"].notna()]
+    return {
+        str(row["drive"]): float(row["efficiency_mj_per_km"])
+        for _, row in df.iterrows()
+    }
+
+
+_DEFAULT_ASSUMPTIONS = _load_default_assumptions()
 
 ECONOMY_CODE_TO_LEAP_REGION_NAMES = {
     "01AUS": ["Australia"],
@@ -114,14 +207,17 @@ LEAP_REGION_NAME_TO_ECONOMY_CODE = {
     for region_name in region_names
 }
 
+# Population is intentionally not required for the strict, source-backed
+# Module 1 workflow (workbook + overlays). Keep a zero-population fallback for
+# legacy synthetic defaults paths only.
+ECONOMIES = [
+    (economy_code, region_names[0], 0.0)
+    for economy_code, region_names in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
+]
+
 VEHICLE_TYPES = [
-    ("passenger", "passenger_car", 1.00, 0.62),
-    ("passenger", "suv_light_truck", 1.35, 0.20),
-    ("passenger", "bus", 12.00, 0.02),
-    ("passenger", "motorcycle", 0.25, 0.16),
-    ("freight", "light_commercial_vehicle", 1.50, 0.55),
-    ("freight", "medium_truck", 3.00, 0.25),
-    ("freight", "heavy_truck", 5.00, 0.20),
+    vehicle_type
+    for vehicle_type in _load_default_vehicle_types()
 ]
 
 DRIVE_FUEL_MAP = {
@@ -137,175 +233,30 @@ DRIVE_FUEL_MAP = {
 }
 
 DEFAULT_DRIVE_SHARES = {
-    "passenger_car": {
-        "ice_gasoline": 0.65,
-        "ice_diesel": 0.08,
-        "lpg": 0.02,
-        "cng": 0.01,
-        "hev_gasoline": 0.11,
-        "erev_gasoline": 0.03,
-        "phev_gasoline": 0.02,
-        "bev": 0.07,
-        "fcev": 0.00,
-    },
-    "suv_light_truck": {
-        "ice_gasoline": 0.70,
-        "ice_diesel": 0.15,
-        "lpg": 0.01,
-        "cng": 0.01,
-        "hev_gasoline": 0.06,
-        "erev_gasoline": 0.01,
-        "phev_gasoline": 0.01,
-        "bev": 0.04,
-        "fcev": 0.00,
-    },
-    "bus": {
-        "ice_gasoline": 0.02,
-        "ice_diesel": 0.78,
-        "lpg": 0.01,
-        "cng": 0.08,
-        "hev_gasoline": 0.00,
-        "erev_gasoline": 0.00,
-        "phev_gasoline": 0.00,
-        "bev": 0.09,
-        "fcev": 0.01,
-    },
-    "motorcycle": {
-        "ice_gasoline": 0.93,
-        "ice_diesel": 0.00,
-        "lpg": 0.00,
-        "cng": 0.00,
-        "hev_gasoline": 0.00,
-        "erev_gasoline": 0.00,
-        "phev_gasoline": 0.00,
-        "bev": 0.07,
-        "fcev": 0.00,
-    },
-    "light_commercial_vehicle": {
-        "ice_gasoline": 0.42,
-        "ice_diesel": 0.48,
-        "lpg": 0.02,
-        "cng": 0.02,
-        "hev_gasoline": 0.00,
-        "erev_gasoline": 0.00,
-        "phev_gasoline": 0.01,
-        "bev": 0.03,
-        "fcev": 0.00,
-    },
-    "medium_truck": {
-        "ice_gasoline": 0.06,
-        "ice_diesel": 0.86,
-        "lpg": 0.01,
-        "cng": 0.04,
-        "hev_gasoline": 0.00,
-        "erev_gasoline": 0.00,
-        "phev_gasoline": 0.00,
-        "bev": 0.02,
-        "fcev": 0.01,
-    },
-    "heavy_truck": {
-        "ice_gasoline": 0.02,
-        "ice_diesel": 0.90,
-        "lpg": 0.00,
-        "cng": 0.04,
-        "hev_gasoline": 0.00,
-        "erev_gasoline": 0.00,
-        "phev_gasoline": 0.00,
-        "bev": 0.02,
-        "fcev": 0.02,
-    },
+    vehicle_type: shares
+    for vehicle_type, shares in _load_default_drive_shares().items()
 }
 
-DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE = 0.10
+DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE = float(
+    _assumption_value("gasoline_diesel_share_tolerance", 0.0)
+)
 
 # Explicitly constrain which drive types are valid for each vehicle type in
 # Module 1 default generation. This prevents placeholder rows for combinations
 # that are out of scope in the current road data tree.
 VALID_DRIVES_BY_VEHICLE_TYPE = {
-    "passenger_car": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "hev_gasoline",
-        "erev_gasoline",
-        "phev_gasoline",
-        "bev",
-        "fcev",
-    },
-    "suv_light_truck": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "hev_gasoline",
-        "erev_gasoline",
-        "phev_gasoline",
-        "bev",
-        "fcev",
-    },
-    "bus": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "phev_gasoline",
-        "bev",
-        "fcev",
-    },
-    "motorcycle": {
-        "ice_gasoline",
-        "bev",
-        "phev_gasoline",
-        "fcev",
-    },
-    "light_commercial_vehicle": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "phev_gasoline",
-        "bev",
-        "fcev",
-    },
-    "medium_truck": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "bev",
-        "fcev",
-    },
-    "heavy_truck": {
-        "ice_gasoline",
-        "ice_diesel",
-        "lpg",
-        "cng",
-        "bev",
-        "fcev",
-    },
+    vehicle_type: drives
+    for vehicle_type, drives in _load_valid_drives_by_vehicle_type().items()
 }
 
 MILEAGE_KM_PER_YEAR = {
-    "passenger_car": 12500,
-    "suv_light_truck": 13500,
-    "bus": 45000,
-    "motorcycle": 7000,
-    "light_commercial_vehicle": 21000,
-    "medium_truck": 36000,
-    "heavy_truck": 65000,
+    vehicle_type: value
+    for vehicle_type, value in _load_default_mileage_km_per_year().items()
 }
 
 EFFICIENCY_MJ_PER_KM = {
-    "ice_gasoline": 2.7,
-    "ice_diesel": 2.4,
-    "lpg": 2.8,
-    "cng": 2.6,
-    "hev_gasoline": 1.9,
-    "erev_gasoline": 1.4,
-    "phev_gasoline": 1.5,
-    "bev": 0.65,
-    "fcev": 1.1,
+    drive: value
+    for drive, value in _load_default_efficiency_mj_per_km().items()
 }
 
 EXPECTED_UNITS = {
@@ -596,11 +547,38 @@ def get_economies() -> list[EconomyInfo]:
     return [EconomyInfo(code=code, name=name, population_million=pop) for code, name, pop in ECONOMIES]
 
 
+def _economies_from_default_input(default_input_df: pd.DataFrame) -> list[EconomyInfo]:
+    if default_input_df is None or default_input_df.empty or "Region" not in default_input_df.columns:
+        return []
+
+    regions = (
+        default_input_df["Region"]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .loc[lambda s: s.ne("")]
+        .unique()
+        .tolist()
+    )
+    economies: list[EconomyInfo] = []
+    seen: set[str] = set()
+    for region in regions:
+        code = LEAP_REGION_NAME_TO_ECONOMY_CODE.get(region)
+        if not code or code in seen:
+            continue
+        canonical_name = ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(code, [region])[0]
+        economies.append(EconomyInfo(code=code, name=canonical_name, population_million=0.0))
+        seen.add(code)
+    return economies
+
+
 def _base_stock_total(economy: EconomyInfo, transport_type: str) -> float:
     population = economy.population_million * 1_000_000
+    if population <= 0:
+        return 0.0
     if transport_type == "passenger":
-        return population * 0.42
-    return population * 0.055
+        return population * _assumption_value("base_stock_multiplier.passenger", 0.0)
+    return population * _assumption_value("base_stock_multiplier.freight", 0.0)
 
 
 def _year_multiplier(year: int, annual_change: float) -> float:
@@ -2110,18 +2088,63 @@ def _long_defaults_to_wide(long_df: pd.DataFrame) -> pd.DataFrame:
 
 def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], years: Iterable[int]) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
+    reconciliation_values = {
+        "reconciliation_weight_stock": _assumption_value("reconciliation_weight_stock", 0.0),
+        "reconciliation_weight_mileage": _assumption_value("reconciliation_weight_mileage", 0.0),
+        "reconciliation_weight_efficiency": _assumption_value("reconciliation_weight_efficiency", 0.0),
+        "reconciliation_bound_lower_mileage": _assumption_value("reconciliation_bound_lower_mileage", 0.0),
+        "reconciliation_bound_upper_mileage": _assumption_value("reconciliation_bound_upper_mileage", 0.0),
+        "reconciliation_bound_lower_efficiency": _assumption_value("reconciliation_bound_lower_efficiency", 0.0),
+        "reconciliation_bound_upper_efficiency": _assumption_value("reconciliation_bound_upper_efficiency", 0.0),
+    }
+    turnover_bounds = {
+        "lower": _assumption_value("turnover_rate_bound_lower", 0.0),
+        "upper": _assumption_value("turnover_rate_bound_upper", 0.0),
+    }
+    passenger_saturation_cfg = {
+        "vehicles_per_1000_people": _assumption_value("passenger_saturation_vehicles_per_1000_people", 0.0),
+        "reached": _assumption_value("passenger_saturation_reached", 0.0),
+    }
+    phev_formula = {
+        "base": _assumption_value("phev_electric_driving_share_formula.base", 0.0),
+        "max": _assumption_value("phev_electric_driving_share_formula.max", 0.0),
+        "annual_change": _assumption_value("phev_electric_driving_share_formula.annual_change", 0.0),
+    }
+    max_age = int(_assumption_value("age_profiles.max_age", 0.0))
+    passenger_age_profile = {
+        "survival_age_divisor": _assumption_value("age_profiles.passenger.survival_age_divisor", 1.0),
+        "survival_exponent": _assumption_value("age_profiles.passenger.survival_exponent", 1.0),
+        "vintage_decay_base": _assumption_value("age_profiles.passenger.vintage_decay_base", 1.0),
+    }
+    freight_age_profile = {
+        "survival_age_divisor": _assumption_value("age_profiles.freight.survival_age_divisor", 1.0),
+        "survival_exponent": _assumption_value("age_profiles.freight.survival_exponent", 1.0),
+        "vintage_decay_base": _assumption_value("age_profiles.freight.vintage_decay_base", 1.0),
+    }
+    vehicle_equivalent_bounds = {
+        "passenger_car": {
+            "lower": _assumption_value("vehicle_equivalent_bounds.passenger_car.lower", 1.0),
+            "upper": _assumption_value("vehicle_equivalent_bounds.passenger_car.upper", 1.0),
+        },
+        "suv_light_truck": {
+            "lower": _assumption_value("vehicle_equivalent_bounds.suv_light_truck.lower", 1.0),
+            "upper": _assumption_value("vehicle_equivalent_bounds.suv_light_truck.upper", 1.0),
+        },
+        "bus": {
+            "lower": _assumption_value("vehicle_equivalent_bounds.bus.lower", 1.0),
+            "upper": _assumption_value("vehicle_equivalent_bounds.bus.upper", 1.0),
+        },
+        "motorcycle": {
+            "lower": _assumption_value("vehicle_equivalent_bounds.motorcycle.lower", 1.0),
+            "upper": _assumption_value("vehicle_equivalent_bounds.motorcycle.upper", 1.0),
+        },
+    }
+    mileage_annual_change = _assumption_value("mileage_annual_change", 0.0)
+    efficiency_annual_change = _assumption_value("efficiency_annual_change", 0.0)
 
     for scenario in scenarios:
         for transport_type in ["passenger", "freight"]:
-            for parameter, default_value in [
-                ("reconciliation_weight_stock", 0.50),
-                ("reconciliation_weight_mileage", 0.25),
-                ("reconciliation_weight_efficiency", 0.25),
-                ("reconciliation_bound_lower_mileage", 0.85),
-                ("reconciliation_bound_upper_mileage", 1.15),
-                ("reconciliation_bound_lower_efficiency", 0.90),
-                ("reconciliation_bound_upper_efficiency", 1.10),
-            ]:
+            for parameter, default_value in reconciliation_values.items():
                 rows.append(
                     _row(
                         economy=economy,
@@ -2145,7 +2168,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                     drive="all",
                     fuel="all",
                     parameter="turnover_rate_bound_lower",
-                    value=0.05,
+                        value=float(turnover_bounds.get("lower", 0.0)),
                 )
             )
             rows.append(
@@ -2158,7 +2181,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                     drive="all",
                     fuel="all",
                     parameter="turnover_rate_bound_upper",
-                    value=0.09,
+                        value=float(turnover_bounds.get("upper", 0.0)),
                 )
             )
             if transport_type == "passenger":
@@ -2172,7 +2195,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         drive="all",
                         fuel="all",
                         parameter="passenger_saturation",
-                        value=420,
+                        value=float(passenger_saturation_cfg.get("vehicles_per_1000_people", 0.0)),
                     )
                 )
                 rows.append(
@@ -2185,7 +2208,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         drive="all",
                         fuel="all",
                         parameter="passenger_saturation_reached",
-                        value=0,
+                        value=float(passenger_saturation_cfg.get("reached", 0.0)),
                     )
                 )
             for year in years:
@@ -2199,16 +2222,28 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         drive="phev_gasoline",
                         fuel="all",
                         parameter="phev_electric_driving_share",
-                        value=min(0.75, 0.45 * _year_multiplier(year, 0.01)),
+                        value=min(
+                            float(phev_formula.get("max", 0.0)),
+                            float(phev_formula.get("base", 0.0))
+                            * _year_multiplier(year, float(phev_formula.get("annual_change", 0.0))),
+                        ),
                     )
                 )
-            for age in range(0, 31):
+            for age in range(0, max_age + 1):
                 if transport_type == "freight":
-                    survival = max(0.0, 1 - (age / 28) ** 2.4)
-                    vintage_weight = 0.91**age
+                    survival = max(
+                        0.0,
+                        1 - (age / float(freight_age_profile.get("survival_age_divisor", 1.0)))
+                        ** float(freight_age_profile.get("survival_exponent", 1.0)),
+                    )
+                    vintage_weight = float(freight_age_profile.get("vintage_decay_base", 1.0)) ** age
                 else:
-                    survival = max(0.0, 1 - (age / 22) ** 2.2)
-                    vintage_weight = 0.88**age
+                    survival = max(
+                        0.0,
+                        1 - (age / float(passenger_age_profile.get("survival_age_divisor", 1.0)))
+                        ** float(passenger_age_profile.get("survival_exponent", 1.0)),
+                    )
+                    vintage_weight = float(passenger_age_profile.get("vintage_decay_base", 1.0)) ** age
 
                 rows.append(
                     _row(
@@ -2242,12 +2277,9 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
 
         for transport_type, vehicle_type, vehicle_equivalent_weight, stock_share in VEHICLE_TYPES:
             if transport_type == "passenger":
-                lower_bound, upper_bound = {
-                    "passenger_car": (1.0, 1.0),
-                    "suv_light_truck": (1.0, 1.5),
-                    "bus": (8.0, 80.0),
-                    "motorcycle": (0.05, 0.80),
-                }.get(vehicle_type, (vehicle_equivalent_weight, vehicle_equivalent_weight))
+                bounds = dict(vehicle_equivalent_bounds.get(vehicle_type, {}))
+                lower_bound = float(bounds.get("lower", vehicle_equivalent_weight))
+                upper_bound = float(bounds.get("upper", vehicle_equivalent_weight))
                 rows.append(
                     _row(
                         economy=economy,
@@ -2310,7 +2342,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                         drive="all",
                         fuel="all",
                         parameter="mileage",
-                        value=MILEAGE_KM_PER_YEAR[vehicle_type] * _year_multiplier(year, -0.002),
+                        value=MILEAGE_KM_PER_YEAR[vehicle_type] * _year_multiplier(year, mileage_annual_change),
                     )
                 )
 
@@ -2354,7 +2386,7 @@ def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], ye
                             drive=drive,
                             fuel=fuel,
                             parameter="efficiency",
-                            value=EFFICIENCY_MJ_PER_KM[drive] * 100 * _year_multiplier(year, -0.006),
+                            value=EFFICIENCY_MJ_PER_KM[drive] * 100 * _year_multiplier(year, efficiency_annual_change),
                         )
                     )
 
@@ -3217,7 +3249,11 @@ def write_all_economy_packages(
     build_schema_contract().to_csv(schema_contract_path, index=False)
 
     all_paths = {}
-    for economy in get_economies():
+    economies_to_write = _economies_from_default_input(default_input_df)
+    if not economies_to_write:
+        economies_to_write = get_economies()
+
+    for economy in economies_to_write:
         all_paths[economy.code] = write_economy_package(
             economy=economy,
             output_root=output_root,

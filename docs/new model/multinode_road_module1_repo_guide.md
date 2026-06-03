@@ -31,7 +31,7 @@ this repo is not just a UI. It is the canonical Module 1 system:
 - it defines the researcher-facing data request;
 - it loads and documents default assumptions;
 - it overlays better provided values where available;
-- it records sources, review flags, and validation results;
+- it records sources, review flags, and validation results; > todo sources is good to include but review and validation seem over the top
 - it exports one structured package per economy for downstream road modules.
 
 The downstream `leap_road_model` repo should treat the Module 1 output from this
@@ -39,30 +39,80 @@ repo as the input contract for Modules 2-7.
 
 Default deployment assumption for this guide:
 
-- run as a static, client-side tool (for example GitHub Pages);
+- run largely as a static, client-side tool (for example GitHub Pages);
 - no always-on server requirement;
 - upload/checkpoint behavior is browser-side file processing by default;
-- backend endpoints are optional local tooling, not the primary operational mode.
+- backend endpoints which allow for running the road model afterwards are optional local tooling, not the primary operational mode.
 
 Static runtime behavior in the current frontend implementation:
 
 - selector metadata is loaded from packaged static files first;
 - provided-values defaults are loaded from packaged static files first;
 - optional backend fallback/helpers are enabled only by explicit opt-in
-  (for example `?roadBackend=1`, disabled with `?roadBackend=0`);
+  (for example `?roadBackend=1`, disabled with `?roadBackend=0`); > todo dont know wat this means
 - if neither packaged defaults nor backend fallback is available, users can still
-  continue by loading a checkpoint/values file in-browser.
+  continue by loading a checkpoint/values file in-browser. > todo this doesnt seem necessary. defaults are a key input. should never not be available. if they are missing, the workflow should fail and request data regeneration rather than silently allowing users to upload their own defaults. this is a key point of the data-sourcing policy 
 
 Historical context that should guide implementation choices:
 
 - before the new Module 1 design, the project already had broad default coverage
    through the `leap_transport` pipeline;
-- `leap_transport` already performed most 9th-edition to LEAP recategorisation;
+- `leap_transport` already performed 9th-edition to LEAP recategorisation;
 - recategorisation between `leap_transport` output and Module 1 / `leap_road_model`
-   input is intentionally minimal;
+   input is intentionally minimal; > todo in fact we want to eventually stop using leap_transport as it is a bit non-useful to be using 9th data for more than a few years afterwards
 - in practice, Module 1 defaults should be treated as near-direct use of
-   `leap_transport` outputs, with hard-coded assumptions retained mainly as
-   explicit fallback/bootstrap logic.
+   `leap_transport` outputs > todo this is so so. we will use the leap-transport outputs where they suit but the simplified structure of the new road model is more important. 
+
+### Data-sourcing policy (mandatory)
+
+Road model data values must not be hard-coded in application logic.
+
+All operational defaults and assumptions used by Module 1 and its UI must be
+provided from source files under:
+
+```text
+back-end/data/road_model/
+```
+
+Allowed data-source file types:
+
+- `.csv`
+- `.xlsx` / `.xls`
+
+Examples include:
+
+- `road_model_default_input_workbook.xlsx`
+- `apec_reconciliation_factors.csv`
+- `apec_phev_utilisation_rates.csv`
+- `apec_vehicle_equivalent_weights.csv`
+- `apec_passenger_vehicle_saturation.csv`
+
+Implementation rule:
+
+- Code may implement transformations, validation, and rendering logic.
+- Code must not embed road input datasets (economy lists, reconciliation
+  values, saturation/mileage/efficiency defaults, etc.) as literal tables for
+  runtime use.
+- If source files are missing, fail clearly and request data regeneration; do
+  not silently invent replacements.
+
+Audit helper:
+
+- `back-end/scripts/audit_road_model_data_sourcing.py` checks that required
+  source files exist and that banned hard-coded runtime data markers are not
+  present in `front-end/app.js`.
+
+Practical contract split (recommended):
+
+- Structure/control-plane (economy IDs/names, variable names, required columns,
+  dataset shape) is defined in:
+  - `back-end/data/road_model/road_model_structure_contract.json`
+- Numeric operational values must come from CSV/XLSX/XLS files under:
+  - `back-end/data/road_model/`
+- Numeric-data update provenance should be recorded in:
+  - `back-end/data/road_model/UPDATE_METHOD.md`
+- Additional implementation guidance:
+  - `docs/new model/road_model_data_contract_v1.md` > todo is this necessary?
 
 ---
 
@@ -70,21 +120,21 @@ Historical context that should guide implementation choices:
 
 ### What this repo owns
 
-This repo owns Module 1:
+This repo owns Module 1: todo a lot of the things noted here are missing the makr. this should be more simple/ 
 
 - economy list and economy name aliases used by the input workflow;
 - road input row schema;
 - default road input generation;
-- PHEV utilisation overlay;
-- transport LEAP export overlay;
-- researcher override capture from the UI;
+- PHEV utilisation overlay; > todo huh what does this mean?
+- transport LEAP export overlay; todo huh what does this mean?
+- researcher override capture from the UI; todo huh what does this mean?
 - source and review metadata;
 - unit, key, bounds, and structure validation;
 - Module 1 output package writing.
 
 ### What `leap_road_model` owns
 
-`leap_road_model` owns Modules 2-7:
+`leap_road_model` owns Modules 2-7: > todo maybe fill this out more 
 
 - base-year road structure mapping;
 - stock target projection;
@@ -99,7 +149,7 @@ This repo owns Module 1:
 Module 1 should output a clean, explicit, and documented package. That package
 is the only contract that `leap_road_model` should rely on. If
 `leap_road_model` needs new inputs, they should be added to the Module 1 output
-and documented in this guide.
+and documented in this guide. > todo not true. the leap_road_model has some inputs such as population data and esto energy data. but generally yes the road model will get most of its data from this repo, and the contract should be clear about what that data is.
 
 A key strength of this approach is that Module 1 defaults already use the same
 structure as the output package. Because upstream `leap_transport` outputs are
@@ -107,13 +157,13 @@ already close to Module 1 shape, this is often close to direct reuse rather
 than major remapping. This means `leap_road_model` can use those defaults as a
 fallback when researchers do not provide overrides. Because defaults and
 outputs share one format, updates are easier to manage and the interface
-between repos stays simple and stable.
+between repos stays simple and stable. > todo this is not that true anymore. I thinik the benefit of trying to keep a similar strucutre by using the branch path as the key identifier between rows is useful as it helps keep everything aligned and makes it easy to understand where evertyhign fits in, but there are also many columns in the original leap workbook structure that are unnecessary and we arent using in this strucutree, and instead using other column to capoture other information. so the structure is similar but not the same, and that is ok. we should just be clear about what the structure is and how it maps to the original leap transport outputs.
 
 The target interface is:
 
 ```text
 one flat CSV per economy
-road_module1_default_filled_inputs_<ECONOMY>.csv
+road_module1_default_filled_inputs_<ECONOMY>.csv > todo we should make sure there is datestamping and versioning in the filename to make it clear when files are updated and to avoid confusion between different versions of the same economy. maybe something like road_module1_default_filled_inputs_<ECONOMY>_20260601.csv
 ```
 
 where the CSV contains the core Module 1 row keys and the base-year value.
@@ -129,7 +179,7 @@ implemented and still partly CSV-based.
 
 ### Implemented today
 
-Key implementation files:
+Key implementation files:> todo what is being used in code here vs what is old code that ai thinks we need but is not a functionality i want
 
 | File | Purpose |
 | --- | --- |
@@ -137,7 +187,7 @@ Key implementation files:
 | `back-end/road_module1_defaults_workflow.py` | Notebook-style workflow script that writes all-economy default packages. |
 | `back-end/api/routers.py` | Optional FastAPI endpoints for local/non-static deployments. |
 | `front-end/app.js` | Road Module 1 researcher UI state, rendering, overrides, browser-draft handling, client-side upload validation/overlay, and client-side checkpoint export. |
-| `front-end/api.js` | Optional API client methods for backend-enabled runs (not required for static-first workflow). |
+| `front-end/api.js` | Optional API client methods for backend-enabled runs (not required for static-first workflow). | 
 | `front-end/road-module1-static/index.json` | Packaged static selector metadata used as the primary runtime source in static mode. |
 | `front-end/road-module1-static/README.md` | Static bundle layout and defaults-file naming/schema contract for static packaging. |
 | `back-end/data/road_model_default_input_workbook.xlsx` | All-economy seed workbook for default input rows. |
@@ -191,7 +241,7 @@ Module 1 defaults as the default upstream source for base-year assumptions in
 Current adapter behavior supports both naming conventions during transition:
 
 - `road_module1_default_filled_inputs_<ECONOMY>.csv` (current writer default)
-- `road_module1_default_filled_inputs.csv` (legacy compatibility)
+- `road_module1_default_filled_inputs.csv` (legacy compatibility)> todo lets move out of this./
 
 ### 3.1 Repo folder structure and archive policy
 
@@ -239,18 +289,18 @@ Lightweight housekeeping rule:
 The Module 1 process should be understood as this sequence:
 
 1. Build or load default assumptions.
-2. Overlay economy-specific source data where available.
+2. Overlay economy-specific source data where available. > todo not really true. from the beginning the economy-specific source data is the main source of truth for the defaults. while there are multiple files in the inputs folderr they are generally sorted into groups of measures, with most data in the back-end\data\road_model\leap_import_workbooks files e.g. `transport_leap_export_combined_ALL_ECONS_20260601.xlsx` being the main source of truth for defaults, and the other files being used for specific overlays such as the PHEV utilisation overlay. so the leap_transport export is the main source of truth for defaults, and the workflow should be designed to use that as much as possible, while using other files for specific overlays where needed. > todo what is meant by overlays
 3. Serve default-filled rows to the researcher UI.
-4. Let the researcher review and override base-year values.
-5. Validate the completed input package.
+4. Let the researcher review and override base-year values. > todo allow them to provide comments and sources for their overrides as well. review flags may be useful but i think the comments may allow for that without needing a separate flag. but we should make that clear in the UI and in the data contract. we want to be able to trace back any override to a source or a reason, and that should be captured in the data.
+5. Validate the completed input package. > doesnt really seem necessary, but if they run the model in the backend it will run validation there and report any issues. maybe we could also run some basic validation in the UI before they export they interact with backend? i dunno
 6. Export one structured flat CSV per economy.
 7. Let `leap_road_model` read that CSV as Module 1 input.
 
 ### 4.1 Default assumptions
 
 Defaults are seeded primarily from `leap_transport`-derived workbook inputs
-(the all-economy seed workbook), with hard-coded tables and helper functions in
-`road_module1_defaults.py` acting as fallback/bootstrap logic when needed.
+(the all-economy seed workbook) and other source datasets under
+`back-end/data/road_model/`. > todo i think eventually we should extract what we need from the leap_transport repo and then continue with lighter weight data sourcing or something more similar to the transport_data_system code which is built to clean and use data from a variety of sources, rather than relying on the 9th edition outputs as the main source of truth for defaults. but in the near term, we can use the leap_transport outputs as the main source of truth for defaults, and then build out a more robust data sourcing system over time that can pull from a wider variety of sources and do more cleaning and validation.
 
 Design intent: because `leap_transport` has already done most category mapping,
 the translation from that output into Module 1 and then into
@@ -298,7 +348,7 @@ because of limited data. The current assumption is still preferred over broad
 fallback values from other economies. If better data becomes available, update
 the source CSV and the overlay will refresh automatically.
 
-### 4.3 Transport LEAP export overlay
+### 4.3 Transport LEAP export overlay > todo i odnt uynderstand htis section. wheat is it? where are the files? 
 
 Transport LEAP export workbooks are used as the best available source where
 their rows match Module 1 branch paths and variables. In normal operations,
@@ -327,16 +377,16 @@ report flag over a silent update. Where row identity is clear, direct reuse of
 ### 4.4 Researcher override layer
 
 The UI serves default-filled rows to researchers. Researchers can type values
-for editable years, currently focused on the base year.
+for editable years, currently focused on the base year. > todo make sure its clear that new rows cant be created asnd the keys cant be changed. they can only fill in values for existing rows. But what it does help wiht is allowing the user to fill in values programmatically rather than slowly, and then upload the csv again. This allows them to use their own tools and workflows to fill in values, which may be easier for some researchers than typing in the UI. It also allows them to keep a record of their filled-in values in a CSV file that they can save, share, and re-upload later if needed.
 
 Overrides are keyed by:
 
 ```text
-Branch Path, Variable, Scenario, Region, Year
+Branch Path, Variable, Scenario, Region, Year > todo double check this. also i think maybe we should have a year column and a value column instead of a column called 2022. this deosnt match elap but we can fix that with a simple pivot, and this way is jsut more flexible and easier to work with in csv form. 
 ```
 
 In the default static workflow, those overrides are applied in browser state and
-captured in exported checkpoint files. No server persistence is required.
+captured in exported checkpoint files. No server persistence is required. > old values tyhe resaerrcher fille din are saved via cookies and local browser storage, but the main record of their overrides should be the checkpoint CSV that they can export and re-upload later. if they want to save their work in progress, they can export a checkpoint CSV, and then re-upload it later to continue where they left off. this allows them to keep a record of their filled-in values in a CSV file that they can save, share, and re-upload later if needed, which is a bit more robust than relying on browser storage which can be cleared or lost if they switch devices. the checkpoint CSV is the main record of their overrides, and it can be moved between computers, emailed, archived, and reloaded as needed.
 
 Browser drafts are convenience only. The portable record is the exported
 checkpoint file that the researcher keeps and can re-load later.
@@ -367,28 +417,28 @@ Checkpoint export behavior (static/client-side-first):
 - Shared mileage values are expanded to the detailed LEAP-like mileage rows
   before export, unless a detailed row override is present.
 - Upload compatibility and value-bound checks are run client-side before values
-  are applied.
+  are applied. > todo are these actualkly done?
 - Only the core columns need to be populated for a row to matter: `Branch
   Path`, `Variable`, `Scenario`, `Region`, `Scale`, `Units`, `Per...`, and
-  `2022`.
+  `2022`. 
 - Extra columns may be blank or absent. Blanks and non-existent values are not
   used by the loader.
 - Partial files are allowed: if only some rows or some columns are filled in,
-  the loader uses the populated values and ignores the rest.
+  the loader uses the populated values and ignores the rest. > todo but a error should be raised if a row is new or if key columns are missing. we want to allow them to fill in just a few values, but we dont want them to accidentally create new rows or change the structure of the data. so if they upload a file that has new rows or is missing key columns, we should raise an error and ask them to fix it rather than silently accepting it.
 
 Upload behavior:
 
 - XLSX/XLS files prefer row-key input from `Details` when that sheet exists,
-  otherwise from `Data`, otherwise from the first worksheet.
+  otherwise from `Data`, otherwise from the first worksheet. > todo unsure if this is necessary. maybe we should just require them to use the `Data` sheet and not worry about the others? it might be simpler to just have one required sheet for uploads and not try to be flexible about it. we can always add more sheets later if we want, but for now it might be easier to just have one clear place for them to put their data.
 - If present, `Factors`, `Lifecycle`, and `Vintage` are also parsed client-side
-  and mapped into canonical row-key updates before overlay is applied.
+  and mapped into canonical row-key updates before overlay is applied. > todo probably want to pre-explain in somehwere above that these measures dont usually belong in the data strucutre since they are either imported into leap suing a different strucutre (like the strucutre of the files back-end\data\road_model\vehicle_survival_modified_00_APEC.xlsx and back-end\data\road_model\vintage_modelled_from_survival_00_APEC.xlsx are), or they are only used in the road_model before leap, in the case of the Factors. But its good to have everything mapped into the same structure before it gets applied as defaults, so we can keep the loader simple and just have one format to deal with. 
 - CSV files are read directly.
 - The file must keep the key columns:
   `Branch Path`, `Variable`, `Scenario`, `Region`, `Scale`, `Units`, `Per...`,
   and `2022`.
 - For workbook-style uploads, if other sheets or columns are absent or partial,
   mapped updates can still contribute updates for matching canonical Module 1
-  rows.
+  rows. > todo this is a bit complex i think. may be s=we ask them to just upload a flat CSV with the required columns and not worry about the other sheets. that means we should also only export csvs too. so maybe jsut export the Details sheet and Data is not used at all. 
 - Future-year columns may be present, but the current researcher workflow is
   base-year first; later-year changes are handled in LEAP adjustment variables.
 - Uploaded checkpoint values are overlaid client-side onto the currently loaded
@@ -400,7 +450,7 @@ Validation for upload compatibility and value checks runs client-side in static
 deployments. Backend validation is optional and should mirror the same rules
 when backend mode is used.
 
-### 4.6 Validation
+### 4.6 Validation > todo do we even have code for this? perhaps we can have some basic validation related to module 6's reconciliation checks here if its not too hard?
 
 Module 1 validation should check:
 
@@ -425,29 +475,29 @@ the UI before export/download.
 
 ## 5. Measure Scope Contract
 
-Module 1 is a base-year data request. The current base year is `2022`.
+Module 1 is a base-year data request. > todo add something like this, and malke sure the code uses a base year variable rather than hard coded 2022: The current base year is recorded as the variable `BASE_YEAR` in the code and should be consistent across all source files, defaults, and outputs. Future-year columns may be present for viewing or optional input, but the researcher workflow is focused on the base year and future-year values are not required. > todo we should make sure this is clear in the UI and in the data contract. we want to avoid confusion about whether future-year values are expected or required, since that is not the focus of the current workflow. we can allow them to fill in future-year values if they want, but we should make it clear that the main focus is on the base year and that future-year values are optional and not required.
 
 Researchers should only be asked for values less than or equal to the base year
 unless the LEAP adjustment-variable workflow changes. Future years can remain in
 the schema for compatibility and viewing, but the researcher review UI should
-not imply that future-year values are expected inputs.
+not imply that future-year values are expected inputs. > todo no this isnt true. but if we do add stuff for future years we should also add variables such as end_year and make sure the UI and the data contract are clear about what is expected and required. we can allow them to fill in future-year values if they want, but we should make it clear that the main focus is on the base year and that future-year values are optional and not required.
 
 The standard data request intentionally keeps some measures shared above the
 vehicle or fuel level.
 
-Current scope policy (used to prevent branch/scope mismatch flags):
+Current scope policy (used to prevent branch/scope mismatch flags): > todo note that this is compared to the leap_transport outputs, which have a bit more branch-level detail than the current road model structure. We trried to keep the same branch paths where possible, but some of the more detailed branches in leap_transport are not used in the current road model structure, and that is ok. FOr the most part the simplifcations we did make are easy to handle allocation with.
 
 - keep `HEV` and `EREV` only under LPV branches;
 - remove `HEV` and `EREV` from non-LPV vehicle types;
 - remove truck `PHEV` branches;
-- use LPV drive-size labels as `small` / `medium` / `large` in downstream mapping;
-- use `Fuel Economy` as the canonical efficiency variable name;
+- continue to use LPV drive-size labels as `small` / `medium` / `large`, and 'medium' and 'large' truck. We considered getting rid of this but it seems like a useful level of detail to keep for allocation and for matching to leap_transport outputs, as well as providing real-world meaning for researchers. 
+- use `Fuel Economy` as the canonical efficiency variable name; > todo its not clear what the alternative was? efficiency? we should note this.
 - keep researcher mileage input at shared vehicle-type scope, then expand to
-  detailed fuel-level rows in exported outputs;
+  detailed fuel-level rows in exported outputs; > this loses detail wrt differences in m,ileage between drive types but it is a lot easier for researchers to provide mileage values at the vehicle-type level rather than the fuel-level, and we can still expand to fuel-level rows in the output for leap_road_model to use. if we find that we need more detail in mileage later, we can always add more rows for researchers to fill in, but for now it seems like a good balance to have them fill in mileage at the vehicle-type level and then expand it in the output.
 - keep main `Stock` reporting at transport-type scope, with optional
-  drive-level stock detail on a separate sheet when requested.
+  drive-level stock detail on a separate sheet when requested. > todo is this true. i dont think it is. i berleive we are reporting at the drive level and only for the leap import we are aggregating to the transport-type level. this detail allows us to calcualte energy use by drive type, reconcile eff/mielage/stocks with the esto road energy data. furethmroe, leap essentially requires a stock number for the drive level by naturee of its stock share asnd device share measures at the vehicle type and drive levels. 
 
-| Measure | Standard scope | Notes |
+| Measure | Standard scope | Notes | > todo is this everyhting?s
 | --- | --- | --- |
 | Reconciliation Bound Lower | Whole road sector | One value for Passenger road and one value for Freight road. |
 | Reconciliation Bound Upper | Whole road sector | One value for Passenger road and one value for Freight road. |
@@ -499,8 +549,7 @@ Columns:
 | `Units` | Unit string. |
 | `Per...` | Denominator unit where needed. |
 | `2022` | Base-year value. |
-| `2030`, `2040`, `2050` | Optional viewing/projection columns where applicable. These may be blank or absent and will not be used when not needed. |
-
+| `2030`, `2040`, `2050` | Optional viewing/projection columns where applicable. These may be blank or absent and will not be used when not needed. | > todo nope. as explained earlier we will replace this with a `Year` column and a `Value` column, which is more flexible and easier to work with in csv form. we can still pivot to the wide format for leap if needed, but the long format is easier to work with in csv form and allows for more flexibility in terms of which years are included without needing to change the schema.
 Advice for filling rows:
 
 - As long as the core columns above are filled in, other cells do not need to
@@ -526,8 +575,7 @@ Stock convention for downstream consumers:
   a separate detail sheet (for example `Stock_Drive_Detail`) rather than
   replacing the main stock rows.
 
-Rows that should not be stored primarily in `Data`:
-
+Rows that should not be stored primarily in `Data`: > todo no lets go with the new way we are doiung it where evertythying is put into one csv with the same strucutre. the measures below will jsut need to use that strucutre. then it is up to the loader in module 2 to map theseback to their requires studcutres for the code, and then later on in the outptu from moduel 6 we provide eveyrhting in the actual strucutrre that is needed for the data, such as lweaps workbook sturcutre and the profiles strucutres (profiles strucutrtres are wt is deescrived in below sheet Lifecycle and Vintage - we should reuese their deescirptions somewhere to make this clear). This way we have one clear format for the data.
 - survival rates;
 - vintage profiles;
 - PHEV utilisation;
@@ -638,7 +686,8 @@ These are not part of the minimum reader contract unless explicitly promoted.
 
 ---
 
-## 7. Optional Backend API Contract
+## 7. Optional Backend API Contract  > todo its not clear to me what is actuallly needed here if all we need is to be able to run the python road_model in the backend, maybe its justa  few endpoints such as whatever allows us to run the model using what is entered in the UI, and then whatever is needed to export the results form the road model, and acces sthe dashboard too. 
+> todo related to above note, i havent read any of this section. 
 
 This section applies only when running an optional backend deployment.
 
@@ -673,7 +722,7 @@ and helper actions only when opted in (for example `?roadBackend=1`).
 
 ---
 
-## 8. Downstream Reader Contract for `leap_road_model`
+## 8. Downstream Reader Contract for `leap_road_model` > tyodo obvsiously this will take into account ntoes ive made above and how it changes the ufn iuonlity here.n 
 
 `leap_road_model` should implement a reader adapter, conceptually:
 
@@ -698,7 +747,7 @@ The adapter should parse branch paths into downstream dimensions:
 - size where represented (LPV: `small` / `medium` / `large`);
 - fuel.
 
-Reader logic should treat the following as canonical scope rules:
+Reader logic should treat the following as canonical scope rules: > todo, this definitely shouldnt be needed as it should be andled by module 1. 
 
 - non-LPV `HEV`/`EREV` rows are legacy and should be ignored;
 - truck `PHEV` rows are legacy and should be ignored;
@@ -713,10 +762,10 @@ The adapter should convert units explicitly. Known conversions include:
 
 Because recategorisation from `leap_transport` output into Module 1 is designed
 to be minimal, the adapter should prefer direct field mapping and only apply
-explicit, documented conversions where unavoidable.
+explicit, documented conversions where unavoidable. > todo very impoirtant point. the more we can keep the same branch paths and variable names as the leap_transport outputs, the easier it will be to implement the reader and the less likely we are to introduce errors in re-deriving values. if we do need to do some recategorisation or conversion, it should be explicit and well-documented, but the overall goal should be to keep it as simple and direct as possible. this means making the units and measures and varibale names we use, simple and understandble to the users and also as close as possible to the leap_transport outputs which were originally intendeed to be imported strtaight into leap, liek teh output from module 6 will bge, so we can just reuse those values directly in the reader without needing to do a lot of complex mapping or conversion )besides the aforementioned recategorisations_.
 
 `leap_road_model` should not depend on the current CSV sidecar layout once the
-workbook writer exists.
+workbook writer exists. > todo not sure what thsi means. 
 
 ---
 
@@ -741,7 +790,7 @@ workbook writer exists.
 
 This file is doing too many jobs, but it is currently the correct starting point
 for understanding Module 1 behavior. Any refactor should preserve behavior and
-tests first.
+tests first. > todo not sure what 'too many jobs' means. how can we simpligfy it? a lot of that stufdf seems like it may not be requried if our inptus and outptus are sturcutred right and the way things work is simplified/systematrised right?
 
 ### Backend routes
 
@@ -772,7 +821,7 @@ assumed by the core researcher workflow.
 
 The frontend is the primary runtime in static mode. Validation and scope checks
 needed for safe researcher input should exist client-side. If backend mode is
-enabled, backend checks should mirror the same rules.
+enabled, backend checks should mirror the same rules. > todo we should look for ways to make this so less needs to be done by the backend, while keeping things fast. the mroe things here the lgihter the whole thing is and the less we need the backend to begin with . 
 
 ---
 
@@ -820,7 +869,7 @@ Done when:
 - validation expectations are clear;
 - current module boundaries are explicit.
 
-### Phase 2: Add workbook writer without removing CSV outputs
+### Phase 2: Add workbook writer without removing CSV outputs > todo is this required after what was mentioned in my notes above
 
 Add functions that convert a completed Module 1 dataframe into:
 
@@ -860,10 +909,10 @@ Once this guide and the workbook writer are stable:
 - update `README.md` to link here.
 - keep any future Module 1 design updates in this file unless there is a clear
   reason to split out a narrower reference.
-
+> todo right now i think having 3 .md files is a bit much. iuf we can create a single comprehensive guide that covers the workflow, the design, and the implementation details all in one place, that might be easier to maintain and reference than having separate files for each aspect. we can use clear section headings and a table of contents to make it easy to navigate within a single document. this way we have one go-to reference for everything related to Module 1, and we can keep it updated as the design evolves without needing to worry about keeping multiple documents in sync.
 ---
 
-## 12. Rules for Future Changes
+## 12. Rules for Future Changes > todo im not sure about this section as its hard for me to predct where things will go. i think the msot important thing is to keep things simple, keep relying on the csvs and workboks as sources of truth, and avoid adding too much complex logic in the code that is not also reflected in the data. if we can keep the data as the main source of truth and keep the code as simple as possible, that will make it easier to maintain and update in the future. we can also make sure to document any changes clearly in this guide so that future developers understand the rationale and the impact of any changes made to Module 1 behavior. And make sure eveyrhtiung always is built with modules 2-7 in mind, so we dont end up with a situation where we have to go back and change module 1 because we forgot about how it interacts with the other modules.
 
 When changing Module 1 behavior:
 
@@ -880,13 +929,15 @@ When changing Module 1 behavior:
    variables.
 9. Make new assumptions visible in `Details`, `Factors`, or diagnostics.
 10. Treat `leap_transport` output as the primary default source and avoid
-   re-deriving values in Module 1 unless a gap is documented.
+  re-deriving values in Module 1 unless a gap is documented.
+11. Do not hard-code road input data in frontend/backend runtime code; add or
+  update source files in `back-end/data/road_model/` instead.
 
 ---
 
 ## 13. Open Design Questions
 
-These need explicit decisions before the workbook becomes the only handoff:
+These need explicit decisions before the workbook becomes the only handoff: > todo none of these are relvant. but i am interested in whether we need a json file between the processing of the csv and xlsx inputs from back-end\data\road_model and the writing of the data to the UI. is it gfoing to be jsut as fast to have code which extrtacts data form the csv and xlsx files and then writes it directly to the UI, or do we need to have an intermediate json file that is written to disk and then read by the UI? if we can do it without the intermediate json file, that would be simpler and faster, but if we find that we need it for some reason (for example if the data processing is too slow to do on the fly), then we can add it in as a way to cache the processed data and make it faster for the UI to load. but ideally we would want to avoid adding an extra step of writing and reading from disk if we can just process the data in memory and pass it directly to the UI. > theres an extra bonus of having internmediate data, in that when we update data inputs then we can double chekc its formatted right and so on buy creating the intemedite inputs before pushing the enw data to the site, thereofr enotuiciung issues before they go live. 
 
 | Question | Current leaning |
 | --- | --- |
@@ -899,7 +950,7 @@ These need explicit decisions before the workbook becomes the only handoff:
 
 ---
 
-## 14. Quick Navigation
+## 14. Quick Navigation > im not sure about this but i trust u i guess
 
 Use these files first:
 

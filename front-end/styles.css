@@ -758,7 +758,7 @@ body.road-panel-resizing * {
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.9rem 1rem;
+    padding: 0.58rem 0.7rem;
     border-bottom: 1px solid #dbe3ee;
     background: #f8fafc;
 }
@@ -790,7 +790,7 @@ body.road-panel-resizing * {
 
 .road-group-title {
     color: #0f172a;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 800;
     line-height: 1.2;
 }
@@ -816,11 +816,42 @@ body.road-panel-resizing * {
 .road-group-count {
     background: white;
     color: #64748b;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 900;
     letter-spacing: 0.04em;
-    padding: 0.25rem 0.55rem;
+    padding: 0.2rem 0.45rem;
     text-transform: uppercase;
+}
+
+.road-group-card.is-compact .road-group-header {
+    border-bottom: 0;
+    padding: 0.38rem 0.58rem;
+    min-width: 0;
+}
+
+.road-group-card.is-compact .road-group-rows {
+    align-items: center;
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+    padding: 0.22rem 0.42rem 0.22rem 0;
+}
+
+.road-group-card.is-compact {
+    align-items: center;
+    display: grid;
+    gap: 0.2rem;
+    grid-template-columns: minmax(240px, 1fr) auto;
+}
+
+.road-group-card.is-compact .road-group-count {
+    display: none;
+}
+
+.road-group-card.is-compact .road-input-row {
+    background: transparent;
+    border: 0;
+    padding: 0;
 }
 
 .road-group-rows {
@@ -1062,13 +1093,48 @@ body.road-panel-resizing * {
 
 .road-input-row {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) minmax(180px, 420px) minmax(220px, 270px);
-    gap: 1rem;
+    grid-template-columns: minmax(220px, 1fr) minmax(170px, 380px) minmax(190px, 240px);
+    gap: 0.65rem;
     align-items: center;
-    padding: 0.8rem 1rem;
+    padding: 0.45rem 0.6rem;
     border-left: 3px solid transparent;
     border-bottom: 1px solid #edf2f7;
     transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.road-input-row.no-row-label {
+    grid-template-columns: minmax(260px, 1fr) minmax(180px, 250px);
+    gap: 0.36rem;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.road-input-row.no-row-label .road-year-grid {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    grid-template-columns: none;
+    justify-content: flex-start;
+    width: auto;
+}
+
+.road-input-row.no-row-label .road-year-input {
+    align-items: center;
+    display: inline-flex;
+    flex-direction: row;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.road-input-row.no-row-label .road-year-input label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.road-input-row.no-row-label .road-year-input .road-value-input {
+    min-height: 1.34rem;
+    padding: 0.14rem 0.3rem;
+    width: 7rem;
 }
 
 .road-input-row:last-child {
@@ -1092,9 +1158,9 @@ body.road-panel-resizing * {
 
 .road-row-title {
     color: #1e293b;
-    font-size: 0.78rem;
+    font-size: 0.71rem;
     font-weight: 800;
-    line-height: 1.25;
+    line-height: 1.2;
     display: flex;
     align-items: center;
     gap: 0.3rem;
@@ -1153,7 +1219,7 @@ body.road-panel-resizing * {
 
 .road-row-meta,
 .road-review-note {
-    font-size: 0.68rem;
+    font-size: 0.61rem;
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1162,7 +1228,7 @@ body.road-panel-resizing * {
 
 .road-row-meta {
     color: #64748b;
-    margin-top: 0.2rem;
+    margin-top: 0.08rem;
 }
 
 .road-review-note {
@@ -1172,21 +1238,37 @@ body.road-panel-resizing * {
 .road-transport-params-measures {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.38rem;
     min-width: 0;
+}
+
+.road-transport-param-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.4rem;
+    padding: 0.26rem 0.36rem;
+    background: #f8fafc;
+}
+
+.road-transport-param-group-title {
+    color: #64748b;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
 }
 
 .road-reconciliation-components {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.28rem;
     min-width: 0;
 }
 
 .road-reconciliation-component {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.08rem;
     min-width: 0;
 }
 
@@ -1194,17 +1276,17 @@ body.road-panel-resizing * {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    color: #475569;
-    font-size: 0.68rem;
-    font-weight: 800;
+    color: #64748b;
+    font-size: 0.58rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
 }
 
 .road-transport-param-measure {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.12rem;
     min-width: 0;
 }
 
@@ -1212,34 +1294,86 @@ body.road-panel-resizing * {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    color: #475569;
-    font-size: 0.68rem;
-    font-weight: 800;
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
 }
 
 .road-year-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+    gap: 0.28rem;
 }
 
 .road-year-input label {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: #64748b;
-    font-size: 0.62rem;
-    font-weight: 900;
+    color: #94a3b8;
+    font-size: 0.56rem;
+    font-weight: 700;
     line-height: 1;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.1rem;
 }
 
 .road-year-input label .road-info-tip {
     width: 0.9rem;
     height: 0.9rem;
     font-size: 0.56rem;
+}
+
+.road-boolean-switch {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.4rem;
+    user-select: none;
+}
+
+.road-boolean-switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.road-boolean-switch-track {
+    position: relative;
+    width: 2rem;
+    height: 1.1rem;
+    background: #cbd5e1;
+    border-radius: 9999px;
+    transition: background-color 0.15s ease;
+}
+
+.road-boolean-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 0.14rem;
+    left: 0.16rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+    transition: transform 0.15s ease;
+}
+
+.road-boolean-switch-input:checked + .road-boolean-switch-track {
+    background: #2563eb;
+}
+
+.road-boolean-switch-input:checked + .road-boolean-switch-track::after {
+    transform: translateX(0.88rem);
+}
+
+.road-boolean-switch-label {
+    color: #475569;
+    font-size: 0.62rem;
+    font-weight: 700;
+    min-width: 2rem;
 }
 
 .road-value-input,
@@ -1254,9 +1388,10 @@ body.road-panel-resizing * {
 }
 
 .road-value-input {
-    min-height: 2.25rem;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.8rem;
+    min-height: 1.52rem;
+    padding: 0.2rem 0.36rem;
+    font-size: 0.67rem;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
 }
 
@@ -1265,9 +1400,30 @@ body.road-panel-resizing * {
 }
 
 .road-comment-input {
-    min-height: 2.25rem;
-    padding: 0.5rem 0.65rem;
-    font-size: 0.75rem;
+    min-height: 1.52rem;
+    padding: 0.2rem 0.36rem;
+    font-size: 0.63rem;
+    font-weight: 500;
+}
+
+.road-reconciliation-row .road-row-title,
+.road-transport-params-row .road-row-title {
+    color: #334155;
+    font-size: 0.69rem;
+    font-weight: 700;
+}
+
+.road-reconciliation-row .road-row-meta,
+.road-transport-params-row .road-row-meta {
+    color: #94a3b8;
+    font-size: 0.58rem;
+}
+
+.road-reconciliation-row .road-source-badge,
+.road-transport-params-row .road-source-badge {
+    font-size: 0.54rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
 }
 
 .road-value-input:focus,
@@ -1279,8 +1435,49 @@ body.road-panel-resizing * {
 .road-row-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: flex-end;
+    gap: 0.35rem;
     min-width: 0;
+}
+
+.road-reconciliation-row,
+.road-transport-params-row {
+    grid-template-columns: minmax(210px, 1fr) minmax(210px, 430px) minmax(170px, 225px);
+    gap: 0.45rem;
+    padding-top: 0.34rem;
+    padding-bottom: 0.34rem;
+}
+
+.road-reconciliation-row .road-row-label,
+.road-transport-params-row .road-row-label {
+    align-self: flex-start;
+}
+
+.road-reconciliation-row .road-row-actions,
+.road-transport-params-row .road-row-actions {
+    align-self: flex-start;
+    padding-top: 0.08rem;
+}
+
+.road-reconciliation-row .road-row-actions .road-comment-input,
+.road-transport-params-row .road-row-actions .road-comment-input {
+    max-width: 8rem;
+}
+
+.road-input-row.no-row-label .road-row-actions {
+    justify-content: flex-end;
+}
+
+.road-input-row.no-row-label .road-row-actions .road-comment-input {
+    max-width: 8rem;
+}
+
+.road-group-card.is-compact .road-breadcrumbs {
+    font-size: 0.62rem;
+}
+
+.road-group-card.is-compact .road-group-title {
+    font-size: 0.74rem;
 }
 
 .road-reset-button {
@@ -1291,13 +1488,13 @@ body.road-panel-resizing * {
     color: #64748b;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 900;
-    height: 1.7rem;
+    height: 1.5rem;
     justify-content: center;
     line-height: 1;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-    width: 1.7rem;
+    width: 1.5rem;
 }
 
 .road-reset-button:hover {
@@ -1433,13 +1630,14 @@ body.road-panel-resizing * {
 }
 
 .road-source-badge {
+    display: none;
     background: #f8fafc;
     color: #475569;
     flex: 0 0 auto;
-    font-size: 0.62rem;
+    font-size: 0.56rem;
     font-weight: 900;
     letter-spacing: 0.02em;
-    padding: 0.35rem 0.55rem;
+    padding: 0.2rem 0.42rem;
     text-transform: uppercase;
 }
 

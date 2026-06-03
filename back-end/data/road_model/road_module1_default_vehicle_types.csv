@@ -1,0 +1,8 @@
+transport_type,vehicle_type,vehicle_equivalent_weight,stock_share
+passenger,passenger_car,1.0,0.62
+passenger,suv_light_truck,1.35,0.2
+passenger,bus,12.0,0.02
+passenger,motorcycle,0.25,0.16
+freight,light_commercial_vehicle,1.5,0.55
+freight,medium_truck,3.0,0.25
+freight,heavy_truck,5.0,0.2

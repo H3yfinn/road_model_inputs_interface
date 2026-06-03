@@ -1,0 +1,91 @@
+{
+  "contract_version": "v1",
+  "description": "Schema/control-plane only. Numeric operational values must come from CSV/XLSX sources.",
+  "economies": {
+    "fields": ["economy_code", "economy_name"],
+    "notes": "Codes and names allowed here; numeric model values are not."
+  },
+  "datasets": [
+    {
+      "name": "default_input_workbook",
+      "required_file_patterns": ["road_model_default_input_workbook.xlsx"],
+      "required_columns": ["Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Per...", "2022"]
+    },
+    {
+      "name": "reconciliation_factors",
+      "required_file_patterns": ["apec_reconciliation_factors.csv"],
+      "required_columns": ["economy", "transport_type", "parameter", "value", "unit"]
+    },
+    {
+      "name": "phev_utilisation",
+      "required_file_patterns": ["apec_phev_utilisation_rates.csv"],
+      "required_columns": ["economy", "value"]
+    },
+    {
+      "name": "vehicle_equivalent_weights",
+      "required_file_patterns": ["apec_vehicle_equivalent_weights.csv"],
+      "required_columns": ["transport_type", "vehicle_type", "value"]
+    },
+    {
+      "name": "passenger_saturation",
+      "required_file_patterns": ["apec_passenger_vehicle_saturation.csv"],
+      "required_columns": ["economy", "value"]
+    },
+    {
+      "name": "default_vehicle_types",
+      "required_file_patterns": ["road_module1_default_vehicle_types.csv"],
+      "required_columns": ["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"]
+    },
+    {
+      "name": "default_drive_shares",
+      "required_file_patterns": ["road_module1_default_drive_shares.csv"],
+      "required_columns": ["vehicle_type", "drive", "share"]
+    },
+    {
+      "name": "valid_drives_by_vehicle_type",
+      "required_file_patterns": ["road_module1_valid_drives_by_vehicle_type.csv"],
+      "required_columns": ["vehicle_type", "drive"]
+    },
+    {
+      "name": "default_mileage",
+      "required_file_patterns": ["road_module1_default_mileage_km_per_year.csv"],
+      "required_columns": ["vehicle_type", "mileage_km_per_year"]
+    },
+    {
+      "name": "default_efficiency",
+      "required_file_patterns": ["road_module1_default_efficiency_mj_per_km.csv"],
+      "required_columns": ["drive", "efficiency_mj_per_km"]
+    },
+    {
+      "name": "default_assumptions",
+      "required_file_patterns": ["road_module1_default_assumptions.csv"],
+      "required_columns": ["key", "value"]
+    }
+  ],
+  "variables": {
+    "canonical_names": [
+      "Stock",
+      "Mileage",
+      "Fuel Economy",
+      "Sales Share",
+      "Vehicle Equivalent Weight",
+      "Passenger Vehicle Saturation",
+      "PHEV Electric Driving Share",
+      "Reconciliation Weight",
+      "Reconciliation Bound Lower",
+      "Reconciliation Bound Upper",
+      "Survival Rate",
+      "Vintage Profile Share"
+    ],
+    "aliases": {
+      "Final On-Road Fuel Economy": "Fuel Economy"
+    }
+  },
+  "policy": {
+    "numeric_values_in_structure_json": false,
+    "runtime_hardcoded_numeric_datasets": false,
+    "numeric_source_extensions": [".csv", ".xlsx", ".xls"],
+    "numeric_source_root": "back-end/data/road_model",
+    "update_method_record": "back-end/data/road_model/UPDATE_METHOD.md"
+  }
+}

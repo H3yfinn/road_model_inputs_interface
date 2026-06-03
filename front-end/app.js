@@ -55,7 +55,6 @@ const State = {
     userVariables: []  // Array of { id, name, key, value, unit, category, description }
 };
 
-const ROAD_MODULE1_FALLBACK_VERSION = 'v2026_05_25_best_guess';
 const ROAD_MODULE1_BASE_YEAR = 2022;
 const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
@@ -76,29 +75,6 @@ const ROAD_MODULE1_VALUE_RULES = {
     'Vehicle Equivalent Weight': { min: 0 },
     'Vintage Profile Share': { min: 0, max: 100 }
 };
-const ROAD_MODULE1_FALLBACK_ECONOMIES = [
-    { economy: "01AUS", economy_name: "Australia" },
-    { economy: "02BD", economy_name: "Brunei Darussalam" },
-    { economy: "03CDA", economy_name: "Canada" },
-    { economy: "04CHL", economy_name: "Chile" },
-    { economy: "05PRC", economy_name: "China" },
-    { economy: "06HKC", economy_name: "Hong Kong, China" },
-    { economy: "07INA", economy_name: "Indonesia" },
-    { economy: "08JPN", economy_name: "Japan" },
-    { economy: "09ROK", economy_name: "Korea" },
-    { economy: "10MAS", economy_name: "Malaysia" },
-    { economy: "11MEX", economy_name: "Mexico" },
-    { economy: "12NZ", economy_name: "New Zealand" },
-    { economy: "13PNG", economy_name: "Papua New Guinea" },
-    { economy: "14PE", economy_name: "Peru" },
-    { economy: "15PHL", economy_name: "Philippines" },
-    { economy: "16RUS", economy_name: "Russia" },
-    { economy: "17SGP", economy_name: "Singapore" },
-    { economy: "18CT", economy_name: "Chinese Taipei" },
-    { economy: "19THA", economy_name: "Thailand" },
-    { economy: "20USA", economy_name: "United States" },
-    { economy: "21VN", economy_name: "Viet Nam" }
-];
 const RoadModule1StaticBundleState = {
     indexLoaded: false,
     indexData: null
@@ -219,7 +195,7 @@ let roadModule1AutoLoadInFlight = false;
 let roadModule1SuppressAutoLoad = false;
 
 function getSelectedRoadModule1Version() {
-    return DOM.roadVersionSelect?.value || State.roadModule1.version || ROAD_MODULE1_FALLBACK_VERSION;
+    return DOM.roadVersionSelect?.value || State.roadModule1.version || '';
 }
 
 function showCustomConfirm(title, message, options = {}) {
@@ -583,7 +559,7 @@ function getRoadStaticIndexDefaultVersion(indexData, versions) {
     const defaultVersion = String(indexData?.default_version || '').trim();
     if (defaultVersion && versions.includes(defaultVersion)) return defaultVersion;
     if (versions.length > 0) return versions[versions.length - 1];
-    return ROAD_MODULE1_FALLBACK_VERSION;
+    return '';
 }
 
 function getRoadStaticEconomies(indexData, version) {
@@ -673,14 +649,14 @@ function normalizeRoadModule1RowsForUi(rows) {
 
 function seedRoadModule1FallbackSelectors() {
     if (DOM.roadVersionSelect && DOM.roadVersionSelect.options.length === 0) {
-        DOM.roadVersionSelect.add(new Option(ROAD_MODULE1_FALLBACK_VERSION, ROAD_MODULE1_FALLBACK_VERSION));
-        DOM.roadVersionSelect.value = ROAD_MODULE1_FALLBACK_VERSION;
+        DOM.roadVersionSelect.innerHTML = '';
+        DOM.roadVersionSelect.add(new Option('No packaged versions found', ''));
+        DOM.roadVersionSelect.value = '';
     }
     if (DOM.roadEconomySelect && DOM.roadEconomySelect.options.length === 0) {
-        ROAD_MODULE1_FALLBACK_ECONOMIES.forEach(item => {
-            DOM.roadEconomySelect.add(new Option(`${item.economy} (${item.economy_name})`, item.economy));
-        });
-        DOM.roadEconomySelect.value = '20USA';
+        DOM.roadEconomySelect.innerHTML = '';
+        DOM.roadEconomySelect.add(new Option('No packaged economies found', ''));
+        DOM.roadEconomySelect.value = '';
     }
 }
 
@@ -803,7 +779,7 @@ async function populateRoadModule1Selectors() {
     } catch (error) {
         roadModule1SuppressAutoLoad = false;
         if (DOM.roadSaveStatus) {
-            DOM.roadSaveStatus.innerText = `Static selector metadata unavailable. Using built-in selector defaults. (${error.message})`;
+            DOM.roadSaveStatus.innerText = `Static selector metadata unavailable. Populate packaged data from back-end/data/road_model and rebuild static bundle. (${error.message})`;
         }
     }
 
@@ -823,8 +799,6 @@ async function populateRoadModule1Economies(version) {
             });
             if (previousEconomy && DOM.roadEconomySelect.querySelector(`option[value="${previousEconomy}"]`)) {
                 DOM.roadEconomySelect.value = previousEconomy;
-            } else if (DOM.roadEconomySelect.querySelector('option[value="20USA"]')) {
-                DOM.roadEconomySelect.value = '20USA';
             } else if (DOM.roadEconomySelect.options.length > 0) {
                 DOM.roadEconomySelect.value = DOM.roadEconomySelect.options[0].value;
             }
@@ -1054,9 +1028,9 @@ async function loadRoadModule1Defaults() {
         }
         DOM.roadSaveOutput.disabled = false;
         if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
-        DOM.roadSaveStatus.innerText = `Loaded ${State.roadModule1.rows.length.toLocaleString('en-US')} rows from ${loadSourceLabel}.`;
+        DOM.roadSaveStatus.innerText = `Road defaults loaded from ${loadSourceLabel}.`;
         renderRoadModule1Inputs();
-        showCustomToast("Road model provided values loaded.", "success");
+        showCustomToast("Road defaults loaded.", "success");
     } catch (error) {
         showCustomToast("Failed to load road provided values: " + error.message, "error");
     } finally {
@@ -1144,7 +1118,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
         clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
-        DOM.roadSaveStatus.innerText = `Loaded ${State.roadModule1.rows.length.toLocaleString('en-US')} rows from packaged static defaults.`;
+        DOM.roadSaveStatus.innerText = 'Built-in provided values applied.';
         renderRoadModule1Inputs();
         showCustomToast('Built-in provided values applied from packaged static defaults.', 'success', 5000);
     } catch (error) {
@@ -1246,6 +1220,12 @@ function getRoadParentBranchPath(path) {
     return parts.slice(0, -1).join('\\');
 }
 
+function getRoadBranchLeafLabel(path) {
+    const parts = String(path || '').split('\\').filter(Boolean);
+    if (parts.length === 0) return '';
+    return parts[parts.length - 1];
+}
+
 function isRoadAgeSeriesRow(row) {
     return getRoadAgeFromBranchPath(row['Branch Path']) !== null;
 }
@@ -1329,10 +1309,15 @@ function getRoadPairedFuelShareRowRefs(rows) {
 function isRoadReconciliationControlRow(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
     return [
+        'reconciliation weight',
         'reconciliation weight stock',
         'reconciliation weight mileage',
         'reconciliation weight efficiency',
+        'reconciliation bound lower',
+        'reconciliation bound lower stock',
         'reconciliation bound lower mileage',
+        'reconciliation bound upper',
+        'reconciliation bound upper stock',
         'reconciliation bound upper mileage',
         'reconciliation bound lower efficiency',
         'reconciliation bound upper efficiency',
@@ -1342,10 +1327,15 @@ function isRoadReconciliationControlRow(row) {
 function getRoadReconciliationControlRole(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
     const roleMap = {
+        'reconciliation weight': 'weight_shared',
         'reconciliation weight stock': 'weight_stock',
         'reconciliation weight mileage': 'weight_mileage',
         'reconciliation weight efficiency': 'weight_efficiency',
+        'reconciliation bound lower': 'bound_lower_shared',
+        'reconciliation bound lower stock': 'bound_lower_stock',
         'reconciliation bound lower mileage': 'bound_lower_mileage',
+        'reconciliation bound upper': 'bound_upper_shared',
+        'reconciliation bound upper stock': 'bound_upper_stock',
         'reconciliation bound upper mileage': 'bound_upper_mileage',
         'reconciliation bound lower efficiency': 'bound_lower_efficiency',
         'reconciliation bound upper efficiency': 'bound_upper_efficiency',
@@ -1390,7 +1380,8 @@ function isRoadTransportParamRow(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
     return [
         normalizeRoadTextToken('Vehicle Equivalent Weight'),
-        normalizeRoadTextToken('Passenger Vehicle Saturation')
+        normalizeRoadTextToken('Passenger Vehicle Saturation'),
+        normalizeRoadTextToken('Passenger Saturation Reached')
     ].includes(variable);
 }
 
@@ -1398,12 +1389,13 @@ function getRoadTransportParamRole(row) {
     const variable = normalizeRoadTextToken(row?.Variable || '');
     if (variable === normalizeRoadTextToken('Vehicle Equivalent Weight')) return 'vew';
     if (variable === normalizeRoadTextToken('Passenger Vehicle Saturation')) return 'pvs';
+    if (variable === normalizeRoadTextToken('Passenger Saturation Reached')) return 'pvs_reached';
     return '';
 }
 
 function getRoadTransportParamBranchPath(row) {
     const parts = getRoadPathParts(row);
-    return parts.slice(0, Math.min(3, parts.length)).join('\\') || row['Branch Path'] || '';
+    return parts.slice(0, Math.min(2, parts.length)).join('\\') || row['Branch Path'] || '';
 }
 
 function getRoadTransportParamGroupKey(row) {
@@ -1412,6 +1404,48 @@ function getRoadTransportParamGroupKey(row) {
         row.Scenario || '',
         row.Region || ''
     ].join('||');
+}
+
+function getRoadVehicleWeightLabel(row) {
+    const parts = getRoadPathParts(row);
+    return parts[parts.length - 1] || 'Vehicle';
+}
+
+function getRoadFleetWeightCanonicalClass(row) {
+    const branchPath = String(row?.['Branch Path'] || '');
+    const normalized = normalizeRoadTextToken(branchPath);
+
+    if (normalized.includes('demand\\passenger road')) {
+        if (normalized.includes('\\buses')) return 'Buses';
+        if (normalized.includes('\\motorcycles')) return 'Motorcycles';
+        if (
+            normalized.includes('\\lpvs')
+            || normalized.includes('\\passenger cars')
+            || normalized.includes('\\suv and light trucks')
+        ) {
+            return 'LPVs';
+        }
+    }
+
+    return getRoadVehicleWeightLabel(row);
+}
+
+function isRoadVehicleEquivalentBoundsRow(row) {
+    const variable = normalizeRoadTextToken(row?.Variable || '');
+    return [
+        normalizeRoadTextToken('Vehicle Equivalent Weight Lower Bound'),
+        normalizeRoadTextToken('Vehicle Equivalent Weight Upper Bound')
+    ].includes(variable);
+}
+
+function isRoadTransportLevelSharedRow(row) {
+    const variable = normalizeRoadTextToken(row?.Variable || '');
+    return variable === normalizeRoadTextToken('PHEV Electric Driving Share');
+}
+
+function getRoadTransportSharedBranchPath(row) {
+    const parts = getRoadPathParts(row);
+    return parts.slice(0, Math.min(2, parts.length)).join('\\') || row['Branch Path'] || '';
 }
 
 function getRoadSharedMileageOverride(row, year) {
@@ -1527,6 +1561,9 @@ function getRoadSortValue(row) {
 function sortRoadRows(rows) {
     const directionMultiplier = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
     return [...rows].sort((a, b) => {
+        const depthCompare = getRoadBranchDepth(a['Branch Path']) - getRoadBranchDepth(b['Branch Path']);
+        if (depthCompare !== 0) return depthCompare;
+
         const primary = String(getRoadSortValue(a)).localeCompare(String(getRoadSortValue(b)), 'en-US', { numeric: true });
         if (primary !== 0) return primary * directionMultiplier;
         return String(a['Branch Path'] || '').localeCompare(String(b['Branch Path'] || ''), 'en-US', { numeric: true })
@@ -1564,6 +1601,8 @@ function getRoadRowTitle(row) {
     ].filter(value => value !== undefined && value !== null && value !== '');
 
     if (keyParts.length > 0) return keyParts.join(' | ');
+    const branchLeaf = getRoadBranchLeafLabel(row['Branch Path']);
+    if (branchLeaf) return branchLeaf;
     if (row.Scenario || row.Region) {
         return [row.Scenario, row.Region].filter(Boolean).join(' | ');
     }
@@ -1571,10 +1610,11 @@ function getRoadRowTitle(row) {
 }
 
 function getRoadRowMeta(row, yearLabels) {
+    const normalizedYears = (yearLabels || []).filter(Boolean);
+    const showYears = normalizedYears.length > 1;
     const metaParts = [
-        yearLabels.join(', '),
-        row.Units,
-        row.parameter || row.Variable
+        showYears ? normalizedYears.join(', ') : '',
+        row.Units
     ].filter(value => value !== undefined && value !== null && value !== '');
 
     return metaParts.join(' | ');
@@ -1719,6 +1759,22 @@ function groupRoadRowsForEditors(filteredRows) {
     const groupedRows = new Map();
 
     filteredRows
+        .filter(isRoadTransportLevelSharedRow)
+        .forEach(row => {
+            const branchPath = getRoadTransportSharedBranchPath(row);
+            const groupKey = `transport-shared|${branchPath}|${row.Variable}|${row.Scenario || ''}|${row.Region || ''}`;
+            if (!groupedRows.has(groupKey)) {
+                groupedRows.set(groupKey, {
+                    groupType: 'transport-shared',
+                    branchPath: branchPath,
+                    sharedKey: '',
+                    rows: []
+                });
+            }
+            groupedRows.get(groupKey).rows.push(row);
+        });
+
+    filteredRows
         .filter(isRoadPairedFuelShareRow)
         .forEach(row => {
             const branchPath = getRoadPairedFuelShareBranchPath(row);
@@ -1767,7 +1823,7 @@ function groupRoadRowsForEditors(filteredRows) {
         });
 
     filteredRows
-        .filter(row => !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTransportParamRow(row))
+        .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
             const useSharedMileage = isRoadMileageRow(row) && !State.roadModule1.detailedMileage;
             const branchPath = useSharedMileage
@@ -1912,6 +1968,7 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
 function buildRoadModule1TreeEditorHtml(group, depth) {
     const groupRows = group.rows;
     const first = groupRows[0];
+    const isCompactGroup = group.groupType !== 'age-series' && groupRows.length === 1;
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
@@ -1921,10 +1978,10 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? (groupRows.some(r => getRoadTransportParamRole(r) === 'pvs') ? 'Vehicle ownership' : 'Fleet weighting')
+                ? 'Ownership & fleet weighting'
                 : first.Variable));
     return `
-        <section class="road-group-card road-tree-editor" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
+        <section class="road-group-card road-tree-editor ${isCompactGroup ? 'is-compact' : ''}" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
             <div class="road-group-header">
                 <div class="min-w-0">
                     <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
@@ -1996,13 +2053,10 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
     };
 
     const pairedTitle = `Gasoline / diesel mix — ${escapeHtml(getRoadMileageSharedVehicleLabel(referenceRow))}`;
-    const rowMeta = `${escapeHtml(referenceRow.Scenario || 'Current Accounts')} | conventional ICE split`;
-
     return `
         <div class="road-input-row road-paired-share-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}">
             <div class="road-row-label">
                 <div class="road-row-title" title="Conventional gasoline/diesel split at the top-level vehicle type">${pairedTitle} ${buildRoadInfoTooltip('Only the conventional gasoline/diesel split is shown here; alternative fuels such as biogasoline are excluded.')}</div>
-                <div class="road-row-meta">${rowMeta}</div>
             </div>
             <div class="road-year-grid road-paired-share-grid">
                 ${shareInput('gasoline', 'Gasoline share')}
@@ -2011,7 +2065,6 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
                 <div class="road-paired-share-sum-badge">${escapeHtml(shareHint)}</div>
             </div>
             <div class="road-row-actions road-paired-share-actions">
-                <span class="road-source-badge">paired</span>
                 <button type="button" class="road-reset-button" title="Reset paired gasoline/diesel shares" aria-label="Reset paired fuel shares">&#8634;</button>
                 <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
             </div>
@@ -2031,10 +2084,10 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
     const serializableRowRefs = rowRefs.map(({ role, rowKey, year, keyPayload }) => ({ role, rowKey, year, keyPayload }));
     const comment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
 
-    const valueInput = (role, label, helpText) => {
-        const row = rowsByRole.get(role) || null;
+    const valueInput = (bindRole, label, helpText) => {
+        const row = rowsByRole.get(bindRole) || null;
         if (!row) return '';
-        const ref = rowRefs.find(r => r.role === role);
+        const ref = rowRefs.find(r => r.role === bindRole);
         if (!ref) return '';
         const defaultValue = getRoadDefaultValue(row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
@@ -2042,7 +2095,7 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
             ? override.value : '';
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
-            <div class="road-year-input road-reconciliation-input" data-reconciliation-role="${role}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
+            <div class="road-year-input road-reconciliation-input" data-reconciliation-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
                 ${buildRoadCellLabelHtml(label, helpText)}
                 <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
@@ -2064,22 +2117,65 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
         `;
     };
 
+    const hasSharedWeight = rowsByRole.has('weight_shared');
+    const hasSharedLower = rowsByRole.has('bound_lower_shared');
+    const hasSharedUpper = rowsByRole.has('bound_upper_shared');
+
+    const pickWeightRole = (specificRole) => rowsByRole.has(specificRole)
+        ? specificRole
+        : (hasSharedWeight ? 'weight_shared' : '');
+    const pickLowerRole = (specificRole) => rowsByRole.has(specificRole)
+        ? specificRole
+        : (hasSharedLower ? 'bound_lower_shared' : '');
+    const pickUpperRole = (specificRole) => rowsByRole.has(specificRole)
+        ? specificRole
+        : (hasSharedUpper ? 'bound_upper_shared' : '');
+
+    const stockSection = componentSection(
+        'Stock',
+        pickWeightRole('weight_stock'),
+        pickLowerRole('bound_lower_stock'),
+        pickUpperRole('bound_upper_stock'),
+        'Share of the energy correction applied by adjusting vehicle stock.',
+        'Minimum allowed stock adjustment factor (e.g. 0.85 = −15%).',
+        'Maximum allowed stock adjustment factor (e.g. 1.15 = +15%).'
+    );
+    const mileageSection = componentSection(
+        'Mileage',
+        pickWeightRole('weight_mileage'),
+        pickLowerRole('bound_lower_mileage'),
+        pickUpperRole('bound_upper_mileage'),
+        'Share of the energy correction applied by adjusting annual km per vehicle.',
+        'Minimum allowed mileage adjustment factor (e.g. 0.85 = −15%).',
+        'Maximum allowed mileage adjustment factor (e.g. 1.15 = +15%).'
+    );
+    const efficiencySection = componentSection(
+        'Efficiency',
+        pickWeightRole('weight_efficiency'),
+        pickLowerRole('bound_lower_efficiency'),
+        pickUpperRole('bound_upper_efficiency'),
+        'Share of the energy correction applied by adjusting fuel economy.',
+        'Minimum allowed efficiency adjustment factor (e.g. 0.90 = −10%).',
+        'Maximum allowed efficiency adjustment factor (e.g. 1.10 = +10%).'
+    );
+
+    const sectionCount = [stockSection, mileageSection, efficiencySection]
+        .filter(Boolean)
+        .length;
+    const reconciliationDescription = 'Aligned to Module 6 defaults: weights 0.50 / 0.25 / 0.25, stock bounds 0–10, mileage 0.85–1.15, efficiency 0.90–1.10.';
+
     return `
         <div class="road-input-row road-reconciliation-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}">
+            <div class="road-row-label">
+                <div class="road-row-title">Fuel reconciliation controls ${buildRoadInfoTooltip('These values constrain how reconciliation adjusts stock, mileage, and/or efficiency to match fuel totals.')}</div>
+                <div class="road-row-meta">${escapeHtml(reconciliationDescription)} ${sectionCount > 1 ? `(${sectionCount} control groups)` : ''}</div>
+            </div>
             <div class="road-reconciliation-components">
-                ${componentSection('Stock', 'weight_stock', null, null,
-                    'Share of the energy correction applied by adjusting vehicle stock. Unbounded — stock absorbs any residual the other components cannot.')}
-                ${componentSection('Mileage', 'weight_mileage', 'bound_lower_mileage', 'bound_upper_mileage',
-                    'Share of the energy correction applied by adjusting annual km per vehicle.',
-                    'Minimum allowed mileage adjustment factor (e.g. 0.85 = −15%).',
-                    'Maximum allowed mileage adjustment factor (e.g. 1.15 = +15%).')}
-                ${componentSection('Efficiency', 'weight_efficiency', 'bound_lower_efficiency', 'bound_upper_efficiency',
-                    'Share of the energy correction applied by adjusting fuel economy.',
-                    'Minimum allowed efficiency adjustment factor (e.g. 0.90 = −10%).',
-                    'Maximum allowed efficiency adjustment factor (e.g. 1.10 = +10%).')}
+                ${stockSection}
+                ${mileageSection}
+                ${efficiencySection}
             </div>
             <div class="road-row-actions">
-                <span class="road-source-badge">combined</span>
                 <button type="button" class="road-reset-button" title="Reset fuel reconciliation" aria-label="Reset fuel reconciliation">&#8634;</button>
                 <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
             </div>
@@ -2088,20 +2184,14 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
 }
 
 function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
-    const rowsByRole = new Map();
-    group.rows.forEach(row => {
-        const role = getRoadTransportParamRole(row);
-        if (role) rowsByRole.set(role, row);
-    });
+    const pvsRows = group.rows.filter(row => getRoadTransportParamRole(row) === 'pvs');
+    const pvsReachedRows = group.rows.filter(row => getRoadTransportParamRole(row) === 'pvs_reached');
+    const vewRows = group.rows
+        .filter(row => getRoadTransportParamRole(row) === 'vew')
+        .sort((a, b) => getRoadFleetWeightCanonicalClass(a).localeCompare(getRoadFleetWeightCanonicalClass(b), 'en-US', { numeric: true }));
 
-    const vewRow = rowsByRole.get('vew') || null;
-    const pvsRow = rowsByRole.get('pvs') || null;
-    const referenceRow = vewRow || pvsRow || group.rows[0];
-
-    const roleLabel = { vew: 'Vehicle equivalence weight', pvs: 'Ownership saturation' };
-
-    const paramSection = (role, row) => {
-        if (!row) return '';
+    const paramSection = (row, role, labelText) => {
+        if (!row || !labelText) return '';
         const rowKey = buildRoadModule1Key(row);
         const keyPayload = encodeURIComponent(JSON.stringify(roadModule1KeyPayload(row)));
         const yearColumns = getRoadYearColumns(row);
@@ -2109,40 +2199,100 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
         const yearInputs = yearColumns.map(year => {
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
-            const defaultValue = formatRoadDefaultValue(getRoadDefaultValue(row, year));
+            const defaultValueRaw = getRoadDefaultValue(row, year);
+            const defaultValue = formatRoadDefaultValue(defaultValueRaw);
+            const isBooleanToggle = role === 'pvs_reached';
+            const defaultChecked = normalizeRoadBooleanish(defaultValueRaw);
+            const currentChecked = override
+                ? normalizeRoadBooleanish(override.value)
+                : defaultChecked;
             return `
                 <div class="road-year-input road-transport-param-input" data-param-role="${role}" data-row-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}" data-year="${year}">
                     <label>${escapeHtml(year)}</label>
-                    <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    ${isBooleanToggle
+                        ? `
+                        <label class="road-boolean-switch" aria-label="Toggle ${escapeHtml(labelText)} for ${escapeHtml(year)}">
+                            <input type="checkbox" class="road-boolean-switch-input" data-default-bool="${defaultChecked ? '1' : '0'}" ${currentChecked ? 'checked' : ''}>
+                            <span class="road-boolean-switch-track"></span>
+                            <span class="road-boolean-switch-label">${currentChecked ? 'True' : 'False'}</span>
+                        </label>
+                        `
+                        : `<input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">`
+                    }
                 </div>
             `;
         }).join('');
         const unitPill = row.Units ? `<span class="road-unit-pill">${escapeHtml(row.Units)}</span>` : '';
         return `
             <div class="road-transport-param-measure" data-param-role="${role}">
-                <div class="road-transport-param-label">${escapeHtml(roleLabel[role] || role)}${unitPill}</div>
+                <div class="road-transport-param-label">${escapeHtml(labelText)}${unitPill}</div>
                 <div class="road-year-grid">${yearInputs}</div>
             </div>
         `;
     };
 
-    const allRowKeys = [vewRow, pvsRow].filter(Boolean).map(r => buildRoadModule1Key(r));
-    const allYears = [vewRow, pvsRow].filter(Boolean).flatMap(r => getRoadYearColumns(r));
+    const ownershipHtml = [
+        ...pvsRows.map(row => paramSection(row, 'pvs', 'Ownership saturation')),
+        ...pvsReachedRows.map(row => paramSection(row, 'pvs_reached', 'Passenger saturation reached'))
+    ]
+        .filter(Boolean)
+        .join('');
+
+    const canonicalFleetRows = (() => {
+        const byClass = new Map();
+        vewRows.forEach(row => {
+            const className = getRoadFleetWeightCanonicalClass(row);
+            if (!byClass.has(className)) {
+                byClass.set(className, row);
+                return;
+            }
+            const existing = byClass.get(className);
+            const existingLeaf = normalizeRoadTextToken(getRoadVehicleWeightLabel(existing));
+            const nextLeaf = normalizeRoadTextToken(getRoadVehicleWeightLabel(row));
+            const prefersCanonicalLeaf = normalizeRoadTextToken(className);
+            if (nextLeaf === prefersCanonicalLeaf && existingLeaf !== prefersCanonicalLeaf) {
+                byClass.set(className, row);
+            }
+        });
+        return [...byClass.entries()]
+            .sort((a, b) => a[0].localeCompare(b[0], 'en-US', { numeric: true }))
+            .map(([, row]) => row);
+    })();
+
+    const fleetRowsHtml = canonicalFleetRows
+        .map(row => paramSection(row, 'vew', `Vehicle equivalence weight — ${getRoadFleetWeightCanonicalClass(row)}`))
+        .join('');
+
+    const allRows = [...pvsRows, ...pvsReachedRows, ...canonicalFleetRows];
+
+    const allRowKeys = allRows.map(row => buildRoadModule1Key(row));
+    const allYears = allRows.flatMap(row => getRoadYearColumns(row));
     const comment = getRoadCommentForKeys(allRowKeys, allYears);
 
-    const rowRefs = [
-        vewRow ? { role: 'vew', rowKey: buildRoadModule1Key(vewRow), year: getRoadBaseYearColumn(vewRow), keyPayload: roadModule1KeyPayload(vewRow) } : null,
-        pvsRow ? { role: 'pvs', rowKey: buildRoadModule1Key(pvsRow), year: getRoadBaseYearColumn(pvsRow), keyPayload: roadModule1KeyPayload(pvsRow) } : null
-    ].filter(Boolean);
+    const rowRefs = allRows.map(row => ({
+        role: getRoadTransportParamRole(row),
+        rowKey: buildRoadModule1Key(row),
+        year: getRoadBaseYearColumn(row),
+        keyPayload: roadModule1KeyPayload(row)
+    }));
 
     return `
         <div class="road-input-row road-transport-params-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
             <div class="road-transport-params-measures">
-                ${paramSection('vew', vewRow)}
-                ${paramSection('pvs', pvsRow)}
+                ${ownershipHtml ? `
+                <div class="road-transport-param-group">
+                    <div class="road-transport-param-group-title">Ownership</div>
+                    ${ownershipHtml}
+                </div>
+                ` : ''}
+                ${fleetRowsHtml ? `
+                <div class="road-transport-param-group">
+                    <div class="road-transport-param-group-title">Fleet weighting</div>
+                    ${fleetRowsHtml}
+                </div>
+                ` : ''}
             </div>
             <div class="road-row-actions">
-                <span class="road-source-badge">combined</span>
                 <button type="button" class="road-reset-button" title="Reset transport parameters" aria-label="Reset transport parameters">&#8634;</button>
                 <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
             </div>
@@ -2153,6 +2303,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
 function buildRoadModule1EditorRowsHtml(group, depth = 0) {
     const groupRows = group.rows;
     const first = groupRows[0];
+    const isSinglePlainRowGroup = group.groupType === 'rows' && groupRows.length === 1;
 
     if (group.groupType === 'paired-fuel-share') {
         return buildRoadModule1PairedFuelShareEditorHtml(group, depth);
@@ -2186,14 +2337,9 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         }).join('');
 
         return `
-            <div class="road-input-row road-shared-mileage-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-shared-mileage-key="${encodeURIComponent(sharedKey)}">
-                <div class="road-row-label">
-                    <div class="road-row-title" title="Mileage shared across this vehicle type">Mileage shared across ${escapeHtml(getRoadMileageSharedVehicleLabel(first))} ${buildRoadInfoTooltip('One mileage series is used across all drives and fuels in this vehicle type.')}</div>
-                    <div class="road-row-meta">${escapeHtml(getRoadRowMeta(first, yearColumns))}${childCount > 1 ? ` | applies to ${childCount} detailed rows` : ''}</div>
-                </div>
+            <div class="road-input-row road-shared-mileage-row no-row-label" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-shared-mileage-key="${encodeURIComponent(sharedKey)}">
                 <div class="road-year-grid">${yearInputs}</div>
                 <div class="road-row-actions">
-                    <span class="road-source-badge">shared</span>
                     <button type="button" class="road-reset-button" title="Reset shared mileage to the original provided value" aria-label="Reset shared mileage">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
                 </div>
@@ -2265,7 +2411,6 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
     }
 
     return groupRows.map(row => {
-        const reviewClass = row.researcher_review_recommended ? 'road-source-badge needs-review' : 'road-source-badge';
         const rowKey = buildRoadModule1Key(row);
         const keyPayload = encodeURIComponent(JSON.stringify(roadModule1KeyPayload(row)));
         const yearColumns = getRoadYearColumns(row);
@@ -2286,15 +2431,17 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const rowComment = getRoadCommentForKeys([rowKey], yearColumns);
         const rowTitle = getRoadRowTitle(row);
         const rowMeta = getRoadRowMeta(row, yearColumns);
+        const hideRowLabel = isSinglePlainRowGroup && !row.review_reason;
         return `
-            <div class="road-input-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
+            <div class="road-input-row ${hideRowLabel ? 'no-row-label' : ''}" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
+                ${hideRowLabel ? '' : `
                 <div class="road-row-label">
                     <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}${row.review_reason ? ` ${buildRoadInfoTooltip(row.review_reason)}` : ''}</div>
-                    <div class="road-row-meta">${escapeHtml(rowMeta)}</div>
+                    ${rowMeta ? `<div class="road-row-meta">${escapeHtml(rowMeta)}</div>` : ''}
                 </div>
+                `}
                 <div class="road-year-grid">${yearInputs}</div>
                 <div class="road-row-actions">
-                    <span class="${reviewClass}">${escapeHtml(formatRoadInputSourceLabel(row.input_source))}</span>
                     <button type="button" class="road-reset-button" title="${isRoadMileageRow(row) ? 'Reset detailed row to inherited shared mileage' : 'Reset row to the original provided value'}" aria-label="Reset row">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
                 </div>
@@ -2327,6 +2474,7 @@ function renderRoadModule1TreeInputs(filteredRows) {
 function buildRoadModule1ListGroupHtml(group) {
     const groupRows = group.rows;
     const first = groupRows[0];
+    const isCompactGroup = group.groupType !== 'age-series' && groupRows.length === 1;
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
@@ -2336,10 +2484,10 @@ function buildRoadModule1ListGroupHtml(group) {
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? (groupRows.some(r => getRoadTransportParamRole(r) === 'pvs') ? 'Vehicle ownership' : 'Fleet weighting')
+                ? 'Ownership & fleet weighting'
                 : first.Variable));
     return `
-        <section class="road-group-card">
+        <section class="road-group-card ${isCompactGroup ? 'is-compact' : ''}">
             <div class="road-group-header">
                 <div class="min-w-0">
                     <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
@@ -2389,10 +2537,14 @@ function renderRoadModule1Inputs() {
             return haystack.includes(filter);
         })
         : rows;
-    const filteredRows = sortRoadRows(textFilteredRows.filter(roadRowMatchesStructuredFilters));
+    const filteredRows = sortRoadRows(
+        textFilteredRows
+            .filter(roadRowMatchesStructuredFilters)
+            .filter(row => !isRoadVehicleEquivalentBoundsRow(row))
+    );
 
     updateRoadModule1OverrideCount();
-    DOM.roadValidationSummary.innerText = `${rows.length.toLocaleString('en-US')} provided rows loaded`;
+    DOM.roadValidationSummary.innerText = '';
 
     if (filteredRows.length === 0) {
         DOM.roadInputContainer.innerHTML = '<div class="text-sm text-slate-400">No rows match the current filter.</div>';
@@ -2689,9 +2841,24 @@ function handleRoadModule1TransportParamsInputChange(rowEl) {
         const year = yearEl.dataset.year;
         const key = `${rowKey}||Year=${year}`;
         const valueInput = yearEl.querySelector('.road-value-input');
-        const value = valueInput ? valueInput.value.trim() : '';
+        const boolInput = yearEl.querySelector('.road-boolean-switch-input');
 
-        if (!value) {
+        let value = '';
+        let shouldPersist = false;
+
+        if (boolInput) {
+            const currentBool = Boolean(boolInput.checked);
+            const defaultBool = boolInput.dataset.defaultBool === '1';
+            value = currentBool ? '1' : '0';
+            shouldPersist = currentBool !== defaultBool || comment.length > 0;
+            const labelEl = yearEl.querySelector('.road-boolean-switch-label');
+            if (labelEl) labelEl.innerText = currentBool ? 'True' : 'False';
+        } else {
+            value = valueInput ? valueInput.value.trim() : '';
+            shouldPersist = Boolean(value);
+        }
+
+        if (!shouldPersist) {
             State.roadModule1.overrides.delete(key);
             return;
         }
@@ -2717,6 +2884,13 @@ function handleRoadModule1TransportParamsResetClick(rowEl) {
         State.roadModule1.overrides.delete(`${rowKey}||Year=${year}`);
         const input = yearEl.querySelector('.road-value-input');
         if (input) input.value = '';
+        const boolInput = yearEl.querySelector('.road-boolean-switch-input');
+        if (boolInput) {
+            const defaultChecked = boolInput.dataset.defaultBool === '1';
+            boolInput.checked = defaultChecked;
+            const labelEl = yearEl.querySelector('.road-boolean-switch-label');
+            if (labelEl) labelEl.innerText = defaultChecked ? 'True' : 'False';
+        }
     });
     const commentInput = rowEl.querySelector('.road-comment-input');
     if (commentInput) commentInput.value = '';
@@ -3116,6 +3290,11 @@ function normalizeRoadNumber(value) {
     if (value === null || value === undefined || String(value).trim() === '') return null;
     const numeric = Number(String(value).replace(/,/g, '').trim());
     return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeRoadBooleanish(value) {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    return ['1', 'true', 'yes', 'y', 'on'].includes(normalized);
 }
 
 function getRoadModule1UploadContextDefaults() {

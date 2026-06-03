@@ -31,6 +31,12 @@ REQUIRED_ROAD_MODEL_INPUTS = [
     "apec_passenger_vehicle_saturation.csv",
     "apec_reconciliation_factors.csv",
     "apec_vehicle_equivalent_weights.csv",
+    "road_module1_default_vehicle_types.csv",
+    "road_module1_default_drive_shares.csv",
+    "road_module1_valid_drives_by_vehicle_type.csv",
+    "road_module1_default_mileage_km_per_year.csv",
+    "road_module1_default_efficiency_mj_per_km.csv",
+    "road_module1_default_assumptions.csv",
     "vehicle_survival_modified_00_APEC.xlsx",
     "vintage_modelled_from_survival_00_APEC.xlsx",
 ]
@@ -70,6 +76,33 @@ REQUIRED_CSV_COLUMNS = {
         "lower_bound",
         "upper_bound",
         "data_year",
+    ],
+    "road_module1_default_vehicle_types.csv": [
+        "transport_type",
+        "vehicle_type",
+        "vehicle_equivalent_weight",
+        "stock_share",
+    ],
+    "road_module1_default_drive_shares.csv": [
+        "vehicle_type",
+        "drive",
+        "share",
+    ],
+    "road_module1_valid_drives_by_vehicle_type.csv": [
+        "vehicle_type",
+        "drive",
+    ],
+    "road_module1_default_mileage_km_per_year.csv": [
+        "vehicle_type",
+        "mileage_km_per_year",
+    ],
+    "road_module1_default_efficiency_mj_per_km.csv": [
+        "drive",
+        "efficiency_mj_per_km",
+    ],
+    "road_module1_default_assumptions.csv": [
+        "key",
+        "value",
     ],
 }
 

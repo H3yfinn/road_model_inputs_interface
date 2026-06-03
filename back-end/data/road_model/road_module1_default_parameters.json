@@ -1,0 +1,54 @@
+{
+  "contract_version": "v1",
+  "purpose": "Structure/control-plane metadata only. Operational numeric values are sourced from CSV/XLSX files under back-end/data/road_model.",
+  "economies": [
+    {"code": "01AUS", "name": "Australia"},
+    {"code": "02BD", "name": "Brunei Darussalam"},
+    {"code": "03CDA", "name": "Canada"},
+    {"code": "04CHL", "name": "Chile"},
+    {"code": "05PRC", "name": "China"},
+    {"code": "06HKC", "name": "Hong Kong, China"},
+    {"code": "07INA", "name": "Indonesia"},
+    {"code": "08JPN", "name": "Japan"},
+    {"code": "09ROK", "name": "Korea"},
+    {"code": "10MAS", "name": "Malaysia"},
+    {"code": "11MEX", "name": "Mexico"},
+    {"code": "12NZ", "name": "New Zealand"},
+    {"code": "13PNG", "name": "Papua New Guinea"},
+    {"code": "14PE", "name": "Peru"},
+    {"code": "15PHL", "name": "Philippines"},
+    {"code": "16RUS", "name": "Russia"},
+    {"code": "17SGP", "name": "Singapore"},
+    {"code": "18CT", "name": "Chinese Taipei"},
+    {"code": "19THA", "name": "Thailand"},
+    {"code": "20USA", "name": "United States"},
+    {"code": "21VN", "name": "Viet Nam"}
+  ],
+  "variables": {
+    "canonical_names": [
+      "Stock",
+      "Mileage",
+      "Fuel Economy",
+      "Sales Share",
+      "Vehicle Equivalent Weight",
+      "Passenger Vehicle Saturation",
+      "PHEV Electric Driving Share",
+      "Reconciliation Weight",
+      "Reconciliation Bound Lower",
+      "Reconciliation Bound Upper",
+      "Survival Rate",
+      "Vintage Profile Share"
+    ],
+    "aliases": {
+      "Final On-Road Fuel Economy": "Fuel Economy"
+    }
+  },
+  "numeric_sources": [
+    "road_module1_default_vehicle_types.csv",
+    "road_module1_default_drive_shares.csv",
+    "road_module1_valid_drives_by_vehicle_type.csv",
+    "road_module1_default_mileage_km_per_year.csv",
+    "road_module1_default_efficiency_mj_per_km.csv",
+    "road_module1_default_assumptions.csv"
+  ]
+}

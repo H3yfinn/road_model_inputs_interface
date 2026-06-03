@@ -1,0 +1,8 @@
+vehicle_type,mileage_km_per_year
+passenger_car,12500
+suv_light_truck,13500
+bus,45000
+motorcycle,7000
+light_commercial_vehicle,21000
+medium_truck,36000
+heavy_truck,65000
