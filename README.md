@@ -1,6 +1,6 @@
 ---
 title: Road Model Inputs Interface
-emoji: car
+emoji: 🚗
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -9,6 +9,8 @@ pinned: false
 ---
 
 ## Road Model Inputs Interface
+
+> **Hugging Face Spaces deployment config** — the table above is required by HF Spaces and contains the app metadata. [![Hugging Face Spaces](https://img.shields.io/badge/HuggingFace-Spaces-orange)](https://huggingface.co/spaces/H3yfinn/road_model_inputs_interface)
 
 This repository hosts the researcher-facing interface and source-data package
 for Road Module 1 in the APEC road transport model workflow.
@@ -72,7 +74,7 @@ These values are LEAP-style percentages and each transport group should sum to
 ## Where it fits in the multi-repo workflow
 
 | Repo | Role |
-|---|---|
+| --- | --- |
 | `transport_model_9th_edition` | Original upstream transport model outputs. |
 | `leap_transport` | Near-term source of processed transport outputs close to LEAP branch structure. |
 | `road_model_inputs_interface` | Module 1 writer: source files, defaults, UI, validation, researcher export. |
