@@ -40,6 +40,8 @@ Module 1 is not the road model calculation engine. It should stay simple: most
 numeric assumptions should live in CSV/XLSX source files, and code should mainly
 read, normalize, validate, and export those values.
 
+![Road Module 1-7 simplified interface workflow](Road%20Module%201-7%20simplified%20interface%20workflow.png)
+
 ## 2. System boundary
 
 ### This repo owns Module 1

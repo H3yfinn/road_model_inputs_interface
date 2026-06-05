@@ -17,6 +17,12 @@ In plain English: this site shows researchers the default road-model input rows,
 lets them fill values and comments without changing the row structure, and
 exports a Module 1 package for `leap_road_model`.
 
+## Overview diagrams
+
+![Road Module 1-7 simplified interface workflow](docs/new%20model/Road%20Module%201-7%20simplified%20interface%20workflow.png)
+
+![Road Module 1 workflow diagram](docs/new%20model/Road%20Module%201%20workflow%20diagram.png)
+
 ## What this site is for
 
 `road_model_inputs_interface` is the Module 1 input collection and packaging
