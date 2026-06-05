@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          lfs: true
+          lfs: false
 
       - name: Push snapshot to Hugging Face Space
         env:
@@ -20,14 +20,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git remote add hf https://finbarmaunsell:$HF_TOKEN@huggingface.co/spaces/finbarmaunsell/leap_road_model
-
-          # Re-stage LFS files as regular git blobs so HF receives real content, not LFS pointers
-          git lfs ls-files -n | xargs -r git rm --cached
-          git lfs ls-files -n | xargs -r git add
-
-          # Push only current snapshot with no history — avoids HF rejecting old commits that had large files
+          # Orphan commit — no history, avoids HF rejecting old commits that had large files
           git checkout --orphan hf-deploy
-          # Remove dirs not needed on HF (docs contains PNGs which HF rejects as binary files)
+          # Remove docs/ — contains PNGs which HF rejects as binary files
           git rm -rf --cached docs/ 2>/dev/null || true
           git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push hf hf-deploy:main --force
