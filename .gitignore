@@ -49,15 +49,12 @@ back-end/outputs/
 #   back-end/data/road_model/*.csv               small parameter/config CSVs
 #   back-end/data/multinodeenergy_backend/sector_fuel_codes_to_names*.csv
 #
-# Do NOT commit (too large, or loaded and processed locally before pushing):
-#   APEC energy database (>10 MB) — energy-model tab unavailable on HF; startup is graceful
-#   LEAP export workbooks — kept locally; run prepare_road_source.py to regenerate processed_source/
-#     Combined all-economies workbook: leap_import_workbooks/transport_leap_export_combined_ALL_ECONS_*.xlsx
-#     Default input workbook:          leap_import_workbooks/road_model_default_input_workbook.xlsx
-#   Individual per-economy XLSXs were confirmed identical to the combined file and deleted.
+# Do NOT commit:
+#   ALL_ECONS combined workbook (>10 MB) — replaced by per-economy splits below
+#   Default input workbook — large, regenerated locally
 # ===========================
-back-end/data/multinodeenergy_backend/00APEC_2024_low_with_subtotals.csv
-back-end/data/road_model/leap_import_workbooks/
+back-end/data/road_model/leap_import_workbooks/transport_leap_export_combined_ALL_ECONS_*.xlsx
+back-end/data/road_model/leap_import_workbooks/road_model_default_input_workbook.xlsx
 back-end/data/transport_leap_exports/
 
 # ===========================
