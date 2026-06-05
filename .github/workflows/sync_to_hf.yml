@@ -22,5 +22,7 @@ jobs:
           git remote add hf https://finbarmaunsell:$HF_TOKEN@huggingface.co/spaces/finbarmaunsell/leap_road_model
           # Push only current snapshot with no history — avoids HF rejecting old commits that had large files
           git checkout --orphan hf-deploy
+          # Remove dirs not needed on HF (docs contains PNGs which HF rejects as binary files)
+          git rm -rf --cached docs/ 2>/dev/null || true
           git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push hf hf-deploy:main --force
