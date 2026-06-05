@@ -17,6 +17,8 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git remote add hf https://finbarmaunsell:$HF_TOKEN@huggingface.co/spaces/finbarmaunsell/leap_road_model
           # Push only current snapshot with no history — avoids HF rejecting old commits that had large files
           git checkout --orphan hf-deploy
