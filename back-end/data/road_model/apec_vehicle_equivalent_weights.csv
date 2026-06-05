@@ -1,5 +1,0 @@
-vehicle_type,vehicle_equivalent_weight,lower_bound,upper_bound,data_year,source_note,estimation_status
-passenger_car,1.0,1.0,1.0,2026,APERC initial vehicle equivalent weights for Module 1,synthetic_estimate
-suv_light_truck,1.35,1.0,1.5,2026,APERC initial vehicle equivalent weights for Module 1,synthetic_estimate
-bus,12.0,8.0,80.0,2026,APERC initial vehicle equivalent weights for Module 1,synthetic_estimate
-motorcycle,0.25,0.05,0.80,2026,APERC initial vehicle equivalent weights for Module 1,synthetic_estimate

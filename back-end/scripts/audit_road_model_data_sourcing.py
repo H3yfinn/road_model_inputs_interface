@@ -18,20 +18,17 @@ import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "back-end" / "data" / "road_model"
+SUPPLEMENTAL_SOURCE_DIR = DATA_DIR / "supplemental_source_files"
 FRONTEND_APP = REPO_ROOT / "front-end" / "app.js"
 
 REQUIRED_DATA_FILES = [
-    "road_model_default_input_workbook.xlsx",
     "apec_reconciliation_factors.csv",
     "apec_phev_utilisation_rates.csv",
     "apec_vehicle_equivalent_weights.csv",
     "apec_passenger_vehicle_saturation.csv",
-    "road_module1_default_vehicle_types.csv",
-    "road_module1_default_drive_shares.csv",
-    "road_module1_valid_drives_by_vehicle_type.csv",
-    "road_module1_default_mileage_km_per_year.csv",
-    "road_module1_default_efficiency_mj_per_km.csv",
-    "road_module1_default_assumptions.csv",
+    "apec_lifecycle_profile_factors.csv",
+    "vehicle_survival_modified_00_APEC.xlsx",
+    "vintage_modelled_from_survival_00_APEC.xlsx",
 ]
 
 # Keep this list intentionally narrow and high-signal.
@@ -49,17 +46,34 @@ def main() -> int:
     if not DATA_DIR.exists():
         violations.append(f"Missing data directory: {DATA_DIR}")
     else:
+        if not SUPPLEMENTAL_SOURCE_DIR.exists():
+            violations.append(f"Missing supplemental source directory: {SUPPLEMENTAL_SOURCE_DIR}")
         for filename in REQUIRED_DATA_FILES:
-            path = DATA_DIR / filename
+            path = SUPPLEMENTAL_SOURCE_DIR / filename
             if not path.exists():
                 violations.append(f"Missing required data source file: {path}")
 
-        source_files = [
-            p for p in DATA_DIR.iterdir() if p.is_file() and p.suffix.lower() in {".csv", ".xlsx", ".xls"}
-        ]
+        processed_source_dir = DATA_DIR / "processed_source"
+        has_processed_source = processed_source_dir.exists() and any(
+            processed_source_dir.glob("road_module1_source_*.csv")
+        )
+        default_workbook = DATA_DIR / "road_model_default_input_workbook.xlsx"
+        if not has_processed_source and not default_workbook.exists():
+            violations.append(
+                "Missing Road Module 1 primary source: expected processed_source/"
+                "road_module1_source_*.csv or road_model_default_input_workbook.xlsx"
+            )
+
+        source_files = []
+        if SUPPLEMENTAL_SOURCE_DIR.exists():
+            source_files = [
+                p for p in SUPPLEMENTAL_SOURCE_DIR.iterdir()
+                if p.is_file() and p.suffix.lower() in {".csv", ".xlsx", ".xls"}
+            ]
         if not source_files:
             violations.append(
-                "No CSV/XLSX/XLS source files found in back-end/data/road_model."
+                "No CSV/XLSX/XLS source files found in "
+                "back-end/data/road_model/supplemental_source_files."
             )
 
     if not FRONTEND_APP.exists():
@@ -80,7 +94,9 @@ def main() -> int:
 
     print("Road model data sourcing audit PASSED.")
     print(f"- Data directory: {DATA_DIR}")
+    print(f"- Supplemental source directory: {SUPPLEMENTAL_SOURCE_DIR}")
     print(f"- Checked required source files: {len(REQUIRED_DATA_FILES)}")
+    print("- Checked Module 1 processed-source/default-workbook availability")
     print("- No forbidden hard-coded runtime data markers found in front-end/app.js")
     return 0
 

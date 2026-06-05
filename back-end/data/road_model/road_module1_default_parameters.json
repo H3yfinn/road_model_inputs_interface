@@ -37,18 +37,32 @@
       "Reconciliation Bound Lower",
       "Reconciliation Bound Upper",
       "Survival Rate",
-      "Vintage Profile Share"
+      "Vintage Profile Share",
+      "Stock Share"
     ],
     "aliases": {
       "Final On-Road Fuel Economy": "Fuel Economy"
     }
   },
   "numeric_sources": [
-    "road_module1_default_vehicle_types.csv",
-    "road_module1_default_drive_shares.csv",
-    "road_module1_valid_drives_by_vehicle_type.csv",
-    "road_module1_default_mileage_km_per_year.csv",
-    "road_module1_default_efficiency_mj_per_km.csv",
-    "road_module1_default_assumptions.csv"
+    "processed_source/road_module1_source_<ECONOMY>.csv",
+    "supplemental_source_files/apec_reconciliation_factors.csv",
+    "supplemental_source_files/apec_phev_utilisation_rates.csv",
+    "supplemental_source_files/apec_vehicle_equivalent_weights.csv",
+    "supplemental_source_files/apec_passenger_vehicle_saturation.csv",
+    "supplemental_source_files/apec_lifecycle_profile_factors.csv",
+    "supplemental_source_files/vehicle_survival_modified_00_APEC.xlsx",
+    "supplemental_source_files/vintage_modelled_from_survival_00_APEC.xlsx"
+  ],
+  "legacy_fallback_numeric_sources": [
+    "road_model_default_input_workbook.xlsx"
+  ],
+  "archived_numeric_sources": [
+    "archive/seed_csv_defaults/road_module1_default_vehicle_types.csv",
+    "archive/seed_csv_defaults/road_module1_default_drive_shares.csv",
+    "archive/seed_csv_defaults/road_module1_valid_drives_by_vehicle_type.csv",
+    "archive/seed_csv_defaults/road_module1_default_mileage_km_per_year.csv",
+    "archive/seed_csv_defaults/road_module1_default_efficiency_mj_per_km.csv",
+    "archive/seed_csv_defaults/road_module1_default_assumptions.csv"
   ]
 }

@@ -62,11 +62,11 @@ def _to_canonical_economy(economy: str) -> str:
 
 def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -> Path:
     """Write completed Module 1 rows as CSV into leap_road_model's input_data directory."""
-    economy_no_underscore = economy.replace("_", "")
-    dest_dir = _MODULE1_INPUT_DIR / version / economy_no_underscore
+    economy_canonical = _to_canonical_economy(economy)
+    dest_dir = _MODULE1_INPUT_DIR / version / economy_canonical
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest_file = dest_dir / f"road_module1_default_filled_inputs_{economy_no_underscore}.csv"
+    dest_file = dest_dir / f"road_module1_values_{economy_canonical}.csv"
 
     if not rows:
         raise ValueError("No rows provided — cannot write empty Module 1 input file.")

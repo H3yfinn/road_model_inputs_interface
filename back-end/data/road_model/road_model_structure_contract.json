@@ -9,57 +9,57 @@
     {
       "name": "default_input_workbook",
       "required_file_patterns": ["road_model_default_input_workbook.xlsx"],
+      "status": "optional_legacy_fallback",
       "required_columns": ["Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Per...", "2022"]
     },
     {
+      "name": "processed_source",
+      "required_file_patterns": ["processed_source/road_module1_source_*.csv"],
+      "required_columns": ["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"],
+      "notes": "Primary Module 1 source created by back-end/scripts/prepare_road_source.py from the LEAP export workbook. The five canonical vehicle-type Stock Share rows must be preserved by exact Branch Path and Variable."
+    },
+    {
+      "name": "final_value_overrides",
+      "required_file_patterns": ["final_value_overrides/module1_final_value_overrides_<ECONOMY>.csv"],
+      "status": "optional_final_overlay",
+      "required_columns": ["Branch Path", "Variable", "Scenario", "Year", "Value", "Units", "share_decreased_from"],
+      "optional_columns": ["Region"],
+      "notes": "Optional researcher-maintained spreadsheet overlay applied after all source and supplemental overlays. Rows must match existing generated rows by Branch Path, Variable, Scenario, and Year. Sales Share and Stock Share overrides are rebalanced within sibling branch groups to keep each group summing to 100; share_decreased_from can name the sibling branch to adjust, or can be blank to normalize all siblings."
+    },
+    {
       "name": "reconciliation_factors",
-      "required_file_patterns": ["apec_reconciliation_factors.csv"],
-      "required_columns": ["economy", "transport_type", "parameter", "value", "unit"]
+      "required_file_patterns": ["supplemental_source_files/apec_reconciliation_factors.csv"],
+      "required_columns": ["transport_type", "weight_stock", "weight_mileage", "weight_efficiency", "bound_lower_mileage", "bound_upper_mileage", "bound_lower_efficiency", "bound_upper_efficiency", "data_year"]
     },
     {
       "name": "phev_utilisation",
-      "required_file_patterns": ["apec_phev_utilisation_rates.csv"],
-      "required_columns": ["economy", "value"]
+      "required_file_patterns": ["supplemental_source_files/apec_phev_utilisation_rates.csv"],
+      "required_columns": ["project_code", "economy", "vehicle_type", "data_year", "phev_utilisation_rate", "lower_rate", "upper_rate", "evidence_grade", "estimation_status"]
     },
     {
       "name": "vehicle_equivalent_weights",
-      "required_file_patterns": ["apec_vehicle_equivalent_weights.csv"],
-      "required_columns": ["transport_type", "vehicle_type", "value"]
+      "required_file_patterns": ["supplemental_source_files/apec_vehicle_equivalent_weights.csv"],
+      "required_columns": ["vehicle_type", "vehicle_equivalent_weight", "lower_bound", "upper_bound", "data_year"]
     },
     {
       "name": "passenger_saturation",
-      "required_file_patterns": ["apec_passenger_vehicle_saturation.csv"],
-      "required_columns": ["economy", "value"]
+      "required_file_patterns": ["supplemental_source_files/apec_passenger_vehicle_saturation.csv"],
+      "required_columns": ["project_code", "economy", "data_year", "saturation_vehicles_per_1000", "lower_bound", "upper_bound", "evidence_grade", "estimation_status", "reached_saturation_lenient"]
     },
     {
-      "name": "default_vehicle_types",
-      "required_file_patterns": ["road_module1_default_vehicle_types.csv"],
-      "required_columns": ["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"]
+      "name": "lifecycle_profile_factors",
+      "required_file_patterns": ["supplemental_source_files/apec_lifecycle_profile_factors.csv"],
+      "required_columns": ["project_code", "economy", "transport_type", "data_year", "turnover_rate_lower", "turnover_rate_upper", "fit_mode", "scale_age_band_age_min", "scale_age_band_age_max", "smoothing_window", "evidence_grade", "estimation_status"]
     },
     {
-      "name": "default_drive_shares",
-      "required_file_patterns": ["road_module1_default_drive_shares.csv"],
-      "required_columns": ["vehicle_type", "drive", "share"]
+      "name": "survival_profile",
+      "required_file_patterns": ["supplemental_source_files/vehicle_survival_modified_00_APEC.xlsx"],
+      "required_columns": []
     },
     {
-      "name": "valid_drives_by_vehicle_type",
-      "required_file_patterns": ["road_module1_valid_drives_by_vehicle_type.csv"],
-      "required_columns": ["vehicle_type", "drive"]
-    },
-    {
-      "name": "default_mileage",
-      "required_file_patterns": ["road_module1_default_mileage_km_per_year.csv"],
-      "required_columns": ["vehicle_type", "mileage_km_per_year"]
-    },
-    {
-      "name": "default_efficiency",
-      "required_file_patterns": ["road_module1_default_efficiency_mj_per_km.csv"],
-      "required_columns": ["drive", "efficiency_mj_per_km"]
-    },
-    {
-      "name": "default_assumptions",
-      "required_file_patterns": ["road_module1_default_assumptions.csv"],
-      "required_columns": ["key", "value"]
+      "name": "vintage_profile",
+      "required_file_patterns": ["supplemental_source_files/vintage_modelled_from_survival_00_APEC.xlsx"],
+      "required_columns": []
     }
   ],
   "variables": {
@@ -75,7 +75,8 @@
       "Reconciliation Bound Lower",
       "Reconciliation Bound Upper",
       "Survival Rate",
-      "Vintage Profile Share"
+      "Vintage Profile Share",
+      "Stock Share"
     ],
     "aliases": {
       "Final On-Road Fuel Economy": "Fuel Economy"

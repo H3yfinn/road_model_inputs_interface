@@ -1,6 +1,6 @@
 ---
 title: Road Model Inputs Interface
-emoji: 🚗
+emoji: car
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -8,170 +8,146 @@ app_port: 7860
 pinned: false
 ---
 
-## Road Model Inputs Interface (Module 1)
+## Road Model Inputs Interface
 
-This repository hosts the **researcher-facing site for Road Module 1** in the APEC road transport modeling workflow.
+This repository hosts the researcher-facing interface and source-data package
+for Road Module 1 in the APEC road transport model workflow.
 
-In plain English: this site is where researchers review defaults, provide/override base-year road input values, and export a structured package that downstream road modules consume.
-
----
+In plain English: this site shows researchers the default road-model input rows,
+lets them fill values and comments without changing the row structure, and
+exports a Module 1 package for `leap_road_model`.
 
 ## What this site is for
 
-`road_model_inputs_interface` is the **Module 1 input collection and packaging layer** for `leap_road_model`.
+`road_model_inputs_interface` is the Module 1 input collection and packaging
+layer for `leap_road_model`.
 
 It is designed to:
 
-- present default road-model inputs by economy/version/scenario;
-- let researchers review and edit key inputs (primarily base year);
-- preserve source/audit context;
-- validate row keys and value constraints;
-- export one flat CSV per economy in the expected Module 1 contract format.
+- build default values from documented files in `back-end/data/road_model/`;
+- present default rows by economy and scenario;
+- let researchers review and edit values, mainly for the base year;
+- capture source notes and comments for researcher-provided overrides;
+- validate row keys and simple value constraints; and
+- export one flat CSV per economy in the Module 1 contract format.
 
-For researcher review and handoff, the important columns are:
+The target handoff format is a long CSV with these core columns:
 
-- `Branch Path`
-- `Variable`
-- `Scenario`
-- `Region`
-- `Scale`
-- `Units`
-- `Per...`
-- `2022`
+```text
+Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment
+```
 
-As long as those columns are filled in for the rows you care about, the other
-columns do not need specific values. Partial files are acceptable too: blanks
-and non-existent values are ignored by the loader, so you only need to fill in
-the rows and fields that actually matter for the review.
+Generated per-economy files use stable underscore economy codes and overwrite in
+place:
 
-If you only remember one thing: **this is the canonical handoff tool for Road Module 1 outputs**, not just a UI demo.
+```text
+road_module1_values_<ECONOMY>.csv
+road_module1_values_20_USA.csv
+```
 
----
+Researchers can edit value/comment/source fields. They should not create rows or
+change key columns such as `Branch Path`, `Variable`, `Scenario`, `Economy`, or
+`Year`.
+
+Vehicle-type stock splits use LEAP's existing `Stock Share` rows, not custom
+Module 1 variable names. The canonical split rows are:
+
+```text
+Demand\Freight road\Trucks          Stock Share
+Demand\Freight road\LCVs            Stock Share
+Demand\Passenger road\Motorcycles   Stock Share
+Demand\Passenger road\Buses         Stock Share
+Demand\Passenger road\LPVs          Stock Share
+```
+
+These values are LEAP-style percentages and each transport group should sum to
+100.
 
 ## Where it fits in the multi-repo workflow
 
 | Repo | Role |
-| --- | --- |
+|---|---|
 | `transport_model_9th_edition` | Original upstream transport model outputs. |
-| `leap_transport` | Transforms/matches those outputs toward LEAP and Module 1 needs. |
-| `road_model_inputs_interface` | **Module 1 writer**: collect defaults + researcher inputs, validate, export package. |
-| `leap_road_model` | Reads Module 1 package and runs downstream Modules 2-7. |
+| `leap_transport` | Near-term source of processed transport outputs close to LEAP branch structure. |
+| `road_model_inputs_interface` | Module 1 writer: source files, defaults, UI, validation, researcher export. |
+| `leap_road_model` | Reads the Module 1 package and runs Modules 2-7. |
 
----
+## Source of truth
 
-## Core purpose of the site (researcher workflow)
+Default values must come from files in:
 
-1. Select **version**, **economy**, and **scenario**.
-2. Load default values (static bundle first, optional backend fallback).
-3. Review/edit researcher-provided values (base-year-first workflow).
-4. Upload checkpoint/value files when continuing prior work.
-5. Run validation checks on structure and values.
-6. Export `road_module1_default_filled_inputs.csv`-style output as the Module 1 handoff.
+```text
+back-end/data/road_model/
+```
 
-That flat CSV is what downstream road modeling should consume.
+If required default files are missing, generation should fail. Researcher
+uploads are for filling existing rows, not for replacing the default data source.
 
----
+The full contract and roadmap are in:
 
-## Runtime model (important)
+```text
+docs/new model/multinode_road_module1_repo_guide.md
+```
 
-Default operation is **static-first**:
+## Runtime model
 
-- the frontend is expected to run as a static site;
-- packaged defaults and selector metadata are loaded from `front-end/road-module1-static/`;
-- backend routes are optional helpers for local workflows.
+Default operation is static-first:
 
-This means the site can run without a persistent server in many normal use cases.
+- generated UI data are served from `front-end/road-module1-static/`;
+- the frontend can run as a static site;
+- backend routes are optional helpers for local validation and model runs.
 
----
-
-## What is considered the source of truth
-
-For full technical details (folder policy, output contract, overlays, validation behavior, and roadmap), use:
-
-- `docs/new model/multinode_road_module1_repo_guide.md`
-
-That guide is the detailed implementation/source-of-truth document.
-
----
+The static CSV bundle is a UI artifact, not a separate source of truth. It uses
+the same long-row format as the downstream Module 1 package and should be
+regenerated from `back-end/data/road_model/`.
 
 ## Quick start
 
-### Frontend (typical)
+### Frontend
 
-Serve `front-end/` with any simple static server and open it in your browser.
+Serve `front-end/` with a simple static server and open it in your browser.
 
 ### Optional backend
 
-Backend is available for local helper flows (API routes, optional save/export paths), but is **not required** for static-first usage.
+The backend is useful for local helper flows, especially running
+`leap_road_model` from the UI. It is not required for the static researcher
+review workflow.
 
-Install Python dependencies from `requirements.txt`, then run `back-end/run.py` if you need backend-assisted behavior.
+Install Python dependencies from `requirements.txt`, then run:
 
----
+```bash
+python back-end/run.py
+```
 
-## Git data policy (recommended)
+## Recommended update process
 
-To keep repository size healthy, this repo is configured to:
+Before committing Road Module 1 default updates:
 
-- **not track** heavy raw input datasets and generated backend output files under:
-  - `back-end/data/`
-  - `back-end/outputs/`
-- **track** the frontend static defaults bundle under:
-  - `front-end/road-module1-static/`
-
-### Recommended pre-commit refresh process
-
-Before committing/pushing Road Module 1 default updates:
-
-1. Rebuild static defaults JSON bundle:
-   - run `back-end/build_road_model_static_defaults.py`
-2. Review changed files under `front-end/road-module1-static/`
-3. Commit only code/docs + static JSON changes needed for the release.
-
-This keeps Git history focused on deployable artifacts while allowing local raw-data refresh workflows.
-
----
-
-## Output contract (high level)
-
-Expected Module 1 handoff artifact:
-
-- `road_module1_default_filled_inputs.csv`
-
-This flat CSV is intended to carry the core row keys and the base-year value.
-Downstream consumers should ignore blank cells and missing optional fields, and
-they should not rely on extra columns being present.
-
----
+1. Update or add source files under `back-end/data/road_model/`.
+2. Record the method in `back-end/data/road_model/UPDATE_METHOD.md`.
+3. Regenerate Module 1 packages and the static CSV bundle.
+4. Review changed static files under `front-end/road-module1-static/`.
+5. Commit source/method/docs/static-bundle changes together when intentional.
 
 ## Current focus and boundaries
 
-This repo owns Module 1 concerns:
+This repo owns:
 
-- defaults and overlays;
+- Module 1 source-data handling;
+- default package generation;
 - researcher input capture;
-- validation and diagnostics;
-- Module 1 workbook export.
+- simple validation and diagnostics;
+- static UI bundle generation; and
+- optional model-run integration.
 
-This repo does **not** own downstream road simulation logic (Modules 2-7); that belongs in `leap_road_model`.
-
----
-
-## Notes for contributors
-
-- Keep the researcher workflow base-year-first unless the contract changes deliberately.
-- Prefer explicit validation/reporting over silent fallbacks.
-- Preserve source metadata when values are overlaid or overridden.
-- Update the guide doc when behavior/contracts change.
-
----
+This repo does not own downstream road simulation logic. Modules 2-7 belong in
+`leap_road_model`.
 
 ## Documentation index
 
 - Main Module 1 guide:
   - `docs/new model/multinode_road_module1_repo_guide.md`
-- Backend implementation entry points:
-  - `back-end/core/road_module1_defaults_workflow.py`
-  - `back-end/api/routers.py`
-- Frontend implementation entry points:
-  - `front-end/app.js`
-  - `front-end/api.js`
+- Numeric update method log:
+  - `back-end/data/road_model/UPDATE_METHOD.md`
+- Cross-repo docs:
+  - `docs/CROSS_REPO_DOCS.md`

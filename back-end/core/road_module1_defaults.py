@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
+from html import escape
 from math import isfinite
 from pathlib import Path
 from typing import Iterable
@@ -11,14 +12,15 @@ from typing import Iterable
 import pandas as pd
 
 
-DEFAULT_VERSION = "v2026_05_25_best_guess"
+DEFAULT_VERSION = "v2026_06_05_road_module1_sources"
 SOURCE_DATE = "2026-05-25"
 BASE_YEAR = 2022
 DEFAULT_SCENARIOS = ["current_accounts"]
 DEFAULT_YEARS = [2022]
 YEAR_COLUMNS = [str(year) for year in DEFAULT_YEARS]
+# Future years where stock-share trajectories are anchored for researchers to edit.
+STOCK_SHARE_PROJECTION_YEARS = [2040, 2060]
 TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN = "transport_leap_export_combined_ALL_ECONS*.xlsx"
-TRANSPORT_LEAP_EXPORT_FALLBACK_FILENAME = "transport_leap_export_combined_00_APEC_domestic_international_Target_20260514.xlsx"
 TRANSPORT_LEAP_EXPORT_SHEET = "FOR_VIEWING"
 TRANSPORT_LEAP_EXPORT_HEADER_ROW = 2
 TRANSPORT_LEAP_EXPORT_SCENARIO_PRIORITY = ["Reference", "Target"]
@@ -48,24 +50,22 @@ _output_root = Path(_output_root_env) if _output_root_env else BACKEND_ROOT / "o
 MULTINODE_BACKEND_DATA_DIR = DATA_ROOT / "multinodeenergy_backend"
 ROAD_MODEL_DATA_DIR = DATA_ROOT / "road_model"
 TRANSPORT_LEAP_EXPORT_DIR = ROAD_MODEL_DATA_DIR / "leap_import_workbooks"
+PROCESSED_SOURCE_DIR = ROAD_MODEL_DATA_DIR / "processed_source"
+SUPPLEMENTAL_SOURCE_DIR = ROAD_MODEL_DATA_DIR / "supplemental_source_files"
+MANUALLY_FILLED_ROWS_DIR = ROAD_MODEL_DATA_DIR / "manually_filled_rows"
+SOURCE_PRIORITY_PATH = ROAD_MODEL_DATA_DIR / "road_module1_source_priorities.csv"
 ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT = _output_root / "road_module1_defaults"
 ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = _output_root / "road_module1_researcher_outputs"
 ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = ROAD_MODEL_DATA_DIR / "road_model_default_input_workbook.xlsx"
 ROAD_MODEL_DEFAULT_INPUT_SHEET = "road_model_default_inputs"
 ROAD_MODEL_PHEV_UTILISATION_SHEET = "phev_utilisation_source"
-ROAD_MODEL_DEFAULT_ASSUMPTIONS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_assumptions.csv"
-ROAD_MODEL_DEFAULT_VEHICLE_TYPES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_vehicle_types.csv"
-ROAD_MODEL_DEFAULT_DRIVE_SHARES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_drive_shares.csv"
-ROAD_MODEL_VALID_DRIVES_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_valid_drives_by_vehicle_type.csv"
-ROAD_MODEL_DEFAULT_MILEAGE_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_mileage_km_per_year.csv"
-ROAD_MODEL_DEFAULT_EFFICIENCY_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "road_module1_default_efficiency_mj_per_km.csv"
-PHEV_UTILISATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_phev_utilisation_rates.csv"
-PASSENGER_SATURATION_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_passenger_vehicle_saturation.csv"
-RECONCILIATION_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_reconciliation_factors.csv"
-VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_vehicle_equivalent_weights.csv"
-SURVIVAL_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vehicle_survival_modified_00_APEC.xlsx"
-VINTAGE_PROFILE_SOURCE_XLSX = ROAD_MODEL_DATA_DIR / "vintage_modelled_from_survival_00_APEC.xlsx"
-LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV = ROAD_MODEL_DATA_DIR / "apec_lifecycle_profile_factors.csv"
+PHEV_UTILISATION_SOURCE_CSV = SUPPLEMENTAL_SOURCE_DIR / "apec_phev_utilisation_rates.csv"
+PASSENGER_SATURATION_SOURCE_CSV = SUPPLEMENTAL_SOURCE_DIR / "apec_passenger_vehicle_saturation.csv"
+RECONCILIATION_FACTORS_SOURCE_CSV = SUPPLEMENTAL_SOURCE_DIR / "apec_reconciliation_factors.csv"
+VEHICLE_EQUIVALENT_WEIGHTS_SOURCE_CSV = SUPPLEMENTAL_SOURCE_DIR / "apec_vehicle_equivalent_weights.csv"
+SURVIVAL_PROFILE_SOURCE_XLSX = SUPPLEMENTAL_SOURCE_DIR / "vehicle_survival_modified_00_APEC.xlsx"
+VINTAGE_PROFILE_SOURCE_XLSX = SUPPLEMENTAL_SOURCE_DIR / "vintage_modelled_from_survival_00_APEC.xlsx"
+LIFECYCLE_PROFILE_FACTORS_SOURCE_CSV = SUPPLEMENTAL_SOURCE_DIR / "apec_lifecycle_profile_factors.csv"
 
 
 def _read_required_csv(path: Path, required_columns: list[str]) -> pd.DataFrame:
@@ -83,100 +83,13 @@ def _read_required_csv(path: Path, required_columns: list[str]) -> pd.DataFrame:
     return df
 
 
-def _load_default_assumptions(path: Path = ROAD_MODEL_DEFAULT_ASSUMPTIONS_SOURCE_CSV) -> dict[str, float]:
-    df = _read_required_csv(path, ["key", "value"])
-    df = df.copy()
-    df["key"] = df["key"].fillna("").astype(str).str.strip()
-    df = df[df["key"].ne("")]
-    df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    df = df.dropna(subset=["value"])
-    return {
-        row["key"]: float(row["value"])
-        for _, row in df.iterrows()
-    }
-
-
 def _assumption_value(key: str, default: float = 0.0) -> float:
     return float(_DEFAULT_ASSUMPTIONS.get(key, default))
 
 
-def _load_default_vehicle_types(
-    path: Path = ROAD_MODEL_DEFAULT_VEHICLE_TYPES_SOURCE_CSV,
-) -> list[tuple[str, str, float, float]]:
-    df = _read_required_csv(path, ["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"])
-    df = df.copy()
-    for numeric_col in ["vehicle_equivalent_weight", "stock_share"]:
-        df[numeric_col] = pd.to_numeric(df[numeric_col], errors="coerce")
-    df = df.dropna(subset=["transport_type", "vehicle_type", "vehicle_equivalent_weight", "stock_share"])
-    return [
-        (
-            str(row["transport_type"]).strip(),
-            str(row["vehicle_type"]).strip(),
-            float(row["vehicle_equivalent_weight"]),
-            float(row["stock_share"]),
-        )
-        for _, row in df.iterrows()
-    ]
 
 
-def _load_default_drive_shares(
-    path: Path = ROAD_MODEL_DEFAULT_DRIVE_SHARES_SOURCE_CSV,
-) -> dict[str, dict[str, float]]:
-    df = _read_required_csv(path, ["vehicle_type", "drive", "share"])
-    df = df.copy()
-    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
-    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
-    df["share"] = pd.to_numeric(df["share"], errors="coerce")
-    df = df[df["vehicle_type"].ne("") & df["drive"].ne("") & df["share"].notna()]
-    result: dict[str, dict[str, float]] = {}
-    for _, row in df.iterrows():
-        result.setdefault(str(row["vehicle_type"]), {})[str(row["drive"])] = float(row["share"])
-    return result
-
-
-def _load_valid_drives_by_vehicle_type(
-    path: Path = ROAD_MODEL_VALID_DRIVES_SOURCE_CSV,
-) -> dict[str, set[str]]:
-    df = _read_required_csv(path, ["vehicle_type", "drive"])
-    df = df.copy()
-    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
-    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
-    df = df[df["vehicle_type"].ne("") & df["drive"].ne("")]
-    result: dict[str, set[str]] = {}
-    for _, row in df.iterrows():
-        result.setdefault(str(row["vehicle_type"]), set()).add(str(row["drive"]))
-    return result
-
-
-def _load_default_mileage_km_per_year(
-    path: Path = ROAD_MODEL_DEFAULT_MILEAGE_SOURCE_CSV,
-) -> dict[str, float]:
-    df = _read_required_csv(path, ["vehicle_type", "mileage_km_per_year"])
-    df = df.copy()
-    df["vehicle_type"] = df["vehicle_type"].fillna("").astype(str).str.strip()
-    df["mileage_km_per_year"] = pd.to_numeric(df["mileage_km_per_year"], errors="coerce")
-    df = df[df["vehicle_type"].ne("") & df["mileage_km_per_year"].notna()]
-    return {
-        str(row["vehicle_type"]): float(row["mileage_km_per_year"])
-        for _, row in df.iterrows()
-    }
-
-
-def _load_default_efficiency_mj_per_km(
-    path: Path = ROAD_MODEL_DEFAULT_EFFICIENCY_SOURCE_CSV,
-) -> dict[str, float]:
-    df = _read_required_csv(path, ["drive", "efficiency_mj_per_km"])
-    df = df.copy()
-    df["drive"] = df["drive"].fillna("").astype(str).str.strip()
-    df["efficiency_mj_per_km"] = pd.to_numeric(df["efficiency_mj_per_km"], errors="coerce")
-    df = df[df["drive"].ne("") & df["efficiency_mj_per_km"].notna()]
-    return {
-        str(row["drive"]): float(row["efficiency_mj_per_km"])
-        for _, row in df.iterrows()
-    }
-
-
-_DEFAULT_ASSUMPTIONS = _load_default_assumptions()
+_DEFAULT_ASSUMPTIONS: dict[str, float] = {}
 
 ECONOMY_CODE_TO_LEAP_REGION_NAMES = {
     "01AUS": ["Australia"],
@@ -215,10 +128,7 @@ ECONOMIES = [
     for economy_code, region_names in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
 ]
 
-VEHICLE_TYPES = [
-    vehicle_type
-    for vehicle_type in _load_default_vehicle_types()
-]
+VEHICLE_TYPES: list[tuple[str, str, float, float]] = []
 
 DRIVE_FUEL_MAP = {
     "ice_gasoline": "gasoline",
@@ -232,10 +142,7 @@ DRIVE_FUEL_MAP = {
     "fcev": "hydrogen",
 }
 
-DEFAULT_DRIVE_SHARES = {
-    vehicle_type: shares
-    for vehicle_type, shares in _load_default_drive_shares().items()
-}
+DEFAULT_DRIVE_SHARES: dict[str, dict[str, float]] = {}
 
 DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE = float(
     _assumption_value("gasoline_diesel_share_tolerance", 0.0)
@@ -244,20 +151,11 @@ DEFAULT_GASOLINE_DIESEL_SHARE_TOLERANCE = float(
 # Explicitly constrain which drive types are valid for each vehicle type in
 # Module 1 default generation. This prevents placeholder rows for combinations
 # that are out of scope in the current road data tree.
-VALID_DRIVES_BY_VEHICLE_TYPE = {
-    vehicle_type: drives
-    for vehicle_type, drives in _load_valid_drives_by_vehicle_type().items()
-}
+VALID_DRIVES_BY_VEHICLE_TYPE: dict[str, set[str]] = {}
 
-MILEAGE_KM_PER_YEAR = {
-    vehicle_type: value
-    for vehicle_type, value in _load_default_mileage_km_per_year().items()
-}
+MILEAGE_KM_PER_YEAR: dict[str, float] = {}
 
-EFFICIENCY_MJ_PER_KM = {
-    drive: value
-    for drive, value in _load_default_efficiency_mj_per_km().items()
-}
+EFFICIENCY_MJ_PER_KM: dict[str, float] = {}
 
 EXPECTED_UNITS = {
     "base_year_stock": "vehicles",
@@ -304,6 +202,38 @@ MODULE1_KEY_COLUMNS = [
     "Scenario",
     "Region",
 ]
+
+MODULE1_LONG_KEY_COLUMNS = [
+    "Economy",
+    "Scenario",
+    "Branch Path",
+    "Variable",
+    "Year",
+]
+
+MODULE1_LONG_VALUE_COLUMNS = [
+    "Value",
+    "Units",
+    "Source",
+    "Comment",
+]
+
+MODULE1_LONG_COLUMNS = [
+    *MODULE1_LONG_KEY_COLUMNS,
+    *MODULE1_LONG_VALUE_COLUMNS,
+]
+
+VEHICLE_TYPE_STOCK_SHARE_BRANCHES = {
+    "passenger": [
+        "Demand\\Passenger road\\Motorcycles",
+        "Demand\\Passenger road\\Buses",
+        "Demand\\Passenger road\\LPVs",
+    ],
+    "freight": [
+        "Demand\\Freight road\\Trucks",
+        "Demand\\Freight road\\LCVs",
+    ],
+}
 
 MODULE1_WORKBOOK_DATA_COLUMNS = [
     "Branch Path",
@@ -374,8 +304,6 @@ VEHICLE_TYPE_TO_LEAP_BRANCH = {
 }
 
 VEHICLE_TYPE_DETAIL_BRANCH = {
-    "passenger_car": "Passenger cars",
-    "suv_light_truck": "SUV and light trucks",
     "bus": "Buses",
     "motorcycle": "Motorcycles",
     "light_commercial_vehicle": "LCVs",
@@ -622,7 +550,11 @@ def find_phev_utilisation_source_path(explicit_path: str | Path | None = None) -
 
 
 def load_phev_utilisation_rates(source_path: str | Path | None = None) -> tuple[pd.DataFrame, Path | None]:
-    """Load economy-level PHEV electric utilisation rates from the source CSV."""
+    """Load PHEV electric utilisation rates from the source CSV.
+
+    Supports both the legacy single-rate-per-economy format and the current
+    per-vehicle-type format (vehicle_type column with values "LPVs" / "LCVs").
+    """
     resolved_path = find_phev_utilisation_source_path(source_path)
     if resolved_path is None:
         return pd.DataFrame(), None
@@ -649,12 +581,43 @@ def load_phev_utilisation_rates(source_path: str | Path | None = None) -> tuple[
     return phev_df, resolved_path
 
 
+def _phev_rate_for_branch(
+    source_rows: pd.DataFrame,
+    branch_path: str,
+    economy_code: str,
+) -> tuple[float, pd.Series] | tuple[None, None]:
+    """Return (rate, source_row) matched by vehicle_type when available, else first row."""
+    has_vt = "vehicle_type" in source_rows.columns and source_rows["vehicle_type"].notna().any()
+    if has_vt:
+        path_lower = branch_path.lower()
+        if "passenger" in path_lower:
+            vt_rows = source_rows[source_rows["vehicle_type"] == "LPVs"]
+        elif "freight" in path_lower:
+            vt_rows = source_rows[source_rows["vehicle_type"] == "LCVs"]
+        else:
+            vt_rows = pd.DataFrame()
+        if vt_rows.empty:
+            return None, None
+        source_row = vt_rows.iloc[0]
+    else:
+        source_row = source_rows.iloc[0]
+    rate = source_row["phev_utilisation_rate"]
+    if pd.isna(rate):
+        return None, None
+    return float(rate), source_row
+
+
 def overlay_phev_utilisation_rates(
     default_filled_df: pd.DataFrame,
     economy: EconomyInfo,
     source_path: str | Path | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Use the PHEV utilisation CSV for base-year PHEV electric driving share rows."""
+    """Use the PHEV utilisation CSV for base-year PHEV electric driving share rows.
+
+    When the source CSV has a vehicle_type column, applies LPVs rate to passenger
+    branch paths and LCVs rate to freight branch paths. Falls back to a single
+    economy-level rate when no vehicle_type column is present.
+    """
     phev_df, resolved_path = load_phev_utilisation_rates(source_path)
     if phev_df.empty or resolved_path is None:
         return default_filled_df, pd.DataFrame(
@@ -687,24 +650,32 @@ def overlay_phev_utilisation_rates(
             ]
         )
 
-    source_row = source_rows.iloc[0]
-    rate = source_row["phev_utilisation_rate"]
-    if pd.isna(rate):
-        raise ValueError(f"PHEV utilisation rate is missing for {economy.code}.")
-
     overlaid_df = default_filled_df.copy()
     target_mask = overlaid_df["Variable"].eq("PHEV Electric Driving Share")
     report_rows = []
-    note = (
-        f"PHEV utilisation rate from {resolved_path.name}; source data_year "
-        f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
-        f"evidence_grade {source_row['evidence_grade']}; "
-        f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
-        f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
-    )
 
     for idx in overlaid_df[target_mask].index:
-        overlaid_df.at[idx, str(BASE_YEAR)] = float(rate)
+        branch_path = overlaid_df.at[idx, "Branch Path"]
+        rate, source_row = _phev_rate_for_branch(source_rows, branch_path, economy.code)
+        if rate is None:
+            report_rows.append({
+                "status": "skipped",
+                "Branch Path": branch_path,
+                "Variable": "PHEV Electric Driving Share",
+                "Scenario": overlaid_df.at[idx, "Scenario"],
+                "Region": economy.name,
+                "source_year": "",
+                "details": "No matching vehicle_type row in source.",
+            })
+            continue
+        note = (
+            f"PHEV utilisation rate from {resolved_path.name}; source data_year "
+            f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
+            f"evidence_grade {source_row['evidence_grade']}; "
+            f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
+            f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
+        )
+        overlaid_df.at[idx, str(BASE_YEAR)] = rate
         for year_col in YEAR_COLUMNS:
             if int(year_col) > BASE_YEAR:
                 overlaid_df.at[idx, year_col] = pd.NA
@@ -716,17 +687,15 @@ def overlay_phev_utilisation_rates(
         overlaid_df.at[idx, "researcher_review_recommended"] = False
         overlaid_df.at[idx, "review_reason"] = ""
         overlaid_df.at[idx, "notes"] = note
-        report_rows.append(
-            {
-                "status": "applied",
-                "Branch Path": overlaid_df.at[idx, "Branch Path"],
-                "Variable": "PHEV Electric Driving Share",
-                "Scenario": overlaid_df.at[idx, "Scenario"],
-                "Region": economy.name,
-                "source_year": overlaid_df.at[idx, "source_date"],
-                "details": f"{BASE_YEAR}={float(rate)}",
-            }
-        )
+        report_rows.append({
+            "status": "applied",
+            "Branch Path": branch_path,
+            "Variable": "PHEV Electric Driving Share",
+            "Scenario": overlaid_df.at[idx, "Scenario"],
+            "Region": economy.name,
+            "source_year": overlaid_df.at[idx, "source_date"],
+            "details": f"{BASE_YEAR}={rate}",
+        })
 
     return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
 
@@ -1229,8 +1198,8 @@ def overlay_model_factor_sources(
         }
         vehicle_key_to_branch_path = {
             "bus": "Demand\\Passenger road\\Buses",
-            "passenger_car": "Demand\\Passenger road\\LPVs\\Passenger cars",
-            "suv_light_truck": "Demand\\Passenger road\\LPVs\\SUV and light trucks",
+            "passenger_car": "Demand\\Passenger road\\LPVs",
+            "suv_light_truck": "Demand\\Passenger road\\LPVs",
             "motorcycle": "Demand\\Passenger road\\Motorcycles",
         }
         scenarios = (
@@ -1682,11 +1651,7 @@ def find_transport_leap_export_path(
     latest_all_econs = _latest_existing_file(_iter_transport_leap_all_econs_candidates())
     if latest_all_econs is not None:
         return latest_all_econs
-
-    fallback_paths = [
-        TRANSPORT_LEAP_EXPORT_DIR / TRANSPORT_LEAP_EXPORT_FALLBACK_FILENAME,
-    ]
-    return _latest_existing_file(fallback_paths)
+    return None
 
 
 def _transport_leap_source_regions(economy: EconomyInfo) -> list[str]:
@@ -1790,6 +1755,17 @@ def _load_transport_leap_export_defaults_from_path(resolved_path_text: str) -> p
         workbook_df[column] = workbook_df[column].fillna("").astype(str).str.strip()
 
     workbook_df = workbook_df[workbook_df["Branch Path"].ne("") & workbook_df["Variable"].ne("")]
+
+    # PHEV is only valid for LPVs and LCVs — drop Bus/Motorcycle PHEV rows from the source.
+    _phev_oos = (
+        workbook_df["Branch Path"].str.contains("PHEV", na=False)
+        & (
+            workbook_df["Branch Path"].str.contains(r"\\Buses\\", na=False)
+            | workbook_df["Branch Path"].str.contains(r"\\Motorcycles\\", na=False)
+        )
+    )
+    workbook_df = workbook_df[~_phev_oos].copy()
+
     for year_col in YEAR_COLUMNS:
         if year_col in workbook_df.columns:
             workbook_df[year_col] = pd.to_numeric(workbook_df[year_col], errors="coerce")
@@ -1939,6 +1915,704 @@ def _format_leap_scenario(scenario: str) -> str:
     return scenario.replace("_", " ").title()
 
 
+PROCESSED_SOURCE_COLUMNS = ["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]
+MANUAL_FILLED_SOURCE_COLUMNS = ["Economy", *PROCESSED_SOURCE_COLUMNS]
+MANUAL_DO_NOT_USE_COLUMN = "DO_NOT_USE"
+SOURCE_PRIORITY_COLUMNS = ["source_type", "source_name", "priority", "notes"]
+DEFAULT_SOURCE_PRIORITIES = {
+    ("processed_source", "*"): 10,
+    ("manual_missing_rows", "manually_entered_missing_rows.csv"): -1,
+}
+FINAL_VALUE_OVERRIDE_DIR = ROAD_MODEL_DATA_DIR / "final_value_overrides"
+FINAL_VALUE_OVERRIDE_COLUMNS = [*PROCESSED_SOURCE_COLUMNS, "share_decreased_from", "note", MANUAL_DO_NOT_USE_COLUMN]
+FINAL_VALUE_OVERRIDE_REPORT_COLUMNS = [
+    "action",
+    "Branch Path",
+    "Variable",
+    "Scenario",
+    "Year",
+    "old_value",
+    "new_value",
+    "delta",
+    "Units",
+    "source_name",
+    "details",
+]
+SHARE_BALANCED_VARIABLES = {"Sales Share", "Stock Share"}
+PERCENT_SCALE_VARIABLES = {
+    "Sales Share",
+    "Stock Share",
+    "Device Share",
+    "PHEV Electric Driving Share",
+    "Survival Rate",
+    "Vintage Profile Share",
+}
+
+
+def _processed_source_path(economy: EconomyInfo) -> Path:
+    return PROCESSED_SOURCE_DIR / f"road_module1_source_{economy.code}.csv"
+
+
+def _final_value_override_paths(economy: EconomyInfo) -> list[Path]:
+    if not FINAL_VALUE_OVERRIDE_DIR.exists():
+        return []
+
+    paths: list[Path] = []
+    for suffix in ["csv", "xlsx", "xls"]:
+        paths.extend(
+            [
+                *FINAL_VALUE_OVERRIDE_DIR.glob(f"module1_final_value_overrides_{economy.code}.{suffix}"),
+                *FINAL_VALUE_OVERRIDE_DIR.glob(f"module1_final_value_override_{economy.code}.{suffix}"),
+            ]
+        )
+    return sorted(set(paths))
+
+
+def _source_priority_sort_value(priority: int | float) -> float:
+    """Sort value for source priorities: 1 is highest; negative values are fallback tiers."""
+    priority = int(priority)
+    if priority < 0:
+        return 1_000_000 + abs(priority)
+    return float(priority)
+
+
+def _load_source_priorities(path: Path = SOURCE_PRIORITY_PATH) -> dict[tuple[str, str], int]:
+    priorities = dict(DEFAULT_SOURCE_PRIORITIES)
+    if not path.exists():
+        return priorities
+
+    df = _read_required_csv(path, SOURCE_PRIORITY_COLUMNS)
+    for _, row in df.iterrows():
+        source_type = str(row["source_type"] or "").strip()
+        source_name = str(row["source_name"] or "").strip()
+        priority = pd.to_numeric(pd.Series([row["priority"]]), errors="coerce").iloc[0]
+        if not source_type or not source_name or pd.isna(priority):
+            continue
+        priorities[(source_type, source_name)] = int(priority)
+    return priorities
+
+
+def _lookup_source_priority(
+    priorities: dict[tuple[str, str], int],
+    source_type: str,
+    source_name: str,
+) -> int:
+    source_type = str(source_type or "").strip()
+    source_name = str(source_name or "").strip()
+    return priorities.get(
+        (source_type, source_name),
+        priorities.get((source_type, "*"), 100),
+    )
+
+
+def _manual_filled_source_paths() -> list[Path]:
+    if not MANUALLY_FILLED_ROWS_DIR.exists():
+        return []
+    return sorted(MANUALLY_FILLED_ROWS_DIR.glob("*.csv"))
+
+
+def _is_do_not_use_value(value: object) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "do not use", "x"}
+
+
+def _load_manual_filled_rows(economy: EconomyInfo) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    allowed_economies = {economy.code, economy.code.replace("_", ""), economy.name}
+    for path in _manual_filled_source_paths():
+        source_df = _read_required_csv(path, MANUAL_FILLED_SOURCE_COLUMNS)
+        source_df = source_df.copy()
+        source_df = source_df.rename(
+            columns={
+                "DO NOT USE": MANUAL_DO_NOT_USE_COLUMN,
+                "do_not_use": MANUAL_DO_NOT_USE_COLUMN,
+                "do not use": MANUAL_DO_NOT_USE_COLUMN,
+            }
+        )
+        if MANUAL_DO_NOT_USE_COLUMN in source_df.columns:
+            source_df = source_df[~source_df[MANUAL_DO_NOT_USE_COLUMN].map(_is_do_not_use_value)].copy()
+        source_df["Economy"] = source_df["Economy"].fillna("").astype(str).str.strip()
+        source_df = source_df[source_df["Economy"].isin(allowed_economies)].copy()
+        if source_df.empty:
+            continue
+        source_df = source_df[PROCESSED_SOURCE_COLUMNS].copy()
+        source_df["_source_type"] = "manual_missing_rows"
+        source_df["_source_name"] = path.name
+        source_df["_source_note"] = "Loaded from manually filled missing-row source."
+        frames.append(source_df)
+    if not frames:
+        return pd.DataFrame(columns=[*PROCESSED_SOURCE_COLUMNS, "_source_type", "_source_name", "_source_note"])
+    return pd.concat(frames, ignore_index=True)
+
+
+def _load_ranked_source_rows(economy: EconomyInfo) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    source_path = _processed_source_path(economy)
+    if source_path.exists():
+        processed_df = _read_required_csv(source_path, PROCESSED_SOURCE_COLUMNS).copy()
+        processed_df["_source_type"] = "processed_source"
+        processed_df["_source_name"] = source_path.name
+        processed_df["_source_note"] = "Loaded from preprocessed Road Module 1 source."
+        frames.append(processed_df)
+
+    manual_df = _load_manual_filled_rows(economy)
+    if not manual_df.empty:
+        frames.append(manual_df)
+
+    if not frames:
+        return pd.DataFrame(columns=[*PROCESSED_SOURCE_COLUMNS, "_source_type", "_source_name", "_source_note"])
+
+    source_df = pd.concat(frames, ignore_index=True, sort=False)
+    priorities = _load_source_priorities()
+    source_df["_priority"] = [
+        _lookup_source_priority(priorities, source_type, source_name)
+        for source_type, source_name in zip(source_df["_source_type"], source_df["_source_name"])
+    ]
+    source_df["_priority_sort"] = source_df["_priority"].map(_source_priority_sort_value)
+    return source_df
+
+
+def _read_final_value_override_file(path: Path) -> pd.DataFrame:
+    if path.suffix.lower() == ".csv":
+        df = pd.read_csv(path)
+    elif path.suffix.lower() in {".xlsx", ".xls"}:
+        df = pd.read_excel(path)
+    else:
+        raise ValueError(f"Unsupported final value override file type: {path}")
+
+    missing = [column for column in FINAL_VALUE_OVERRIDE_COLUMNS if column not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{path.name} is missing required override columns: {', '.join(missing)}"
+        )
+    df = df.copy()
+    df = df.rename(
+        columns={
+            "DO NOT USE": MANUAL_DO_NOT_USE_COLUMN,
+            "do_not_use": MANUAL_DO_NOT_USE_COLUMN,
+            "do not use": MANUAL_DO_NOT_USE_COLUMN,
+        }
+    )
+    if MANUAL_DO_NOT_USE_COLUMN in df.columns:
+        df = df[~df[MANUAL_DO_NOT_USE_COLUMN].map(_is_do_not_use_value)].copy()
+    df["_override_source_name"] = path.name
+    return df
+
+
+def _value_override_key(row: pd.Series | dict[str, object]) -> tuple[str, str, str, int]:
+    return (
+        str(row["Branch Path"]).strip(),
+        str(row["Variable"]).strip(),
+        str(row["Scenario"]).strip(),
+        int(row["Year"]),
+    )
+
+
+def _branch_parent(branch_path: str) -> str:
+    path = str(branch_path or "").strip()
+    if "\\" not in path:
+        return ""
+    return path.rsplit("\\", 1)[0]
+
+
+def _resolve_share_decreased_from_branch(target_branch_path: str, share_decreased_from: str) -> str:
+    source_branch = str(share_decreased_from or "").strip()
+    if not source_branch:
+        return ""
+    if "\\" in source_branch:
+        return source_branch
+    parent = _branch_parent(target_branch_path)
+    return f"{parent}\\{source_branch}" if parent else source_branch
+
+
+def _normalize_final_value_override_rows(
+    override_df: pd.DataFrame,
+    economy: EconomyInfo,
+) -> pd.DataFrame:
+    df = override_df.copy()
+    for column in ["Branch Path", "Variable", "Scenario", "Units", "share_decreased_from"]:
+        df[column] = df[column].fillna("").astype(str).str.strip()
+    if "Region" in df.columns:
+        df["Region"] = df["Region"].fillna("").astype(str).str.strip()
+        allowed_regions = {"", economy.code, economy.name, *ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code, [])}
+        bad_region_mask = ~df["Region"].isin(allowed_regions)
+        if bad_region_mask.any():
+            sample = df.loc[bad_region_mask, ["Region", "Branch Path", "Variable"]].head(5).to_dict(orient="records")
+            raise ValueError(
+                f"Final value overrides for {economy.code} include rows for another region. Sample: {sample}"
+            )
+
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
+    df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
+    missing_required_mask = (
+        df["Branch Path"].eq("")
+        | df["Variable"].eq("")
+        | df["Scenario"].eq("")
+        | df["Year"].isna()
+        | df["Value"].isna()
+    )
+    if missing_required_mask.any():
+        sample = df.loc[missing_required_mask, FINAL_VALUE_OVERRIDE_COLUMNS].head(5).to_dict(orient="records")
+        raise ValueError(f"Final value override rows have missing required values. Sample: {sample}")
+
+    df["Year"] = df["Year"].astype(int)
+    duplicate_mask = df.duplicated(subset=["Branch Path", "Variable", "Scenario", "Year"], keep=False)
+    if duplicate_mask.any():
+        sample = df.loc[duplicate_mask, ["Branch Path", "Variable", "Scenario", "Year"]].head(5).to_dict(orient="records")
+        raise ValueError(f"Final value overrides have duplicate row keys. Sample: {sample}")
+    return df
+
+
+def _apply_final_share_group_rebalance(
+    final_df: pd.DataFrame,
+    share_adjustments: list[dict[str, object]],
+) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+    df = final_df.copy()
+    report_rows: list[dict[str, object]] = []
+    if not share_adjustments:
+        return df, report_rows
+
+    groups_to_normalize: set[tuple[str, str, str, str]] = set()
+    fixed_branches_by_group: dict[tuple[str, str, str, str], set[str]] = {}
+
+    for adjustment in share_adjustments:
+        parent_path = str(adjustment["parent_path"])
+        variable = str(adjustment["Variable"])
+        year_col = str(adjustment["Year"])
+        scenario = str(adjustment["Scenario"])
+        group_key = (parent_path, variable, year_col, scenario)
+        fixed_branches_by_group.setdefault(group_key, set()).add(str(adjustment["Branch Path"]))
+        decreased_from_branch = str(adjustment.get("share_decreased_from", "") or "").strip()
+        delta = pd.to_numeric(adjustment.get("delta"), errors="coerce")
+
+        if not decreased_from_branch:
+            groups_to_normalize.add(group_key)
+            continue
+
+        fixed_branches_by_group.setdefault(group_key, set()).add(decreased_from_branch)
+        if year_col not in df.columns:
+            raise ValueError(f"Final value override year is not available in generated defaults: {year_col}")
+        group_mask = (
+            df["Variable"].eq(variable)
+            & df["Scenario"].eq(scenario)
+            & df["Branch Path"].map(_branch_parent).eq(parent_path)
+        )
+        group_df = df[group_mask].copy()
+        if group_df.empty:
+            continue
+
+        df.loc[group_mask, year_col] = pd.to_numeric(df.loc[group_mask, year_col], errors="coerce")
+        if pd.isna(delta) or abs(float(delta)) <= 0.000001:
+            continue
+
+        decrease_mask = group_mask & df["Branch Path"].eq(decreased_from_branch)
+        if not decrease_mask.any():
+            raise ValueError(
+                f"share_decreased_from branch was not found in the same sibling group: "
+                f"{decreased_from_branch} for {variable} under {parent_path} | {scenario} | {year_col}"
+            )
+        target_idx = df[decrease_mask].index[0]
+        old_value = df.at[target_idx, year_col]
+        adjusted_value = float(df.at[target_idx, year_col]) - float(delta)
+        if adjusted_value < -0.000001:
+            raise ValueError(
+                f"share_decreased_from branch would become negative: "
+                f"{decreased_from_branch} for {variable} under {parent_path} | {scenario} | {year_col}"
+            )
+        df.at[target_idx, year_col] = max(0.0, adjusted_value)
+        df.at[target_idx, "input_source"] = "provided"
+        df.at[target_idx, "source_type"] = "final_value_override"
+        df.at[target_idx, "source_name"] = "final_value_overrides"
+        df.at[target_idx, "notes"] = "Adjusted to keep final overridden sibling shares summing to 100."
+        report_rows.append(
+            {
+                "action": "share_decreased_from_adjustment",
+                "Branch Path": df.at[target_idx, "Branch Path"],
+                "Variable": variable,
+                "Scenario": scenario,
+                "Year": int(year_col),
+                "old_value": old_value,
+                "new_value": max(0.0, adjusted_value),
+                "delta": max(0.0, adjusted_value) - float(old_value),
+                "Units": df.at[target_idx, "Units"],
+                "source_name": "final_value_overrides",
+                "details": f"Adjusted by {-float(delta)} from {adjustment['Branch Path']}.",
+            }
+        )
+
+    for parent_path, variable, year_col, scenario in groups_to_normalize:
+        if year_col not in df.columns:
+            raise ValueError(f"Final value override year is not available in generated defaults: {year_col}")
+        group_mask = (
+            df["Variable"].eq(variable)
+            & df["Scenario"].eq(scenario)
+            & df["Branch Path"].map(_branch_parent).eq(parent_path)
+        )
+        group_df = df[group_mask].copy()
+        if group_df.empty:
+            continue
+
+        df.loc[group_mask, year_col] = pd.to_numeric(df.loc[group_mask, year_col], errors="coerce")
+        group_total = float(df.loc[group_mask, year_col].sum())
+        if abs(group_total - 100.0) <= 0.000001:
+            continue
+        if group_total <= 0:
+            raise ValueError(
+                f"Cannot normalize {variable} shares with non-positive total under "
+                f"{parent_path} | {scenario} | {year_col}."
+            )
+        fixed_branches = fixed_branches_by_group.get((parent_path, variable, year_col, scenario), set())
+        fixed_mask = group_mask & df["Branch Path"].isin(fixed_branches)
+        flexible_mask = group_mask & ~df["Branch Path"].isin(fixed_branches)
+        fixed_total = float(df.loc[fixed_mask, year_col].sum())
+        flexible_total = float(df.loc[flexible_mask, year_col].sum())
+        target_flexible_total = 100.0 - fixed_total
+        if target_flexible_total < -0.000001:
+            raise ValueError(
+                f"Cannot normalize {variable} shares because fixed override rows exceed 100 under "
+                f"{parent_path} | {scenario} | {year_col}."
+            )
+        if flexible_total <= 0:
+            raise ValueError(
+                f"Cannot normalize {variable} shares because non-overridden siblings have non-positive total under "
+                f"{parent_path} | {scenario} | {year_col}."
+            )
+        for idx in df[flexible_mask].index:
+            old_value = df.at[idx, year_col]
+            new_value = float(df.at[idx, year_col]) / flexible_total * target_flexible_total
+            df.at[idx, year_col] = new_value
+            df.at[idx, "input_source"] = "provided"
+            df.at[idx, "source_type"] = "final_value_override"
+            df.at[idx, "source_name"] = "final_value_overrides"
+            df.at[idx, "notes"] = "Scaled to keep final overridden sibling shares summing to 100."
+            report_rows.append(
+                {
+                    "action": "share_group_scaled_to_residual",
+                    "Branch Path": df.at[idx, "Branch Path"],
+                    "Variable": variable,
+                    "Scenario": scenario,
+                    "Year": int(year_col),
+                    "old_value": old_value,
+                    "new_value": new_value,
+                    "delta": new_value - float(old_value),
+                    "Units": df.at[idx, "Units"],
+                    "source_name": "final_value_overrides",
+                    "details": (
+                        f"Scaled non-overridden siblings from {flexible_total} to "
+                        f"{target_flexible_total}; fixed override total was {fixed_total}."
+                    ),
+                }
+            )
+
+    return df, report_rows
+
+
+def apply_final_value_overrides_with_report(
+    final_df: pd.DataFrame,
+    economy: EconomyInfo,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Overlay optional final value rows after all source overlays have run."""
+    override_paths = _final_value_override_paths(economy)
+    if not override_paths:
+        return final_df, pd.DataFrame(columns=FINAL_VALUE_OVERRIDE_REPORT_COLUMNS)
+
+    override_df = pd.concat(
+        [_read_final_value_override_file(path) for path in override_paths],
+        ignore_index=True,
+    )
+    override_df = _normalize_final_value_override_rows(override_df, economy)
+    completed_df = final_df.copy()
+    report_rows: list[dict[str, object]] = []
+
+    key_to_index = {
+        (
+            str(row["Branch Path"]).strip(),
+            str(row["Variable"]).strip(),
+            str(row["Scenario"]).strip(),
+        ): idx
+        for idx, row in completed_df.iterrows()
+    }
+    share_adjustments: list[dict[str, object]] = []
+
+    for _, override_row in override_df.iterrows():
+        branch_path, variable, scenario, year = _value_override_key(override_row)
+        key = (branch_path, variable, scenario)
+        year_col = str(year)
+        target_idx = key_to_index.get(key)
+        if target_idx is None:
+            raise ValueError(
+                "Final value override row does not match an existing generated row: "
+                f"{dict(zip(['Branch Path', 'Variable', 'Scenario', 'Year'], [branch_path, variable, scenario, year]))}"
+            )
+        if year_col not in completed_df.columns:
+            raise ValueError(f"Final value override year is not available in generated defaults: {year_col}")
+
+        old_value = completed_df.at[target_idx, year_col]
+        completed_df.at[target_idx, year_col] = float(override_row["Value"])
+        completed_df.at[target_idx, "Units"] = str(override_row["Units"]).strip()
+        completed_df.at[target_idx, "input_source"] = "provided"
+        completed_df.at[target_idx, "source_type"] = "final_value_override"
+        completed_df.at[target_idx, "source_name"] = str(override_row["_override_source_name"])
+        completed_df.at[target_idx, "source_scope"] = economy.code
+        completed_df.at[target_idx, "source_date"] = datetime.now().strftime("%Y-%m-%d")
+        completed_df.at[target_idx, "researcher_review_recommended"] = False
+        completed_df.at[target_idx, "review_reason"] = ""
+        completed_df.at[target_idx, "notes"] = "Final value override applied after all source overlays."
+        old_numeric = pd.to_numeric(old_value, errors="coerce")
+        delta_value = pd.NA if pd.isna(old_numeric) else float(override_row["Value"]) - float(old_numeric)
+        report_rows.append(
+            {
+                "action": "direct_override",
+                "Branch Path": branch_path,
+                "Variable": variable,
+                "Scenario": scenario,
+                "Year": year,
+                "old_value": old_value,
+                "new_value": float(override_row["Value"]),
+                "delta": delta_value,
+                "Units": str(override_row["Units"]).strip(),
+                "source_name": str(override_row["_override_source_name"]),
+                "details": "Value from final override spreadsheet.",
+            }
+        )
+
+        if variable in SHARE_BALANCED_VARIABLES:
+            parent_path = _branch_parent(branch_path)
+            decreased_from_branch = _resolve_share_decreased_from_branch(
+                target_branch_path=branch_path,
+                share_decreased_from=str(override_row["share_decreased_from"]),
+            )
+            if decreased_from_branch and _branch_parent(decreased_from_branch) != parent_path:
+                raise ValueError(
+                    f"share_decreased_from must be in the same sibling group as the override row. "
+                    f"Override: {branch_path}; share_decreased_from: {decreased_from_branch}"
+                )
+            share_adjustments.append(
+                {
+                    "parent_path": parent_path,
+                    "Branch Path": branch_path,
+                    "Variable": variable,
+                    "Scenario": scenario,
+                    "Year": year_col,
+                    "delta": delta_value,
+                    "share_decreased_from": decreased_from_branch,
+                }
+            )
+
+    completed_df, rebalance_report_rows = _apply_final_share_group_rebalance(completed_df, share_adjustments)
+    report_rows.extend(rebalance_report_rows)
+    report_df = pd.DataFrame(report_rows)
+    if report_df.empty:
+        report_df = pd.DataFrame(columns=FINAL_VALUE_OVERRIDE_REPORT_COLUMNS)
+    return completed_df[MODULE1_INPUT_COLUMNS], report_df[FINAL_VALUE_OVERRIDE_REPORT_COLUMNS]
+
+
+def apply_final_value_overrides(final_df: pd.DataFrame, economy: EconomyInfo) -> pd.DataFrame:
+    overlaid_df, _ = apply_final_value_overrides_with_report(final_df, economy)
+    return overlaid_df
+
+
+def _format_report_number(value: object) -> str:
+    numeric_value = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric_value):
+        return ""
+    return f"{float(numeric_value):,.6g}"
+
+
+def _final_override_chart_svg(row: pd.Series, chart_width: int = 420, chart_height: int = 80) -> str:
+    old_value = pd.to_numeric(row.get("old_value"), errors="coerce")
+    new_value = pd.to_numeric(row.get("new_value"), errors="coerce")
+    if pd.isna(old_value) or pd.isna(new_value):
+        return "<div class=\"empty-chart\">No numeric before/after values</div>"
+
+    old_float = float(old_value)
+    new_float = float(new_value)
+    max_abs = max(abs(old_float), abs(new_float), 1.0)
+    bar_max_width = chart_width - 140
+    old_width = abs(old_float) / max_abs * bar_max_width
+    new_width = abs(new_float) / max_abs * bar_max_width
+    old_text = escape(_format_report_number(old_float))
+    new_text = escape(_format_report_number(new_float))
+    delta_text = escape(_format_report_number(new_float - old_float))
+    return f"""
+<svg width="{chart_width}" height="{chart_height}" viewBox="0 0 {chart_width} {chart_height}" role="img" aria-label="Final override before and after chart">
+  <text x="0" y="18" font-family="Arial" font-size="12" fill="#333">Old</text>
+  <rect x="54" y="7" width="{old_width:.2f}" height="16" fill="#8aa0b5"></rect>
+  <text x="{min(58 + old_width, chart_width - 76):.2f}" y="19" font-family="Arial" font-size="11" fill="#222">{old_text}</text>
+  <text x="0" y="46" font-family="Arial" font-size="12" fill="#333">New</text>
+  <rect x="54" y="35" width="{new_width:.2f}" height="16" fill="#257f5b"></rect>
+  <text x="{min(58 + new_width, chart_width - 76):.2f}" y="47" font-family="Arial" font-size="11" fill="#222">{new_text}</text>
+  <text x="0" y="72" font-family="Arial" font-size="12" fill="#333">Delta: {delta_text}</text>
+</svg>
+""".strip()
+
+
+def write_final_value_override_visibility_report(
+    report_df: pd.DataFrame,
+    output_dir: Path,
+    economy: EconomyInfo,
+) -> tuple[Path | None, Path | None]:
+    """Write CSV and browser-openable HTML charts for final value overrides."""
+    if report_df.empty:
+        return None, None
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = output_dir / "road_module1_final_value_override_report.csv"
+    html_path = output_dir / "road_module1_final_value_override_report.html"
+    report_df.to_csv(csv_path, index=False)
+
+    cards = []
+    for _, row in report_df.iterrows():
+        title = f"{row.get('Variable', '')} | {row.get('Scenario', '')} | {row.get('Year', '')}"
+        subtitle = str(row.get("Branch Path", ""))
+        details = str(row.get("details", ""))
+        cards.append(
+            f"""
+<section class="card">
+  <h2>{escape(title)}</h2>
+  <div class="path">{escape(subtitle)}</div>
+  <div class="meta">{escape(str(row.get('action', '')))} | {escape(str(row.get('Units', '')))} | {escape(str(row.get('source_name', '')))}</div>
+  {_final_override_chart_svg(row)}
+  <p>{escape(details)}</p>
+</section>
+""".strip()
+        )
+
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Final Value Override Report - {escape(economy.code)}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 24px; color: #1f2933; background: #f7f8fa; }}
+    h1 {{ margin: 0 0 8px; font-size: 24px; }}
+    .summary {{ margin: 0 0 20px; color: #52606d; }}
+    .card {{ background: white; border: 1px solid #d9e2ec; border-radius: 8px; padding: 14px 16px; margin: 0 0 14px; }}
+    h2 {{ font-size: 16px; margin: 0 0 6px; }}
+    .path {{ font-size: 13px; color: #334e68; margin-bottom: 4px; }}
+    .meta {{ font-size: 12px; color: #627d98; margin-bottom: 10px; }}
+    p {{ margin: 8px 0 0; font-size: 13px; color: #52606d; }}
+    .empty-chart {{ font-size: 13px; color: #9aa5b1; }}
+  </style>
+</head>
+<body>
+  <h1>Final Value Override Report - {escape(economy.code)}</h1>
+  <p class="summary">{len(report_df)} override-related row changes. CSV: {escape(csv_path.name)}</p>
+  {''.join(cards)}
+</body>
+</html>
+"""
+    html_path.write_text(html, encoding="utf-8")
+    return csv_path, html_path
+
+
+def load_processed_source_inputs(
+    economy: EconomyInfo,
+    scenarios: Iterable[str] = DEFAULT_SCENARIOS,
+) -> pd.DataFrame:
+    """Load priority-ranked source rows into the internal Module 1 wide schema."""
+    source_df = _load_ranked_source_rows(economy)
+    if source_df.empty:
+        return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
+
+    source_df = source_df.copy()
+    for column in ["Branch Path", "Variable", "Scenario", "Units"]:
+        source_df[column] = source_df[column].fillna("").astype(str).str.strip()
+    source_df["Year"] = pd.to_numeric(source_df["Year"], errors="coerce")
+    source_df["Value"] = pd.to_numeric(source_df["Value"], errors="coerce")
+    source_df = source_df.dropna(subset=["Year", "Value"])
+    if source_df.empty:
+        return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
+    source_df["Year"] = source_df["Year"].astype(int)
+    base_year_key_columns = ["Branch Path", "Variable", "Scenario", "Units"]
+    has_base_year = set(
+        source_df.loc[source_df["Year"].eq(BASE_YEAR), base_year_key_columns]
+        .astype(str)
+        .agg("\u241f".join, axis=1)
+    )
+    fallback_base_rows = []
+    prior_year_df = source_df[source_df["Year"].lt(BASE_YEAR)].copy()
+    for _, group_df in prior_year_df.groupby(base_year_key_columns, dropna=False):
+        key = "\u241f".join(str(group_df.iloc[0][column]) for column in base_year_key_columns)
+        if key in has_base_year:
+            continue
+        latest_row = group_df.sort_values("Year").iloc[-1].copy()
+        latest_row["Year"] = BASE_YEAR
+        fallback_base_rows.append(latest_row)
+    if fallback_base_rows:
+        source_df = pd.concat([source_df, pd.DataFrame(fallback_base_rows)], ignore_index=True)
+    source_df["Year"] = source_df["Year"].astype(str)
+    source_df = source_df[source_df["Year"].isin(YEAR_COLUMNS)].copy()
+    source_df = source_df[
+        source_df["Branch Path"].ne("")
+        & source_df["Variable"].ne("")
+        & source_df["Scenario"].ne("")
+    ].copy()
+    if source_df.empty:
+        return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
+
+    scenario_names = {_format_leap_scenario(scenario) for scenario in scenarios}
+    scenario_aliases = set(scenario_names)
+    if "Current Accounts" in scenario_names:
+        scenario_aliases.add("Reference")
+    if "Reference" in scenario_names:
+        scenario_aliases.add("Current Accounts")
+    source_df = source_df[source_df["Scenario"].isin(scenario_aliases)].copy()
+    if source_df.empty:
+        return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
+
+    key_columns = ["Branch Path", "Variable", "Scenario", "Year"]
+    source_df["_value_text"] = source_df["Value"].round(12).astype(str)
+    same_priority_conflicts = source_df.duplicated(subset=[*key_columns, "_priority", "_value_text"], keep=False)
+    unresolved_conflicts = source_df.duplicated(subset=[*key_columns, "_priority"], keep=False) & ~same_priority_conflicts
+    if unresolved_conflicts.any():
+        sample = source_df.loc[
+            unresolved_conflicts,
+            [*key_columns, "Value", "_source_type", "_source_name", "_priority"],
+        ].head(10).to_dict(orient="records")
+        raise ValueError(f"Source rows have conflicting values at the same priority. Sample: {sample}")
+
+    source_df = source_df.sort_values(
+        [*key_columns, "_priority_sort", "_source_type", "_source_name"],
+        na_position="last",
+    )
+    source_df = source_df.drop_duplicates(subset=key_columns, keep="first").copy()
+
+    source_df["Region"] = economy.name
+    source_df["Scale"] = source_df["Variable"].map(
+        lambda variable: "%" if str(variable) in PERCENT_SCALE_VARIABLES else ""
+    )
+    source_df["Per..."] = ""
+    source_df["input_source"] = "provided"
+    source_df["standardized_label_status"] = "standardized"
+    source_df["notes"] = source_df["_source_note"].fillna("")
+    source_df["source_type"] = source_df["_source_type"].fillna("")
+    source_df["source_name"] = source_df["_source_name"].fillna("")
+    source_df["source_scope"] = economy.code
+    source_df["source_date"] = SOURCE_DATE
+    source_df["default_version"] = DEFAULT_VERSION
+    source_df["researcher_review_recommended"] = False
+    source_df["review_reason"] = ""
+
+    index_columns = [column for column in MODULE1_INPUT_COLUMNS if column not in YEAR_COLUMNS]
+    wide_df = (
+        source_df.pivot_table(
+            index=index_columns,
+            columns="Year",
+            values="Value",
+            aggfunc="first",
+            dropna=True,
+        )
+        .reset_index()
+        .rename_axis(columns=None)
+    )
+    for column in MODULE1_INPUT_COLUMNS:
+        if column not in wide_df.columns:
+            wide_df[column] = pd.NA
+    for year_col in YEAR_COLUMNS:
+        wide_df[year_col] = pd.to_numeric(wide_df[year_col], errors="coerce")
+    return wide_df[MODULE1_INPUT_COLUMNS]
+
+
 def _build_branch_path(
     transport_type: str,
     vehicle_type: str,
@@ -2086,7 +2760,206 @@ def _long_defaults_to_wide(long_df: pd.DataFrame) -> pd.DataFrame:
     return wide_df[MODULE1_INPUT_COLUMNS]
 
 
+def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFrame:
+    """Convert internal wide Module 1 rows to the canonical long CSV contract."""
+    rows: list[dict[str, object]] = []
+    if defaults_df.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    for _, row in defaults_df.iterrows():
+        source = row.get("source_name", row.get("Source", ""))
+        comment = row.get("notes", row.get("Comment", ""))
+        for year_col in YEAR_COLUMNS:
+            if year_col not in defaults_df.columns:
+                continue
+            value = row.get(year_col)
+            if pd.isna(value):
+                continue
+            rows.append(
+                {
+                    "Economy": economy,
+                    "Scenario": row.get("Scenario", ""),
+                    "Branch Path": row.get("Branch Path", ""),
+                    "Variable": row.get("Variable", ""),
+                    "Year": int(year_col),
+                    "Value": value,
+                    "Units": row.get("Units", ""),
+                    "Source": source,
+                    "Comment": comment,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
+
+
+def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: str | None = None) -> pd.DataFrame:
+    """Convert canonical long rows back to the legacy wide shape used by the UI/backend helpers."""
+    if long_df.empty:
+        return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
+
+    df = long_df.copy()
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
+    df = df.dropna(subset=["Year"])
+    df["Year"] = df["Year"].astype(int).astype(str)
+    df["Region"] = region_name or economy
+    if "Source" not in df.columns:
+        df["Source"] = ""
+    if "Comment" not in df.columns:
+        df["Comment"] = ""
+
+    index_cols = ["Branch Path", "Variable", "Scenario", "Region", "Units", "Source", "Comment"]
+    wide = (
+        df.pivot_table(
+            index=index_cols,
+            columns="Year",
+            values="Value",
+            aggfunc="first",
+            dropna=True,
+        )
+        .reset_index()
+        .rename_axis(columns=None)
+    )
+    for column in MODULE1_INPUT_COLUMNS:
+        if column not in wide.columns:
+            wide[column] = pd.NA
+    wide["Scale"] = wide["Variable"].map(lambda variable: "%" if str(variable) in {"Sales Share", "Stock Share", "PHEV Electric Driving Share", "Survival Rate", "Vintage Profile Share"} else "")
+    wide["Per..."] = ""
+    wide["input_source"] = "provided"
+    wide["standardized_label_status"] = "standardized"
+    wide["notes"] = wide["Comment"].fillna("")
+    wide["source_type"] = "module1_long_csv"
+    wide["source_name"] = wide["Source"].fillna("")
+    wide["source_scope"] = economy
+    wide["source_date"] = ""
+    wide["default_version"] = DEFAULT_VERSION
+    wide["researcher_review_recommended"] = False
+    wide["review_reason"] = ""
+    return wide[MODULE1_INPUT_COLUMNS]
+
+
+def _stock_share_transport_group(branch_path: str) -> str:
+    path = str(branch_path or "")
+    if path in VEHICLE_TYPE_STOCK_SHARE_BRANCHES["passenger"]:
+        return "passenger"
+    if path in VEHICLE_TYPE_STOCK_SHARE_BRANCHES["freight"]:
+        return "freight"
+    return ""
+
+
+def _canonical_stock_share_branch_from_stock_path(branch_path: str) -> str:
+    path = str(branch_path or "")
+    for branch in [
+        *VEHICLE_TYPE_STOCK_SHARE_BRANCHES["passenger"],
+        *VEHICLE_TYPE_STOCK_SHARE_BRANCHES["freight"],
+    ]:
+        if path == branch or path.startswith(branch + "\\"):
+            return branch
+    return ""
+
+
+def _ensure_vehicle_type_stock_share_rows(defaults_df: pd.DataFrame, economy: EconomyInfo) -> pd.DataFrame:
+    """
+    Ensure the five LEAP vehicle-type Stock Share rows exist and sum to 100 by transport group.
+
+    Base-year share is always derived from base-year Stock rows and overwritten.
+    Future-year columns (STOCK_SHARE_PROJECTION_YEARS) are seeded to the base-year
+    share if not already set by a researcher — existing non-null values are preserved.
+    """
+    df = defaults_df.copy()
+    if str(BASE_YEAR) not in df.columns:
+        return df
+
+    # Ensure projection-year columns exist in the DataFrame (they may not if DEFAULT_YEARS is base-year only).
+    for yr in STOCK_SHARE_PROJECTION_YEARS:
+        if str(yr) not in df.columns:
+            df[str(yr)] = pd.NA
+
+    source = df.copy()
+    source["_canonical_stock_share_branch"] = source["Branch Path"].map(_canonical_stock_share_branch_from_stock_path)
+    source = source[
+        source["Variable"].eq("Stock")
+        & source["_canonical_stock_share_branch"].astype(str).ne("")
+    ].copy()
+    source[str(BASE_YEAR)] = pd.to_numeric(source[str(BASE_YEAR)], errors="coerce")
+    stock_by_branch = source.groupby("_canonical_stock_share_branch", dropna=False)[str(BASE_YEAR)].sum()
+
+    new_rows = []
+    scenarios = df["Scenario"].dropna().astype(str).loc[lambda s: s.ne("")].unique().tolist()
+    if not scenarios:
+        scenarios = ["Current Accounts"]
+
+    for scenario in scenarios:
+        for transport_type, branch_paths in VEHICLE_TYPE_STOCK_SHARE_BRANCHES.items():
+            transport_total = float(stock_by_branch.reindex(branch_paths).fillna(0.0).sum())
+            for branch_path in branch_paths:
+                share = 0.0
+                if transport_total > 0:
+                    share = float(stock_by_branch.get(branch_path, 0.0)) / transport_total * 100.0
+                existing_mask = (
+                    df["Branch Path"].eq(branch_path)
+                    & df["Variable"].eq("Stock Share")
+                    & df["Scenario"].eq(scenario)
+                )
+                if existing_mask.any():
+                    for idx in df[existing_mask].index:
+                        df.at[idx, str(BASE_YEAR)] = share
+                        df.at[idx, "Scale"] = "%"
+                        df.at[idx, "Units"] = "Share"
+                        df.at[idx, "Per..."] = ""
+                        # Seed future years to base-year share only if researcher hasn't set them.
+                        for yr in STOCK_SHARE_PROJECTION_YEARS:
+                            existing_val = df.at[idx, str(yr)]
+                            if pd.isna(existing_val):
+                                df.at[idx, str(yr)] = share
+                    continue
+                new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                # Also initialise projection-year columns that aren't in MODULE1_INPUT_COLUMNS yet.
+                for yr in STOCK_SHARE_PROJECTION_YEARS:
+                    new_row[str(yr)] = share
+                new_row.update(
+                    {
+                        "Branch Path": branch_path,
+                        "Variable": "Stock Share",
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "Scale": "%",
+                        "Units": "Share",
+                        "Per...": "",
+                        str(BASE_YEAR): share,
+                        "input_source": "provided",
+                        "standardized_label_status": "standardized",
+                        "notes": (
+                            f"Base-year stock split derived from {BASE_YEAR} Stock rows; "
+                            f"{', '.join(str(y) for y in STOCK_SHARE_PROJECTION_YEARS)} seeded to "
+                            "base-year value — edit to define a trajectory."
+                        ),
+                        "source_type": "derived_from_stock",
+                        "source_name": "Module 1 base-year Stock rows",
+                        "source_scope": transport_type,
+                        "source_date": SOURCE_DATE,
+                        "default_version": DEFAULT_VERSION,
+                        "researcher_review_recommended": False,
+                        "review_reason": "",
+                    }
+                )
+                new_rows.append(new_row)
+
+    if new_rows:
+        df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
+
+    # Return only canonical columns, plus any projection-year columns we added.
+    output_cols = MODULE1_INPUT_COLUMNS + [
+        str(yr) for yr in STOCK_SHARE_PROJECTION_YEARS if str(yr) not in MODULE1_INPUT_COLUMNS
+    ]
+    return df[[c for c in output_cols if c in df.columns]]
+
+
 def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], years: Iterable[int]) -> pd.DataFrame:
+    raise RuntimeError(
+        "Synthetic seed CSV defaults are archived. Generate Module 1 defaults from "
+        "back-end/data/road_model/processed_source or road_model_default_input_workbook.xlsx."
+    )
+
     rows: list[dict[str, object]] = []
     reconciliation_values = {
         "reconciliation_weight_stock": _assumption_value("reconciliation_weight_stock", 0.0),
@@ -2424,7 +3297,13 @@ def build_default_input_workbook_tables(
     phev_report_rows = []
 
     for economy in get_economies():
-        economy_df = build_default_assumptions(economy=economy, scenarios=scenarios, years=years)
+        economy_df = load_processed_source_inputs(economy=economy, scenarios=scenarios)
+        if economy_df.empty:
+            raise ValueError(
+                f"No processed Road Module 1 source rows found for {economy.code}. "
+                "Run back-end/scripts/prepare_road_source.py or use write_all_economy_packages "
+                "with road_model_default_input_workbook.xlsx."
+            )
         economy_df, phev_report = overlay_phev_utilisation_rates(
             default_filled_df=economy_df,
             economy=economy,
@@ -2991,13 +3870,13 @@ def build_default_catalog() -> pd.DataFrame:
             {
                 "Variable": variable,
                 "Units": unit,
-                "source_type": "default_best_guess",
-                "source_name": "APERC placeholder road defaults",
-                "source_scope": "all_apec_economies_until_researcher_update",
+                "source_type": "processed_source_or_default_input_workbook",
+                "source_name": "processed_source/road_module1_source_<ECONOMY>.csv",
+                "source_scope": "economy_specific",
                 "source_date": SOURCE_DATE,
                 "default_version": DEFAULT_VERSION,
                 "researcher_review_recommended": False,
-                "notes": "Editable provided-values catalog entry. Replace with documented source before production use.",
+                "notes": "Canonical Module 1 values come from preprocessed LEAP source rows or the legacy default input workbook fallback.",
             }
         )
     return pd.DataFrame(rows)
@@ -3060,7 +3939,10 @@ def write_economy_package(
     economy_dir = output_root / DEFAULT_VERSION / economy.code
     economy_dir.mkdir(parents=True, exist_ok=True)
 
-    if default_input_df is not None and not default_input_df.empty:
+    processed_source_filled = load_processed_source_inputs(economy=economy, scenarios=scenarios)
+    if not processed_source_filled.empty:
+        default_filled = processed_source_filled.copy()
+    elif default_input_df is not None and not default_input_df.empty:
         source_regions = _transport_leap_source_regions(economy)
         default_filled = default_input_df[default_input_df["Region"].isin(source_regions)].copy()
         scenario_names = {_format_leap_scenario(scenario) for scenario in scenarios}
@@ -3093,9 +3975,10 @@ def write_economy_package(
         ] = SOURCE_DATE
         default_filled = default_filled[MODULE1_INPUT_COLUMNS]
     else:
-        default_filled = build_default_assumptions(economy=economy, scenarios=scenarios, years=years)
-        default_filled, _ = overlay_phev_utilisation_rates(default_filled_df=default_filled, economy=economy)
-        default_filled, _ = overlay_lifecycle_profile_factors(default_filled_df=default_filled, economy=economy)
+        raise ValueError(
+            f"No Road model source rows found for {economy.code}. Add "
+            f"{_processed_source_path(economy)} or provide {ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH}."
+        )
 
     # Harmonize legacy naming/scopes from seed workbooks to the current policy:
     # - Use Fuel Economy variable name.
@@ -3143,6 +4026,8 @@ def write_economy_package(
         default_filled_df=default_filled,
         economy=economy,
     )
+    default_filled = _ensure_vehicle_type_stock_share_rows(default_filled, economy)
+    default_filled, final_value_override_report = apply_final_value_overrides_with_report(default_filled, economy)
     # Temporary policy: deactivate researcher-review prioritization globally so
     # all rows are presented equally for manual review.
     default_filled["researcher_review_recommended"] = False
@@ -3197,7 +4082,7 @@ def write_economy_package(
         "default_filled_inputs": economy_dir / _default_filled_inputs_filename(economy.code),
     }
 
-    # Remove old artifacts from prior runs so each economy folder stays CSV-only.
+    # Remove old artifacts from prior runs so each economy folder stays current.
     for extra_file in economy_dir.glob("road_module1_*.csv"):
         if extra_file.name != paths["default_filled_inputs"].name:
             extra_file.unlink(missing_ok=True)
@@ -3205,7 +4090,21 @@ def write_economy_package(
     for extra_file in economy_dir.glob("road_module1_*.xlsx"):
         extra_file.unlink(missing_ok=True)
 
-    default_filled.to_csv(paths["default_filled_inputs"], index=False)
+    for extra_file in economy_dir.glob("road_module1_*.html"):
+        extra_file.unlink(missing_ok=True)
+
+    override_report_csv_path, override_report_html_path = write_final_value_override_visibility_report(
+        report_df=final_value_override_report,
+        output_dir=economy_dir,
+        economy=economy,
+    )
+    if override_report_csv_path is not None:
+        paths["final_value_override_report_csv"] = override_report_csv_path
+    if override_report_html_path is not None:
+        paths["final_value_override_report_html"] = override_report_html_path
+
+    long_defaults = _wide_defaults_to_long(default_filled, economy=economy.code)
+    long_defaults.to_csv(paths["default_filled_inputs"], index=False)
 
     # Keep these variables computed for optional debugging/use in interactive sessions.
     _ = (
@@ -3236,10 +4135,14 @@ def write_all_economy_packages(
         require_exists=require_default_input_workbook,
     )
 
-    if enforce_source_backed_values and default_input_df.empty:
+    has_processed_source = PROCESSED_SOURCE_DIR.exists() and any(
+        PROCESSED_SOURCE_DIR.glob("road_module1_source_*.csv")
+    )
+    if enforce_source_backed_values and default_input_df.empty and not has_processed_source:
         raise ValueError(
-            "Strict source-backed generation requires a populated Road model default input workbook. "
-            f"Expected data at: {default_input_workbook_path}"
+            "Strict source-backed generation requires preprocessed Road Module 1 source rows "
+            "or a populated Road model default input workbook. "
+            f"Expected data at: {PROCESSED_SOURCE_DIR} or {default_input_workbook_path}"
         )
 
     catalog_path = version_root / "road_module1_default_assumptions_catalog.csv"
@@ -3313,6 +4216,10 @@ def list_default_economies(
 
 
 def _default_filled_inputs_filename(economy: str) -> str:
+    return f"road_module1_values_{economy}.csv"
+
+
+def _legacy_default_filled_inputs_filename(economy: str) -> str:
     return f"road_module1_default_filled_inputs_{economy}.csv"
 
 
@@ -3327,17 +4234,28 @@ def load_default_filled_inputs(
         return _normalize_module1_input_columns(workbook_df)
 
     filepath = get_default_filled_inputs_path(economy=economy, version=version, output_root=output_root)
-    legacy_filepath = filepath.with_name("road_module1_default_filled_inputs.csv")
+    legacy_filepath = filepath.with_name(_legacy_default_filled_inputs_filename(economy))
+    legacy_unsuffixed_filepath = filepath.with_name("road_module1_default_filled_inputs.csv")
 
-    if not filepath.exists() and legacy_filepath.exists():
-        filepath = legacy_filepath
+    if not filepath.exists():
+        if legacy_filepath.exists():
+            filepath = legacy_filepath
+        elif legacy_unsuffixed_filepath.exists():
+            filepath = legacy_unsuffixed_filepath
 
     if not filepath.exists():
         raise FileNotFoundError(
             "Default-filled Road model input workbook or CSV not found: "
-            f"{workbook_path} / {filepath} / {legacy_filepath}"
+            f"{workbook_path} / {filepath} / {legacy_filepath} / {legacy_unsuffixed_filepath}"
         )
-    return pd.read_csv(filepath)
+    df = pd.read_csv(filepath)
+    if set(MODULE1_LONG_KEY_COLUMNS + ["Value"]).issubset(df.columns):
+        return _long_defaults_to_ui_wide(
+            df,
+            economy=economy,
+            region_name=get_economy_info(economy).name if economy else None,
+        )
+    return df
 
 
 def get_default_input_workbook_path(
@@ -3411,12 +4329,108 @@ def normalize_provided_values_file(provided_df: pd.DataFrame) -> pd.DataFrame:
     return normalized_df
 
 
+def _normalize_long_upload_file(provided_df: pd.DataFrame) -> pd.DataFrame:
+    normalized_df = provided_df.copy()
+    normalized_df = normalized_df.rename(columns={column: str(column).strip() for column in normalized_df.columns})
+    missing_columns = [column for column in MODULE1_LONG_KEY_COLUMNS for _ in [0] if column not in normalized_df.columns]
+    if missing_columns:
+        raise ValueError("Provided values file is missing required long-key columns: " + ", ".join(missing_columns))
+    for column in MODULE1_LONG_KEY_COLUMNS:
+        normalized_df[column] = normalized_df[column].fillna("").astype(str).str.strip()
+    normalized_df["Year"] = pd.to_numeric(normalized_df["Year"], errors="coerce")
+    if normalized_df["Year"].isna().any():
+        raise ValueError("Provided values file has non-numeric Year values.")
+    normalized_df["Year"] = normalized_df["Year"].astype(int)
+    if "Value" in normalized_df.columns:
+        normalized_df["Value"] = pd.to_numeric(normalized_df["Value"], errors="coerce")
+    duplicate_mask = normalized_df.duplicated(subset=MODULE1_LONG_KEY_COLUMNS, keep=False)
+    if duplicate_mask.any():
+        sample = normalized_df.loc[duplicate_mask, MODULE1_LONG_KEY_COLUMNS].head(5).to_dict(orient="records")
+        raise ValueError(f"Provided values file has duplicate row keys. Sample: {sample}")
+    return normalized_df
+
+
+def _apply_long_provided_values_file(
+    default_filled_df: pd.DataFrame,
+    provided_df: pd.DataFrame,
+    source_name: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    completed_df = default_filled_df.copy()
+    for year_col in YEAR_COLUMNS:
+        if year_col in completed_df.columns:
+            completed_df[year_col] = pd.to_numeric(completed_df[year_col], errors="coerce")
+
+    normalized_provided_df = _normalize_long_upload_file(provided_df)
+    uploaded_economies = normalized_provided_df["Economy"].dropna().astype(str).str.strip().unique().tolist()
+    if len(uploaded_economies) != 1:
+        raise ValueError("Provided values file must contain exactly one Economy value.")
+    default_long = _wide_defaults_to_long(completed_df, economy=uploaded_economies[0])
+    default_key_set = {
+        tuple(row[column] for column in MODULE1_LONG_KEY_COLUMNS)
+        for _, row in default_long.iterrows()
+    }
+    report_rows = []
+
+    for _, provided_row in normalized_provided_df.iterrows():
+        key = tuple(provided_row[column] for column in MODULE1_LONG_KEY_COLUMNS)
+        if key not in default_key_set:
+            report_rows.append(
+                {
+                    "status": "fail",
+                    "issue": "provided_key_not_found",
+                    "details": str({column: provided_row[column] for column in MODULE1_LONG_KEY_COLUMNS}),
+                }
+            )
+            continue
+
+        value = provided_row.get("Value", pd.NA)
+        if pd.isna(value):
+            continue
+        branch_path = provided_row["Branch Path"]
+        variable = provided_row["Variable"]
+        scenario = provided_row["Scenario"]
+        year_col = str(int(provided_row["Year"]))
+        target_mask = (
+            completed_df["Branch Path"].eq(branch_path)
+            & completed_df["Variable"].eq(variable)
+            & completed_df["Scenario"].eq(scenario)
+        )
+        if year_col not in completed_df.columns:
+            completed_df[year_col] = pd.NA
+        for idx in completed_df[target_mask].index:
+            old_value = completed_df.at[idx, year_col]
+            if pd.notna(old_value) and float(old_value) == float(value):
+                continue
+            completed_df.at[idx, year_col] = float(value)
+            completed_df.at[idx, "input_source"] = "provided"
+            completed_df.at[idx, "source_type"] = "researcher_provided_file"
+            completed_df.at[idx, "source_name"] = source_name
+            completed_df.at[idx, "source_date"] = datetime.now().strftime("%Y-%m-%d")
+            if "Comment" in normalized_provided_df.columns:
+                completed_df.at[idx, "notes"] = str(provided_row.get("Comment", "") or "").strip()
+            report_rows.append(
+                {
+                    "status": "applied",
+                    "issue": "",
+                    "details": f"{year_col}: {branch_path} | {variable} | {scenario}",
+                }
+            )
+
+    report_df = pd.DataFrame(report_rows)
+    if report_df.empty:
+        report_df = pd.DataFrame(columns=["status", "issue", "details"])
+    return completed_df[MODULE1_INPUT_COLUMNS], report_df
+
+
 def apply_provided_values_file(
     default_filled_df: pd.DataFrame,
     provided_df: pd.DataFrame,
     source_name: str = "uploaded_provided_values_file",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Overlay uploaded provided values onto the generated provided-value template."""
+    if set(MODULE1_LONG_KEY_COLUMNS + ["Value"]).issubset(provided_df.columns):
+        return _apply_long_provided_values_file(default_filled_df, provided_df, source_name)
+
     completed_df = default_filled_df.copy()
     for year_col in YEAR_COLUMNS:
         completed_df[year_col] = pd.to_numeric(completed_df[year_col], errors="coerce")
