@@ -1,5 +1,5 @@
 {
-  "default_version": "v2026_05_25_best_guess",
+  "default_version": "v2026_06_05_road_module1_sources",
   "versions": [
     {
       "version": "v2026_05_25_best_guess",
@@ -22,7 +22,7 @@
         },
         {
           "economy": "05PRC",
-          "economy_name": "China"
+          "economy_name": "People's Republic of China"
         },
         {
           "economy": "06HKC",
@@ -38,7 +38,7 @@
         },
         {
           "economy": "09ROK",
-          "economy_name": "Korea"
+          "economy_name": "Republic of Korea"
         },
         {
           "economy": "10MAS",
@@ -82,7 +82,96 @@
         },
         {
           "economy": "20USA",
-          "economy_name": "United States"
+          "economy_name": "United States of America"
+        },
+        {
+          "economy": "21VN",
+          "economy_name": "Viet Nam"
+        }
+      ]
+    },
+    {
+      "version": "v2026_06_05_road_module1_sources",
+      "economies": [
+        {
+          "economy": "01AUS",
+          "economy_name": "Australia"
+        },
+        {
+          "economy": "02BD",
+          "economy_name": "Brunei Darussalam"
+        },
+        {
+          "economy": "03CDA",
+          "economy_name": "Canada"
+        },
+        {
+          "economy": "04CHL",
+          "economy_name": "Chile"
+        },
+        {
+          "economy": "05PRC",
+          "economy_name": "People's Republic of China"
+        },
+        {
+          "economy": "06HKC",
+          "economy_name": "Hong Kong, China"
+        },
+        {
+          "economy": "07INA",
+          "economy_name": "Indonesia"
+        },
+        {
+          "economy": "08JPN",
+          "economy_name": "Japan"
+        },
+        {
+          "economy": "09ROK",
+          "economy_name": "Republic of Korea"
+        },
+        {
+          "economy": "10MAS",
+          "economy_name": "Malaysia"
+        },
+        {
+          "economy": "11MEX",
+          "economy_name": "Mexico"
+        },
+        {
+          "economy": "12NZ",
+          "economy_name": "New Zealand"
+        },
+        {
+          "economy": "13PNG",
+          "economy_name": "Papua New Guinea"
+        },
+        {
+          "economy": "14PE",
+          "economy_name": "Peru"
+        },
+        {
+          "economy": "15PHL",
+          "economy_name": "Philippines"
+        },
+        {
+          "economy": "16RUS",
+          "economy_name": "Russia"
+        },
+        {
+          "economy": "17SGP",
+          "economy_name": "Singapore"
+        },
+        {
+          "economy": "18CT",
+          "economy_name": "Chinese Taipei"
+        },
+        {
+          "economy": "19THA",
+          "economy_name": "Thailand"
+        },
+        {
+          "economy": "20USA",
+          "economy_name": "United States of America"
         },
         {
           "economy": "21VN",

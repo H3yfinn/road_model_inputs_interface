@@ -1,0 +1,7 @@
+"Branch Path","Variable","Scenario","Year","Value","Units","share_decreased_from","note","DO_NOT_USE"
+"Demand\Passenger road\LPVs\HEV small","Sales Share","Target","2022","11.1111111111","Share","Demand\Passenger road\LPVs\ICE small","Set total LPV HEV Sales Share to 20%; this row takes from matching ICE small.","TRUE"
+"Demand\Passenger road\LPVs\HEV medium","Sales Share","Target","2022","6.6666666667","Share","Demand\Passenger road\LPVs\ICE medium","Set total LPV HEV Sales Share to 20%; this row takes from matching ICE medium.","TRUE"
+"Demand\Passenger road\LPVs\HEV large","Sales Share","Target","2022","2.2222222222","Share","Demand\Passenger road\LPVs\ICE large","Set total LPV HEV Sales Share to 20%; this row takes from matching ICE large.","TRUE"
+"Demand\Passenger road\LPVs\BEV small","Sales Share","Target","2022","4.5","Share","","Set total LPV BEV Sales Share to 10%; blank replacement scales non-overridden LPV siblings.","TRUE"
+"Demand\Passenger road\LPVs\BEV medium","Sales Share","Target","2022","3.5","Share","","Set total LPV BEV Sales Share to 10%; blank replacement scales non-overridden LPV siblings.","TRUE"
+"Demand\Passenger road\LPVs\BEV large","Sales Share","Target","2022","2.0","Share","","Set total LPV BEV Sales Share to 10%; blank replacement scales non-overridden LPV siblings.","TRUE"

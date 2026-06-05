@@ -6,12 +6,11 @@ This workflow writes versioned, per-economy CSV files for the road input data an
 provided-values layer. The generated values are placeholders for researcher review.
 """
 
-import os
 import json
+import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
@@ -19,7 +18,10 @@ from core.road_module1_defaults import (
     DEFAULT_SCENARIOS,
     DEFAULT_VERSION,
     DEFAULT_YEARS,
+    MODULE1_LONG_COLUMNS,
+    MODULE1_LONG_KEY_COLUMNS,
     MODULE1_KEY_COLUMNS,
+    _wide_defaults_to_long,
     list_default_economies,
     list_default_versions,
     load_default_filled_inputs,
@@ -37,18 +39,6 @@ def _sanitize_static_segment(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "_", str(value or "").strip())
 
 
-def _json_safe_value(value: Any) -> Any:
-    if value is None:
-        return None
-    if pd.isna(value):
-        return None
-    if hasattr(value, "item"):
-        try:
-            return value.item()
-        except Exception:
-            return value
-    return value
-
 
 def write_frontend_static_bundle(
     output_root: Path,
@@ -56,7 +46,14 @@ def write_frontend_static_bundle(
     version: str,
     scenarios: list[str],
 ) -> dict[str, int]:
-    """Write frontend static JSON defaults + index.json for client-side Road Module 1."""
+    """Write frontend static CSV defaults + index.json for client-side Road Module 1.
+
+    Each economy is written as a long-format CSV with columns:
+      Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment
+
+    This is the same format used for 'download filled CSV' and 'upload filled CSV',
+    so the static bundle, the download, and the upload all share one schema.
+    """
     static_root.mkdir(parents=True, exist_ok=True)
 
     version_root = static_root / _sanitize_static_segment(version)
@@ -78,16 +75,10 @@ def write_frontend_static_bundle(
             defaults_df = defaults_df.copy()
             defaults_df["Scenario"] = "Current Accounts"
 
-        payload = {
-            "key_columns": MODULE1_KEY_COLUMNS,
-            "rows": [
-                {key: _json_safe_value(value) for key, value in record.items()}
-                for record in defaults_df.to_dict(orient="records")
-            ],
-        }
+        long_defaults_df = _wide_defaults_to_long(defaults_df, economy=economy_code)
 
-        fallback_path = version_root / f"{economy_safe}.json"
-        fallback_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        csv_path = version_root / f"{economy_safe}.csv"
+        long_defaults_df[MODULE1_LONG_COLUMNS].to_csv(csv_path, index=False)
         defaults_files_written += 1
 
     versions_index = []

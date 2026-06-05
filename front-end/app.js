@@ -59,9 +59,24 @@ const ROAD_MODULE1_BASE_YEAR = 2022;
 const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
+const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
+const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Units', 'Source', 'Comment'];
+const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
+const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
+    passenger: [
+        'Demand\\Passenger road\\Motorcycles',
+        'Demand\\Passenger road\\Buses',
+        'Demand\\Passenger road\\LPVs'
+    ],
+    freight: [
+        'Demand\\Freight road\\Trucks',
+        'Demand\\Freight road\\LCVs'
+    ]
+};
 const ROAD_MODULE1_VALUE_RULES = {
     'Stock': { min: 0 },
     'Sales Share': { min: 0, max: 100 },
+    'Stock Share': { min: 0, max: 100 },
     'Final On-Road Fuel Economy': { min: 0 },
     'Fuel Economy': { min: 0 },
     'Mileage': { min: 0 },
@@ -176,6 +191,8 @@ const DOM = {
     roadUploadSummaryText: document.getElementById('road-upload-summary-text'),
     roadUploadSummaryClose: document.getElementById('road-upload-summary-close'),
     roadUploadSummaryDismiss: document.getElementById('road-upload-summary-dismiss'),
+    roadUploadSummaryConfirm: document.getElementById('road-upload-summary-confirm'),
+    roadUploadSummaryCancel: document.getElementById('road-upload-summary-cancel'),
     // Collapsible Results Panel elements
     resultsSidebar: document.getElementById('results-sidebar'),
     btnToggleResults: document.getElementById('btn-toggle-results'),
@@ -191,6 +208,7 @@ const DOM = {
 // ==========================================
 let currentConfirmResolve = null;
 let roadModule1DraftSaveTimer = null;
+let pendingRoadModule1Upload = null;
 let roadModule1AutoLoadInFlight = false;
 let roadModule1SuppressAutoLoad = false;
 
@@ -253,10 +271,16 @@ document.getElementById('custom-confirm-modal').addEventListener('click', (e) =>
     }
 });
 
-function showRoadUploadSummaryModal(title, summaryText) {
+function showRoadUploadSummaryModal(title, summaryText, { confirmMode = false } = {}) {
     if (!DOM.roadUploadSummaryModal || !DOM.roadUploadSummaryText || !DOM.roadUploadSummaryTitle) return;
     DOM.roadUploadSummaryTitle.innerText = title || 'Upload Change Summary';
     DOM.roadUploadSummaryText.value = summaryText || '';
+
+    const showConfirm = confirmMode;
+    DOM.roadUploadSummaryConfirm?.classList.toggle('hidden', !showConfirm);
+    DOM.roadUploadSummaryCancel?.classList.toggle('hidden', !showConfirm);
+    DOM.roadUploadSummaryDismiss?.classList.toggle('hidden', showConfirm);
+
     DOM.roadUploadSummaryModal.classList.remove('hidden');
     DOM.roadUploadSummaryModal.classList.add('flex-display');
 
@@ -277,14 +301,36 @@ function closeRoadUploadSummaryModal() {
 }
 
 if (DOM.roadUploadSummaryClose) {
-    DOM.roadUploadSummaryClose.addEventListener('click', closeRoadUploadSummaryModal);
+    DOM.roadUploadSummaryClose.addEventListener('click', () => {
+        pendingRoadModule1Upload = null;
+        closeRoadUploadSummaryModal();
+    });
 }
 if (DOM.roadUploadSummaryDismiss) {
     DOM.roadUploadSummaryDismiss.addEventListener('click', closeRoadUploadSummaryModal);
 }
+if (DOM.roadUploadSummaryCancel) {
+    DOM.roadUploadSummaryCancel.addEventListener('click', () => {
+        pendingRoadModule1Upload = null;
+        closeRoadUploadSummaryModal();
+        showCustomToast('Upload cancelled — no changes applied.', 'info');
+    });
+}
+if (DOM.roadUploadSummaryConfirm) {
+    DOM.roadUploadSummaryConfirm.addEventListener('click', () => {
+        if (!pendingRoadModule1Upload) { closeRoadUploadSummaryModal(); return; }
+        const { preview, version, economy, fileName } = pendingRoadModule1Upload;
+        pendingRoadModule1Upload = null;
+        commitRoadModule1UploadPreview(preview, version, economy, fileName);
+        closeRoadUploadSummaryModal();
+    });
+}
 if (DOM.roadUploadSummaryModal) {
     DOM.roadUploadSummaryModal.addEventListener('click', (event) => {
-        if (event.target === DOM.roadUploadSummaryModal) closeRoadUploadSummaryModal();
+        if (event.target === DOM.roadUploadSummaryModal) {
+            pendingRoadModule1Upload = null;
+            closeRoadUploadSummaryModal();
+        }
     });
 }
 
@@ -611,40 +657,104 @@ async function fetchRoadModule1StaticIndex() {
 async function loadRoadModule1DefaultsFromStaticBundle(version, economy) {
     const safeVersion = sanitizeRoadStaticSegment(version);
     const safeEconomy = sanitizeRoadStaticSegment(economy);
+    const path = `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}.csv`;
 
-    const candidatePaths = [
-        `${ROAD_MODULE1_STATIC_BASE_PATH}/${safeVersion}/${safeEconomy}.json`
-    ];
-
-    for (const path of candidatePaths) {
-        const response = await fetch(path, { cache: 'no-store' });
-        if (!response.ok) continue;
-        const data = await response.json();
-        if (!Array.isArray(data?.rows)) {
-            throw new Error(`Static defaults file is malformed: ${path}`);
-        }
-        data.rows = data.rows.map(row => ({
-            ...row,
-            Scenario: 'Current Accounts'
-        }));
-        return {
-            key_columns: Array.isArray(data?.key_columns) && data.key_columns.length
-                ? data.key_columns
-                : ROAD_MODULE1_REQUIRED_KEY_COLUMNS,
-            rows: data.rows
-        };
+    const response = await fetch(path, { cache: 'no-store' });
+    if (!response.ok) {
+        throw new Error(
+            `No packaged defaults file found for ${version}/${economy}. Expected: ${path}`
+        );
     }
 
-    throw new Error(
-        `No packaged defaults file found for ${version}/${economy}. Expected one of: ${candidatePaths.join(' or ')}`
-    );
+    const text = await response.text();
+    const rows = parseCsvText(text).map(row => ({
+        ...row,
+        Year: row.Year === '' ? row.Year : Number(row.Year),
+        Value: row.Value === '' ? row.Value : Number(row.Value),
+        Scenario: 'Current Accounts'
+    }));
+
+    if (rows.length === 0) {
+        throw new Error(`Static defaults file is empty: ${path}`);
+    }
+
+    return {
+        key_columns: ROAD_MODULE1_LONG_KEY_COLUMNS,
+        rows
+    };
 }
 
 function normalizeRoadModule1RowsForUi(rows) {
-    return (rows || []).map(row => ({
+    const rawRows = Array.isArray(rows) ? rows : [];
+    const looksLong = rawRows.length > 0
+        && ROAD_MODULE1_LONG_KEY_COLUMNS.every(column => Object.prototype.hasOwnProperty.call(rawRows[0], column))
+        && Object.prototype.hasOwnProperty.call(rawRows[0], 'Value');
+    const uiRows = looksLong ? convertRoadLongRowsToWideUiRows(rawRows) : rawRows.map(row => ({ ...row }));
+    return ensureRoadStockShareTargetYearColumns(uiRows).map(row => ({
         ...row,
         researcher_review_recommended: false
     }));
+}
+
+function isRoadVehicleTypeStockShareRow(row) {
+    if (!row || String(row.Variable || '') !== 'Stock Share') return false;
+    const path = String(row['Branch Path'] || '');
+    return Object.values(ROAD_MODULE1_STOCK_SHARE_BRANCHES).some(branches => branches.includes(path));
+}
+
+function getRoadStockShareTransportGroup(row) {
+    const path = String(row?.['Branch Path'] || '');
+    if (ROAD_MODULE1_STOCK_SHARE_BRANCHES.passenger.includes(path)) return 'passenger';
+    if (ROAD_MODULE1_STOCK_SHARE_BRANCHES.freight.includes(path)) return 'freight';
+    return '';
+}
+
+function convertRoadLongRowsToWideUiRows(longRows) {
+    const rowsByKey = new Map();
+    longRows.forEach(row => {
+        const region = row.Region || row.Economy || '';
+        const key = [
+            row['Branch Path'] ?? '',
+            row.Variable ?? '',
+            row.Scenario ?? '',
+            region
+        ].join('||');
+        const target = rowsByKey.get(key) || {
+            'Branch Path': row['Branch Path'] ?? '',
+            Variable: row.Variable ?? '',
+            Scenario: row.Scenario ?? '',
+            Region: region,
+            Scale: String(row.Variable || '').includes('Share') ? '%' : '',
+            Units: row.Units ?? '',
+            'Per...': '',
+            input_source: 'provided',
+            standardized_label_status: 'standardized',
+            notes: row.Comment ?? '',
+            source_type: 'module1_long_csv',
+            source_name: row.Source ?? '',
+            source_scope: row.Economy ?? '',
+            source_date: '',
+            default_version: State.roadModule1.version || '',
+            researcher_review_recommended: false,
+            review_reason: ''
+        };
+        const year = String(row.Year ?? '').trim();
+        if (/^\d{4}$/.test(year)) target[year] = row.Value ?? '';
+        rowsByKey.set(key, target);
+    });
+    return Array.from(rowsByKey.values());
+}
+
+function ensureRoadStockShareTargetYearColumns(rows) {
+    return (rows || []).map(row => {
+        if (!isRoadVehicleTypeStockShareRow(row)) return row;
+        const copy = { ...row };
+        ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS.forEach(year => {
+            const yearKey = String(year);
+            if (!Object.prototype.hasOwnProperty.call(copy, yearKey)) copy[yearKey] = '';
+        });
+        return copy;
+    });
 }
 
 function seedRoadModule1FallbackSelectors() {
@@ -1005,7 +1115,7 @@ async function loadRoadModule1Defaults() {
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
         State.roadModule1.scenario = 'Current Accounts';
-        State.roadModule1.keyColumns = response.key_columns || ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
+        State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
@@ -1056,40 +1166,19 @@ async function handleRoadModule1ProvidedFileSelected(event) {
         return;
     }
 
-    showLoading("Applying Provided Values File...");
+    showLoading("Validating Provided Values File...");
     try {
         const uploadResult = await readRoadModule1RowsFromUploadFile(file);
-        const overlayResult = applyRoadModule1UploadedRowsClientSide(uploadResult.rows);
+        const preview = previewRoadModule1UploadedRows(uploadResult.rows);
 
-        State.roadModule1.version = version;
-        State.roadModule1.economy = economy;
-        State.roadModule1.scenario = 'Current Accounts';
-        State.roadModule1.overrides = new Map();
-        State.roadModule1.sharedMileageOverrides = new Map();
-        populateRoadModule1StructuredFilters(State.roadModule1.rows);
-        clearRoadModule1Draft(version, economy);
-        DOM.roadSaveOutput.disabled = false;
-        if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
-        DOM.roadSaveStatus.innerText = [
-            `${overlayResult.appliedCount.toLocaleString('en-US')} row-year values applied from ${file.name}.`,
-            `${overlayResult.unmatchedCount.toLocaleString('en-US')} uploaded rows did not match this version/economy template.`,
-            `${overlayResult.validationIssueCount.toLocaleString('en-US')} value checks were flagged and skipped.`
-        ].join('\n');
-        renderRoadModule1Inputs();
-        const hasIssues = overlayResult.unmatchedCount > 0 || overlayResult.validationIssueCount > 0;
-        const summaryParts = [
-            `Applied ${overlayResult.appliedCount.toLocaleString('en-US')} values client-side.`
-        ];
-        if (overlayResult.unmatchedCount > 0) summaryParts.push(`${overlayResult.unmatchedCount.toLocaleString('en-US')} unmatched rows`);
-        if (overlayResult.validationIssueCount > 0) summaryParts.push(`${overlayResult.validationIssueCount.toLocaleString('en-US')} validation issues`);
-        showCustomToast(summaryParts.join(' | '), hasIssues ? "warning" : "success", 6000);
-
+        pendingRoadModule1Upload = { preview, version, economy, fileName: file.name };
         showRoadUploadSummaryModal(
-            'Upload Change Summary',
-            buildRoadUploadSummaryText(file.name, uploadResult.summary, overlayResult)
+            'Review Upload Changes',
+            buildRoadUploadSummaryText(file.name, uploadResult.summary, preview),
+            { confirmMode: true }
         );
     } catch (error) {
-        showCustomToast("Failed to apply provided values file: " + error.message, "error");
+        showCustomToast("Upload validation failed: " + error.message, "error");
     } finally {
         event.target.value = '';
         hideLoading();
@@ -1111,7 +1200,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
         State.roadModule1.scenario = 'Current Accounts';
-        State.roadModule1.keyColumns = response.key_columns;
+        State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
@@ -1140,9 +1229,8 @@ async function downloadRoadModule1ProvidedValuesTemplate() {
     showLoading("Preparing Input CSV...");
     try {
         const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
-        const safeVersion = sanitizeRoadStaticSegment(version);
-        const fileName = `road_module1_default_filled_inputs_${economy}_${safeVersion}.csv`;
-        exportRoadModule1RowsCsvClientSide(response.rows, economy, fileName);
+        const fileName = `road_module1_values_${economy}.csv`;
+        exportRoadModule1RowsCsvClientSide(normalizeRoadModule1RowsForUi(response.rows), economy, fileName);
         DOM.roadSaveStatus.innerText = `Input CSV downloaded for ${economy}.`;
         showCustomToast('Input CSV downloaded.', 'success', 5000);
     } catch (error) {
@@ -1625,6 +1713,7 @@ function getRoadYearColumns(row) {
         .filter(column => /^\d{4}$/.test(column) && isRoadEditableYear(column))
         .sort();
     if (wideYearColumns.length > 0) {
+        if (isRoadVehicleTypeStockShareRow(row)) return wideYearColumns;
         const populatedColumns = wideYearColumns.filter(column => {
             const value = row[column];
             return value !== null && value !== undefined && String(value).trim() !== '';
@@ -1637,7 +1726,7 @@ function getRoadYearColumns(row) {
 
 function isRoadEditableYear(year) {
     const parsedYear = Number(String(year).trim());
-    return Number.isInteger(parsedYear) && parsedYear <= ROAD_MODULE1_BASE_YEAR;
+    return Number.isInteger(parsedYear) && parsedYear >= ROAD_MODULE1_BASE_YEAR && parsedYear <= 2060;
 }
 
 function getRoadDefaultValue(row, year) {
@@ -2420,10 +2509,11 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const defaultValue = formatRoadDefaultValue(getRoadDisplayedPlaceholderValue(row, year));
             const inheritedValue = getRoadInheritedMileageValue(row, year);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
+            const isReadOnlyBaseStockShare = isRoadVehicleTypeStockShareRow(row) && Number(year) === ROAD_MODULE1_BASE_YEAR;
             return `
                 <div class="road-year-input" data-year="${year}">
                     ${buildRoadCellLabelHtml(year, `${row.Variable || 'Value'} for ${year}. Leave blank to keep the provided default value.`)}
-                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} placeholder="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : (override ? escapeHtml(override.value) : '')}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>
             `;
@@ -2544,7 +2634,7 @@ function renderRoadModule1Inputs() {
     );
 
     updateRoadModule1OverrideCount();
-    DOM.roadValidationSummary.innerText = '';
+    DOM.roadValidationSummary.innerText = buildRoadStockShareValidationSummary(rows);
 
     if (filteredRows.length === 0) {
         DOM.roadInputContainer.innerHTML = '<div class="text-sm text-slate-400">No rows match the current filter.</div>';
@@ -3149,7 +3239,8 @@ async function runRoadModel() {
     showRoadRunLogModal();
 
     const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
-    _appendRoadRunLog(`Sending ${completedRows.length.toLocaleString('en-US')} rows to backend…`);
+    const completedLongRows = convertRoadWideUiRowsToLongRows(completedRows, State.roadModule1.economy);
+    _appendRoadRunLog(`Sending ${completedLongRows.length.toLocaleString('en-US')} long rows to backend...`);
 
     let runId, economyCanonical;
 
@@ -3160,7 +3251,7 @@ async function runRoadModel() {
             body: JSON.stringify({
                 economy: State.roadModule1.economy,
                 version: State.roadModule1.version,
-                rows: completedRows,
+                rows: completedLongRows,
                 enable_visualisations: true
             })
         });
@@ -3468,10 +3559,7 @@ async function readRoadModule1RowsFromUploadFile(file) {
     }
 
     const text = await file.text();
-    const csvRows = parseCsvText(text).map(row => ({
-        ...row,
-        Scenario: 'Current Accounts'
-    }));
+    const csvRows = parseCsvText(text);
 
     return {
         rows: csvRows,
@@ -3512,12 +3600,48 @@ function buildRoadUploadSummaryText(fileName, parseSummary, overlayResult) {
         }
     }
 
+    const changedCells = Array.isArray(overlayResult?.changedCells) ? overlayResult.changedCells : [];
+    if (changedCells.length > 0) {
+        lines.push('', 'Changed cells:');
+        changedCells.slice(0, 100).forEach(item => {
+            lines.push(`- ${item.key}: ${item.oldValue} -> ${item.newValue}`);
+        });
+        if (changedCells.length > 100) {
+            lines.push(`- ...and ${(changedCells.length - 100).toLocaleString('en-US')} more`);
+        }
+    }
+
     lines.push('', 'Recommended workflow: download CSV, fill the core columns, then upload it back. Blanks and missing optional values are ignored.');
     return lines.join('\n');
 }
 
+function buildRoadStockShareValidationSummary(rows) {
+    const messages = [];
+    ['passenger', 'freight'].forEach(group => {
+        ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS.forEach(year => {
+            const total = (rows || [])
+                .filter(row => getRoadStockShareTransportGroup(row) === group)
+                .reduce((sum, row) => {
+                    const override = State.roadModule1.overrides.get(`${buildRoadModule1Key(row)}||Year=${year}`);
+                    const value = override && override.value !== '' && override.value !== null
+                        ? override.value
+                        : getRoadDefaultValue(row, String(year));
+                    const numeric = Number(value);
+                    return Number.isFinite(numeric) ? sum + numeric : sum;
+                }, 0);
+            if (Math.abs(total - 100) > 0.001 && total !== 0) {
+                messages.push(`${group} Stock Share ${year} sums to ${total.toFixed(3)}; expected 100.`);
+            }
+        });
+    });
+    return messages.join('\n');
+}
+
 function getRoadModule1ComparableKeyFromRow(rowLike) {
-    return ROAD_MODULE1_REQUIRED_KEY_COLUMNS
+    const keyColumns = Object.prototype.hasOwnProperty.call(rowLike || {}, 'Economy')
+        ? ROAD_MODULE1_LONG_KEY_COLUMNS
+        : ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
+    return keyColumns
         .map(column => String(rowLike?.[column] ?? '').trim())
         .join('||');
 }
@@ -3546,66 +3670,108 @@ function getRoadModule1EditableYearColumnsFromRows(rows) {
     return Array.from(years).sort();
 }
 
-function applyRoadModule1UploadedRowsClientSide(uploadRows) {
+function previewRoadModule1UploadedRows(uploadRows) {
     if (!Array.isArray(uploadRows) || uploadRows.length === 0) {
         throw new Error('Uploaded file has no data rows.');
     }
 
-    const missingKeyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS
+    const missingKeyColumns = ROAD_MODULE1_LONG_KEY_COLUMNS
         .filter(column => !Object.prototype.hasOwnProperty.call(uploadRows[0], column));
     if (missingKeyColumns.length > 0) {
         throw new Error(`Uploaded file is missing required columns: ${missingKeyColumns.join(', ')}`);
     }
-    if (!Object.prototype.hasOwnProperty.call(uploadRows[0], String(ROAD_MODULE1_BASE_YEAR))) {
-        throw new Error(`Uploaded file must include the base-year column ${ROAD_MODULE1_BASE_YEAR}.`);
+    if (!Object.prototype.hasOwnProperty.call(uploadRows[0], 'Value')) {
+        throw new Error('Uploaded file is missing required column: Value');
     }
 
-    const editableYearColumns = getRoadModule1EditableYearColumnsFromRows(State.roadModule1.rows);
-    if (editableYearColumns.length === 0) {
-        throw new Error('Current selection has no editable year columns to overlay.');
+    const seenUploadKeys = new Set();
+    uploadRows.forEach(uploadRow => {
+        const key = getRoadModule1ComparableKeyFromRow(uploadRow);
+        if (seenUploadKeys.has(key)) {
+            throw new Error(`Uploaded file has duplicate row key: ${key}`);
+        }
+        seenUploadKeys.add(key);
+    });
+
+    const targetLongRows = convertRoadWideUiRowsToLongRows(State.roadModule1.rows, State.roadModule1.economy, true);
+    const targetLongKeys = new Set(targetLongRows.map(row => getRoadModule1ComparableKeyFromRow(row)));
+    const unmatchedRows = uploadRows.filter(uploadRow => !targetLongKeys.has(getRoadModule1ComparableKeyFromRow(uploadRow)));
+    if (unmatchedRows.length > 0) {
+        const sample = unmatchedRows.slice(0, 5).map(row => getRoadModule1ComparableKeyFromRow(row)).join('\n');
+        throw new Error(`Uploaded file contains keys that are not in the current template. First unmatched keys:\n${sample}`);
     }
 
     const targetRows = State.roadModule1.rows.map(row => ({ ...row }));
     const targetRowByKey = new Map(
-        targetRows.map(row => [getRoadModule1ComparableKeyFromRow(row), row])
+        targetRows.map(row => [
+            [row['Branch Path'] || '', row.Variable || '', row.Scenario || ''].join('||'),
+            row
+        ])
     );
 
     let appliedCount = 0;
-    let unmatchedCount = 0;
     let validationIssueCount = 0;
+    const changedCells = [];
 
     uploadRows.forEach(uploadRow => {
-        const rowKey = getRoadModule1ComparableKeyFromRow(uploadRow);
+        const rowKey = [uploadRow['Branch Path'] || '', uploadRow.Variable || '', uploadRow.Scenario || ''].join('||');
         const targetRow = targetRowByKey.get(rowKey);
-        if (!targetRow) {
-            unmatchedCount += 1;
+        if (!targetRow) return;
+
+        const yearColumn = String(uploadRow.Year || '').trim();
+        const rawValue = uploadRow.Value;
+        if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') return;
+
+        const numericValue = Number(String(rawValue).replace(/,/g, '').trim());
+        if (!Number.isFinite(numericValue)) {
+            validationIssueCount += 1;
             return;
         }
 
-        editableYearColumns.forEach(yearColumn => {
-            if (!Object.prototype.hasOwnProperty.call(uploadRow, yearColumn)) return;
-            const rawValue = uploadRow[yearColumn];
-            if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') return;
+        const validationMessage = validateRoadModule1ValueForVariable(String(targetRow.Variable || ''), numericValue);
+        if (validationMessage) {
+            validationIssueCount += 1;
+            return;
+        }
 
-            const numericValue = Number(String(rawValue).replace(/,/g, '').trim());
-            if (!Number.isFinite(numericValue)) {
-                validationIssueCount += 1;
-                return;
-            }
-
-            const validationMessage = validateRoadModule1ValueForVariable(String(targetRow.Variable || ''), numericValue);
-            if (validationMessage) {
-                validationIssueCount += 1;
-                return;
-            }
-
-            targetRow[yearColumn] = numericValue;
-            appliedCount += 1;
+        const oldValue = targetRow[yearColumn];
+        if (String(oldValue ?? '').trim() === String(numericValue)) return;
+        targetRow[yearColumn] = numericValue;
+        if (Object.prototype.hasOwnProperty.call(uploadRow, 'Comment')) targetRow.notes = uploadRow.Comment || targetRow.notes || '';
+        if (Object.prototype.hasOwnProperty.call(uploadRow, 'Source')) targetRow.source_name = uploadRow.Source || targetRow.source_name || '';
+        appliedCount += 1;
+        changedCells.push({
+            key: getRoadModule1ComparableKeyFromRow(uploadRow),
+            oldValue: oldValue ?? '',
+            newValue: numericValue
         });
     });
 
-    State.roadModule1.rows = targetRows;
-    return { appliedCount, unmatchedCount, validationIssueCount };
+    return { targetRows, appliedCount, unmatchedCount: 0, validationIssueCount, changedCells };
+}
+
+function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
+    State.roadModule1.rows = preview.targetRows;
+    State.roadModule1.version = version;
+    State.roadModule1.economy = economy;
+    State.roadModule1.scenario = 'Current Accounts';
+    State.roadModule1.overrides = new Map();
+    State.roadModule1.sharedMileageOverrides = new Map();
+    populateRoadModule1StructuredFilters(State.roadModule1.rows);
+    clearRoadModule1Draft(version, economy);
+    DOM.roadSaveOutput.disabled = false;
+    if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
+    DOM.roadSaveStatus.innerText = [
+        `${preview.appliedCount.toLocaleString('en-US')} row-year values applied from ${fileName}.`,
+        `${preview.unmatchedCount.toLocaleString('en-US')} uploaded rows did not match this version/economy template.`,
+        `${preview.validationIssueCount.toLocaleString('en-US')} value checks were flagged and skipped.`
+    ].join('\n');
+    renderRoadModule1Inputs();
+    const hasIssues = preview.unmatchedCount > 0 || preview.validationIssueCount > 0;
+    const summaryParts = [`Applied ${preview.appliedCount.toLocaleString('en-US')} values.`];
+    if (preview.unmatchedCount > 0) summaryParts.push(`${preview.unmatchedCount.toLocaleString('en-US')} unmatched rows`);
+    if (preview.validationIssueCount > 0) summaryParts.push(`${preview.validationIssueCount.toLocaleString('en-US')} validation issues`);
+    showCustomToast(summaryParts.join(' | '), hasIssues ? 'warning' : 'success', 6000);
 }
 
 function getRoadNotesColumnName(row) {
@@ -3670,8 +3836,8 @@ function buildRoadModule1CompletedRowsForCheckpoint() {
 }
 
 function exportRoadModule1RowsCsvClientSide(rows, economyCode, fileNameOverride = '') {
-    const safeRows = Array.isArray(rows) ? rows : [];
-    const headers = safeRows.length ? Object.keys(safeRows[0]) : [];
+    const safeRows = convertRoadWideUiRowsToLongRows(Array.isArray(rows) ? rows : [], economyCode);
+    const headers = ROAD_MODULE1_LONG_COLUMNS;
     const escapeCsv = (value) => {
         const text = value === null || value === undefined ? '' : String(value);
         if (/[,"\n\r]/.test(text)) {
@@ -3688,7 +3854,7 @@ function exportRoadModule1RowsCsvClientSide(rows, economyCode, fileNameOverride 
 
     const csvText = csvLines.join('\r\n');
     const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
-    const fileName = fileNameOverride || `road_module1_default_filled_inputs_${economyCode}.csv`;
+    const fileName = fileNameOverride || `road_module1_values_${economyCode}.csv`;
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
@@ -3697,6 +3863,32 @@ function exportRoadModule1RowsCsvClientSide(rows, economyCode, fileNameOverride 
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
+}
+
+function convertRoadWideUiRowsToLongRows(rows, economyCode, includeBlankStockShareTargets = false) {
+    const longRows = [];
+    rows.forEach(row => {
+        getRoadYearColumns(row).forEach(year => {
+            const value = getRoadDefaultValue(row, year);
+            if (
+                value === null || value === undefined || String(value).trim() === ''
+            ) {
+                if (!(includeBlankStockShareTargets && isRoadVehicleTypeStockShareRow(row))) return;
+            }
+            longRows.push({
+                Economy: economyCode || State.roadModule1.economy || row.Economy || '',
+                Scenario: row.Scenario || State.roadModule1.scenario || 'Current Accounts',
+                'Branch Path': row['Branch Path'] || '',
+                Variable: row.Variable || '',
+                Year: Number(year),
+                Value: value,
+                Units: row.Units || '',
+                Source: row.source_name || row.Source || '',
+                Comment: row.notes || row.Comment || ''
+            });
+        });
+    });
+    return longRows;
 }
 
 function buildRoadModule1ExportOverrides() {
