@@ -270,7 +270,7 @@ When any of these files is updated, add a dated entry to this log.
   - `write_frontend_static_bundle()` in `back-end/road_module1_defaults_workflow.py`
     now calls `long_defaults_df[MODULE1_LONG_COLUMNS].to_csv()` instead of
     building a JSON payload. Column order:
-    `Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment`
+    `Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment, Input Status`
   - `front-end/app.js` `loadRoadModule1DefaultsFromStaticBundle()` now fetches
     the `.csv` path and parses it with the existing `parseCsvText()` helper,
     coercing `Year` and `Value` to numbers.

@@ -242,11 +242,10 @@ UI-wide shape used for editing.
 
 Rules:
 
-- The core canonical long CSV is the boundary format. It is used for the static
+- The canonical long CSV is the boundary format. It is used for the static
   bundle, download/upload, and model handoff.
-- Browser/model-run exports may extend the core long CSV with provenance columns
-  such as `Input Status`. Downstream readers should tolerate those optional
-  columns.
+- `Input Status` is part of the canonical long CSV. Downstream readers should
+  still tolerate older 9-column files where it is absent.
 - The internal wide schema is a Python processing convenience, not the public
   contract.
 - The UI-wide rows are a browser view model, not an output package.
@@ -255,10 +254,9 @@ Rules:
 - Uploads fill existing template rows. They must not introduce new row keys.
 - Static CSVs are generated artifacts. Change source files and regenerate
   rather than editing `front-end/road-module1-static/` by hand.
-- If the handoff contract changes, decide whether the field belongs in the core
-  schema or is an optional provenance extension. Then update Python
-  `MODULE1_LONG_COLUMNS`, JavaScript `ROAD_MODULE1_LONG_COLUMNS`, upload
-  validation, and the model adapter as needed.
+- If the handoff contract changes, update Python `MODULE1_LONG_COLUMNS`,
+  JavaScript `ROAD_MODULE1_LONG_COLUMNS`, upload validation, and the model
+  adapter as needed.
 
 ## 5. Canonical CSV contract
 

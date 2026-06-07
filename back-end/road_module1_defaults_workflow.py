@@ -50,7 +50,7 @@ def write_frontend_static_bundle(
     """Write frontend static CSV defaults + index.json for client-side Road Module 1.
 
     Each economy is written as a long-format CSV with columns:
-      Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment
+      Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment, Input Status
 
     This is the same format used for 'download filled CSV' and 'upload filled CSV',
     so the static bundle, the download, and the upload all share one schema.

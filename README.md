@@ -42,7 +42,7 @@ It is designed to:
 The target handoff format is a long CSV with these core columns:
 
 ```text
-Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment
+Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment, Input Status
 ```
 
 Generated per-economy files use stable underscore economy codes and overwrite in

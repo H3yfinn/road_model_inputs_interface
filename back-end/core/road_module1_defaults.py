@@ -216,6 +216,7 @@ MODULE1_LONG_VALUE_COLUMNS = [
     "Units",
     "Source",
     "Comment",
+    "Input Status",
 ]
 
 MODULE1_LONG_COLUMNS = [
@@ -2994,6 +2995,9 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
     for _, row in defaults_df.iterrows():
         source = row.get("source_name", row.get("Source", ""))
         comment = row.get("notes", row.get("Comment", ""))
+        input_status = str(row.get("Input Status", row.get("input_source", "")) or "").strip().lower()
+        if input_status in {"", "provided", "default_filled"}:
+            input_status = "default"
         for year_col in YEAR_COLUMNS:
             if year_col not in defaults_df.columns:
                 continue
@@ -3011,6 +3015,7 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
                     "Units": row.get("Units", ""),
                     "Source": source,
                     "Comment": comment,
+                    "Input Status": input_status,
                 }
             )
 

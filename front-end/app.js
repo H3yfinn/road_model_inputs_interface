@@ -749,6 +749,7 @@ function convertRoadLongRowsToWideUiRows(longRows) {
     const rowsByKey = new Map();
     longRows.forEach(row => {
         const region = row.Region || row.Economy || '';
+        const inputStatus = row['Input Status'] || row.input_source || 'default';
         const key = [
             row['Branch Path'] ?? '',
             row.Variable ?? '',
@@ -763,7 +764,8 @@ function convertRoadLongRowsToWideUiRows(longRows) {
             Scale: String(row.Variable || '').includes('Share') ? '%' : '',
             Units: row.Units ?? '',
             'Per...': '',
-            input_source: 'provided',
+            input_source: inputStatus,
+            _inputStatus: inputStatus,
             standardized_label_status: 'standardized',
             notes: row.Comment ?? '',
             source_type: 'module1_long_csv',

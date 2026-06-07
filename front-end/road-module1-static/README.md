@@ -25,7 +25,7 @@ Each per-economy CSV uses the same long-row format as the 'download filled CSV'
 and 'upload filled CSV' actions in the browser UI. The columns are:
 
 ```text
-Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment
+Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment, Input Status
 ```
 
 This means the static bundle, the CSV download, and the CSV upload all share one
