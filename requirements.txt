@@ -6,3 +6,4 @@ scipy
 openpyxl
 pydantic
 python-multipart
+httpx  # required for FastAPI TestClient in tests

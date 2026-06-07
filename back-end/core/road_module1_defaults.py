@@ -23,7 +23,7 @@ STOCK_SHARE_PROJECTION_YEARS = [2040, 2060]
 TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN = "transport_leap_export_combined_ALL_ECONS*.xlsx"
 TRANSPORT_LEAP_EXPORT_SHEET = "FOR_VIEWING"
 TRANSPORT_LEAP_EXPORT_HEADER_ROW = 2
-TRANSPORT_LEAP_EXPORT_SCENARIO_PRIORITY = ["Reference", "Target"]
+TRANSPORT_LEAP_EXPORT_SCENARIO_PRIORITY = ["Current Accounts", "Target"]
 TRANSPORT_LEAP_EXPORT_APEC_FALLBACK_VARIABLES = {
     "Sales Share",
     "Stock Share",
@@ -532,6 +532,26 @@ def _source_fields(review_reason: str) -> dict[str, str | bool]:
     }
 
 
+def _stamp_row_source(
+    df: pd.DataFrame,
+    idx: int,
+    *,
+    source_type: str,
+    source_name: str,
+    source_scope: str,
+    source_date: str = "",
+    note: str = "",
+) -> None:
+    df.at[idx, "input_source"] = "provided"
+    df.at[idx, "source_type"] = source_type
+    df.at[idx, "source_name"] = source_name
+    df.at[idx, "source_scope"] = source_scope
+    df.at[idx, "source_date"] = source_date
+    df.at[idx, "researcher_review_recommended"] = False
+    df.at[idx, "review_reason"] = ""
+    df.at[idx, "notes"] = note
+
+
 def _normalize_apec_economy_code(raw_code: object) -> str:
     return str(raw_code or "").strip().replace("_", "")
 
@@ -586,16 +606,18 @@ def _phev_rate_for_branch(
     branch_path: str,
     economy_code: str,
 ) -> tuple[float, pd.Series] | tuple[None, None]:
-    """Return (rate, source_row) matched by vehicle_type when available, else first row."""
+    """Return (rate, source_row) matched by the vehicle type in the branch path.
+
+    Looks for an exact vehicle_type match in the PHEV utilisation CSV.  If no
+    row exists for that vehicle type (e.g. Buses, Motorcycles), returns None so
+    the branch is skipped rather than inheriting a wrong rate.
+    """
     has_vt = "vehicle_type" in source_rows.columns and source_rows["vehicle_type"].notna().any()
     if has_vt:
-        path_lower = branch_path.lower()
-        if "passenger" in path_lower:
-            vt_rows = source_rows[source_rows["vehicle_type"] == "LPVs"]
-        elif "freight" in path_lower:
-            vt_rows = source_rows[source_rows["vehicle_type"] == "LCVs"]
-        else:
-            vt_rows = pd.DataFrame()
+        parts = str(branch_path).split("\\")
+        # vehicle type is parts[2] (Demand\Transport road\VehicleType\...)
+        vehicle_type = parts[2] if len(parts) > 2 else ""
+        vt_rows = source_rows[source_rows["vehicle_type"] == vehicle_type]
         if vt_rows.empty:
             return None, None
         source_row = vt_rows.iloc[0]
@@ -654,6 +676,86 @@ def overlay_phev_utilisation_rates(
     target_mask = overlaid_df["Variable"].eq("PHEV Electric Driving Share")
     report_rows = []
 
+    # If PHEV Electric Driving Share rows are absent (e.g. source is a raw LEAP
+    # export that doesn't include supplemental rows), infer the PHEV parent branches
+    # from existing data and build fully-populated rows directly from source_rows.
+    # Every value comes from the apec_phev_utilisation_rates CSV — nothing is generated.
+    if not target_mask.any():
+        branch_series = overlaid_df["Branch Path"].astype(str)
+        # Match any branch where a path segment is exactly "PHEV" or starts with
+        # "PHEV " (e.g. "PHEV large", "PHEV medium", "PHEV small").
+        phev_child_mask = branch_series.str.contains(r"\\PHEV(?:\s+\S+)?\\", regex=True, na=False)
+
+        def _phev_parent(bp: str) -> str:
+            parts = bp.split("\\")
+            idx = next(
+                (i for i, p in enumerate(parts) if p == "PHEV" or p.startswith("PHEV ")),
+                None,
+            )
+            return "\\".join(parts[: idx + 1]) if idx is not None else ""
+
+        phev_parent_branches = [
+            p for p in
+            branch_series[phev_child_mask].map(_phev_parent).unique().tolist()
+            if p
+        ]
+        scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+        new_rows: list[dict] = []
+        for branch_path in phev_parent_branches:
+            rate, source_row = _phev_rate_for_branch(source_rows, branch_path, economy.code)
+            if rate is None:
+                report_rows.append({
+                    "status": "skipped",
+                    "Branch Path": branch_path,
+                    "Variable": "PHEV Electric Driving Share",
+                    "Scenario": "",
+                    "Region": economy.name,
+                    "source_year": "",
+                    "details": "No matching vehicle_type row in source.",
+                })
+                continue
+            note = (
+                f"PHEV utilisation rate from {resolved_path.name}; source data_year "
+                f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
+                f"evidence_grade {source_row['evidence_grade']}; "
+                f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
+                f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
+            )
+            for scenario in scenarios:
+                new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                new_row.update({
+                    "Branch Path": branch_path,
+                    "Variable": "PHEV Electric Driving Share",
+                    "Scenario": scenario,
+                    "Region": economy.name,
+                    "Scale": "%",
+                    "Units": "Share",
+                    "Per...": "",
+                    str(BASE_YEAR): rate,
+                    "input_source": "provided",
+                    "source_type": "apec_phev_utilisation_rates",
+                    "source_name": resolved_path.name,
+                    "source_scope": economy.code,
+                    "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
+                    "notes": note,
+                    "standardized_label_status": "standardized",
+                    "researcher_review_recommended": False,
+                    "review_reason": "",
+                })
+                report_rows.append({
+                    "status": "applied",
+                    "Branch Path": branch_path,
+                    "Variable": "PHEV Electric Driving Share",
+                    "Scenario": scenario,
+                    "Region": economy.name,
+                    "source_year": new_row["source_date"],
+                    "details": f"{BASE_YEAR}={rate}",
+                })
+                new_rows.append(new_row)
+        if new_rows:
+            overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
+            target_mask = overlaid_df["Variable"].eq("PHEV Electric Driving Share")
+
     for idx in overlaid_df[target_mask].index:
         branch_path = overlaid_df.at[idx, "Branch Path"]
         rate, source_row = _phev_rate_for_branch(source_rows, branch_path, economy.code)
@@ -679,14 +781,7 @@ def overlay_phev_utilisation_rates(
         for year_col in YEAR_COLUMNS:
             if int(year_col) > BASE_YEAR:
                 overlaid_df.at[idx, year_col] = pd.NA
-        overlaid_df.at[idx, "input_source"] = "provided"
-        overlaid_df.at[idx, "source_type"] = "apec_phev_utilisation_rates"
-        overlaid_df.at[idx, "source_name"] = resolved_path.name
-        overlaid_df.at[idx, "source_scope"] = economy.code
-        overlaid_df.at[idx, "source_date"] = str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
-        overlaid_df.at[idx, "researcher_review_recommended"] = False
-        overlaid_df.at[idx, "review_reason"] = ""
-        overlaid_df.at[idx, "notes"] = note
+        _stamp_row_source(overlaid_df, idx, source_type="apec_phev_utilisation_rates", source_name=resolved_path.name, source_scope=economy.code, source_date=str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "", note=note)
         report_rows.append({
             "status": "applied",
             "Branch Path": branch_path,
@@ -805,14 +900,7 @@ def overlay_lifecycle_profile_factors(
             )
             for idx in overlaid_df[target_mask].index:
                 overlaid_df.at[idx, str(BASE_YEAR)] = float(value)
-                overlaid_df.at[idx, "input_source"] = "provided"
-                overlaid_df.at[idx, "source_type"] = "apec_lifecycle_profile_factors"
-                overlaid_df.at[idx, "source_name"] = resolved_path.name
-                overlaid_df.at[idx, "source_scope"] = economy.code
-                overlaid_df.at[idx, "source_date"] = str(int(data_year)) if not pd.isna(data_year) else ""
-                overlaid_df.at[idx, "researcher_review_recommended"] = False
-                overlaid_df.at[idx, "review_reason"] = ""
-                overlaid_df.at[idx, "notes"] = note
+                _stamp_row_source(overlaid_df, idx, source_type="apec_lifecycle_profile_factors", source_name=resolved_path.name, source_scope=economy.code, source_date=str(int(data_year)) if not pd.isna(data_year) else "", note=note)
                 report_rows.append(
                     {
                         "status": "applied",
@@ -1014,26 +1102,54 @@ def overlay_model_factor_sources(
                 overlaid_df["Variable"].eq("Passenger Vehicle Saturation")
                 & overlaid_df["Branch Path"].eq("Demand\\Passenger road")
             )
+            # Create the row if it doesn't exist (e.g. raw LEAP export source),
+            # populating the value directly from the saturation CSV.
+            if not target_mask.any():
+                scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+                new_rows = []
+                for scenario in scenarios:
+                    new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                    new_row.update({
+                        "Branch Path": "Demand\\Passenger road",
+                        "Variable": "Passenger Vehicle Saturation",
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "Scale": "",
+                        "Units": "Device",
+                        "Per...": "1000 people",
+                        str(BASE_YEAR): float(saturation_value),
+                        "input_source": "provided",
+                        "source_type": "apec_passenger_saturation",
+                        "source_name": saturation_path.name,
+                        "source_scope": economy.code,
+                        "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
+                        "notes": (
+                            f"Passenger saturation from {saturation_path.name}; "
+                            f"lower={source_row['lower_bound']}, upper={source_row['upper_bound']}, "
+                            f"grade={source_row['evidence_grade']}, status={source_row['estimation_status']}."
+                        ),
+                        "standardized_label_status": "standardized",
+                        "researcher_review_recommended": False,
+                        "review_reason": "",
+                    })
+                    new_rows.append(new_row)
+                if new_rows:
+                    overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
+                    target_mask = (
+                        overlaid_df["Variable"].eq("Passenger Vehicle Saturation")
+                        & overlaid_df["Branch Path"].eq("Demand\\Passenger road")
+                    )
             for idx in overlaid_df[target_mask].index:
                 overlaid_df.at[idx, str(BASE_YEAR)] = float(saturation_value)
                 for year_col in YEAR_COLUMNS:
                     if int(year_col) > BASE_YEAR:
                         overlaid_df.at[idx, year_col] = pd.NA
-                overlaid_df.at[idx, "input_source"] = "provided"
-                overlaid_df.at[idx, "source_type"] = "apec_passenger_saturation"
-                overlaid_df.at[idx, "source_name"] = saturation_path.name
-                overlaid_df.at[idx, "source_scope"] = economy.code
-                overlaid_df.at[idx, "source_date"] = (
-                    str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
-                )
-                overlaid_df.at[idx, "researcher_review_recommended"] = False
-                overlaid_df.at[idx, "review_reason"] = ""
-                overlaid_df.at[idx, "notes"] = (
+                _stamp_row_source(overlaid_df, idx, source_type="apec_passenger_saturation", source_name=saturation_path.name, source_scope=economy.code, source_date=str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "", note=(
                     f"Passenger saturation from {saturation_path.name}; "
                     f"lower={source_row['lower_bound']}, upper={source_row['upper_bound']}, "
                     f"grade={source_row['evidence_grade']}, "
                     f"status={source_row['estimation_status']}."
-                )
+                ))
                 report_rows.append(
                     {
                         "status": "applied",
@@ -1082,19 +1198,7 @@ def overlay_model_factor_sources(
                 for year_col in YEAR_COLUMNS:
                     if int(year_col) > BASE_YEAR:
                         overlaid_df.at[idx, year_col] = pd.NA
-                overlaid_df.at[idx, "input_source"] = "provided"
-                overlaid_df.at[idx, "source_type"] = "apec_passenger_saturation"
-                overlaid_df.at[idx, "source_name"] = saturation_path.name
-                overlaid_df.at[idx, "source_scope"] = economy.code
-                overlaid_df.at[idx, "source_date"] = (
-                    str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
-                )
-                overlaid_df.at[idx, "researcher_review_recommended"] = False
-                overlaid_df.at[idx, "review_reason"] = ""
-                overlaid_df.at[idx, "notes"] = (
-                    f"Lenient passenger saturation reached flag from {saturation_path.name}; "
-                    f"reached_saturation_lenient={bool(source_row['reached_saturation_lenient'])}."
-                )
+                _stamp_row_source(overlaid_df, idx, source_type="apec_passenger_saturation", source_name=saturation_path.name, source_scope=economy.code, source_date=str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "", note=f"Lenient passenger saturation reached flag from {saturation_path.name}; reached_saturation_lenient={bool(source_row['reached_saturation_lenient'])}.")
                 report_rows.append(
                     {
                         "status": "applied",
@@ -1135,6 +1239,60 @@ def overlay_model_factor_sources(
             for _, row in reconciliation_df.iterrows()
             if row["transport_type"] in {"passenger", "freight"}
         }
+        # Create reconciliation rows for transport branches where they are absent,
+        # populating values directly from reconciliation_by_transport (CSV source).
+        _TRANSPORT_BRANCH = {
+            "passenger": "Demand\\Passenger road",
+            "freight":   "Demand\\Freight road",
+        }
+        scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+        for transport_type, branch_path in _TRANSPORT_BRANCH.items():
+            source_row = reconciliation_by_transport.get(transport_type)
+            if source_row is None:
+                continue
+            for variable, csv_col in _LEAP_VAR_TO_CSV_COL.items():
+                source_value = source_row[csv_col]
+                if pd.isna(source_value):
+                    continue
+                for scenario in scenarios:
+                    already_exists = (
+                        overlaid_df["Branch Path"].eq(branch_path)
+                        & overlaid_df["Variable"].eq(variable)
+                        & overlaid_df["Scenario"].eq(scenario)
+                    ).any()
+                    if already_exists:
+                        continue
+                    new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                    new_row.update({
+                        "Branch Path": branch_path,
+                        "Variable": variable,
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "Scale": "",
+                        "Units": "Weight" if "Weight" in variable else "Share",
+                        "Per...": "",
+                        str(BASE_YEAR): float(source_value),
+                        "input_source": "provided",
+                        "source_type": "apec_reconciliation_factors",
+                        "source_name": reconciliation_path.name,
+                        "source_scope": transport_type,
+                        "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
+                        "notes": f"Reconciliation factor from {reconciliation_path.name} ({transport_type}).",
+                        "standardized_label_status": "standardized",
+                        "researcher_review_recommended": False,
+                        "review_reason": "",
+                    })
+                    overlaid_df = pd.concat([overlaid_df, pd.DataFrame([new_row])], ignore_index=True)
+                    report_rows.append({
+                        "status": "applied",
+                        "Branch Path": branch_path,
+                        "Variable": variable,
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "source_file": reconciliation_path.name,
+                        "details": f"{BASE_YEAR}={float(source_value)}",
+                    })
+
         for idx, target_row in overlaid_df.iterrows():
             variable = str(target_row.get("Variable", ""))
             csv_col = _LEAP_VAR_TO_CSV_COL.get(variable)
@@ -1154,18 +1312,7 @@ def overlay_model_factor_sources(
             for year_col in YEAR_COLUMNS:
                 if int(year_col) > BASE_YEAR:
                     overlaid_df.at[idx, year_col] = pd.NA
-            overlaid_df.at[idx, "input_source"] = "provided"
-            overlaid_df.at[idx, "source_type"] = "apec_reconciliation_factors"
-            overlaid_df.at[idx, "source_name"] = reconciliation_path.name
-            overlaid_df.at[idx, "source_scope"] = transport_type
-            overlaid_df.at[idx, "source_date"] = (
-                str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
-            )
-            overlaid_df.at[idx, "researcher_review_recommended"] = False
-            overlaid_df.at[idx, "review_reason"] = ""
-            overlaid_df.at[idx, "notes"] = (
-                f"Reconciliation factor from {reconciliation_path.name} ({transport_type})."
-            )
+            _stamp_row_source(overlaid_df, idx, source_type="apec_reconciliation_factors", source_name=reconciliation_path.name, source_scope=transport_type, source_date=str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "", note=f"Reconciliation factor from {reconciliation_path.name} ({transport_type}).")
             report_rows.append(
                 {
                     "status": "applied",
@@ -1208,6 +1355,49 @@ def overlay_model_factor_sources(
             .unique()
             .tolist()
         )
+        # If the main VEW rows are absent (raw LEAP source), fall back to all scenarios.
+        if not scenarios:
+            scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+
+        # Create the main Vehicle Equivalent Weight row when absent,
+        # populating the value directly from the CSV source.
+        for vehicle_key, source_row in weights_by_vehicle.items():
+            branch_path = vehicle_key_to_branch_path.get(vehicle_key)
+            if not branch_path:
+                continue
+            vew_value = source_row.get("vehicle_equivalent_weight")
+            if pd.isna(vew_value):
+                continue
+            for scenario in scenarios:
+                exists = (
+                    overlaid_df["Branch Path"].eq(branch_path)
+                    & overlaid_df["Variable"].eq("Vehicle Equivalent Weight")
+                    & overlaid_df["Scenario"].eq(scenario)
+                ).any()
+                if exists:
+                    continue
+                new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                new_row.update({
+                    "Branch Path": branch_path,
+                    "Variable": "Vehicle Equivalent Weight",
+                    "Scenario": scenario,
+                    "Region": economy.name,
+                    "Scale": "",
+                    "Units": "Vehicle equivalent",
+                    "Per...": "",
+                    str(BASE_YEAR): float(vew_value),
+                    "input_source": "provided",
+                    "source_type": "apec_vehicle_equivalent_weights",
+                    "source_name": vehicle_weights_path.name,
+                    "source_scope": vehicle_key,
+                    "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row.get("data_year")) else "",
+                    "notes": f"Vehicle equivalent weight from {vehicle_weights_path.name} ({vehicle_key}).",
+                    "standardized_label_status": "standardized",
+                    "researcher_review_recommended": False,
+                    "review_reason": "",
+                })
+                overlaid_df = pd.concat([overlaid_df, pd.DataFrame([new_row])], ignore_index=True)
+
         for vehicle_key, source_row in weights_by_vehicle.items():
             branch_path = vehicle_key_to_branch_path.get(vehicle_key)
             if not branch_path:
@@ -1262,18 +1452,7 @@ def overlay_model_factor_sources(
             for year_col in YEAR_COLUMNS:
                 if int(year_col) > BASE_YEAR:
                     overlaid_df.at[idx, year_col] = pd.NA
-            overlaid_df.at[idx, "input_source"] = "provided"
-            overlaid_df.at[idx, "source_type"] = "apec_vehicle_equivalent_weights"
-            overlaid_df.at[idx, "source_name"] = vehicle_weights_path.name
-            overlaid_df.at[idx, "source_scope"] = vehicle_key
-            overlaid_df.at[idx, "source_date"] = (
-                str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else ""
-            )
-            overlaid_df.at[idx, "researcher_review_recommended"] = False
-            overlaid_df.at[idx, "review_reason"] = ""
-            overlaid_df.at[idx, "notes"] = (
-                f"{variable} from {vehicle_weights_path.name} ({vehicle_key})."
-            )
+            _stamp_row_source(overlaid_df, idx, source_type="apec_vehicle_equivalent_weights", source_name=vehicle_weights_path.name, source_scope=vehicle_key, source_date=str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "", note=f"{variable} from {vehicle_weights_path.name} ({vehicle_key}).")
             report_rows.append(
                 {
                     "status": "applied",
@@ -1544,6 +1723,62 @@ def overlay_survival_and_vintage_profiles(
             )
             continue
 
+        # If age-series rows for this variable are absent (e.g. source is a raw LEAP
+        # export that doesn't include supplemental rows), build them directly from the
+        # profile xlsx — values, source attribution and all — in a single pass.
+        # Nothing is invented here: every value comes from profile_lookup which was
+        # read from the xlsx file above.
+        existing_age_mask = overlaid_df["Variable"].eq(variable_name)
+        if not existing_age_mask.any():
+            transport_branches = {
+                "passenger": "Demand\\Passenger road",
+                "freight": "Demand\\Freight road",
+            }
+            scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+            new_rows: list[dict] = []
+            for (transport_type, age), profile_value in profile_lookup.items():
+                branch_path = transport_branches.get(transport_type)
+                if not branch_path:
+                    continue
+                age_branch = f"{branch_path}\\Age {age}"
+                for scenario in scenarios:
+                    new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+                    new_row.update({
+                        "Branch Path": age_branch,
+                        "Variable": variable_name,
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "Scale": "%",
+                        "Units": "Share",
+                        "Per...": "",
+                        str(BASE_YEAR): float(profile_value),
+                        "input_source": "provided",
+                        "source_type": source_type,
+                        "source_name": profile_path.name,
+                        "source_scope": economy.code,
+                        "source_date": SOURCE_DATE,
+                        "notes": (
+                            f"{variable_name} imported from {profile_path.name}; "
+                            f"transport={transport_type}, age={age}."
+                        ),
+                        "standardized_label_status": "standardized",
+                        "researcher_review_recommended": False,
+                        "review_reason": "",
+                    })
+                    report_rows.append({
+                        "status": "applied",
+                        "Branch Path": age_branch,
+                        "Variable": variable_name,
+                        "Scenario": scenario,
+                        "Region": economy.name,
+                        "source_file": profile_path.name,
+                        "details": f"{BASE_YEAR}={float(profile_value)}",
+                    })
+                    new_rows.append(new_row)
+            if new_rows:
+                overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
+            continue  # rows are fully populated; skip the update-in-place loop below
+
         for idx, row in overlaid_df.iterrows():
             if str(row.get("Variable", "")) != variable_name:
                 continue
@@ -1562,17 +1797,7 @@ def overlay_survival_and_vintage_profiles(
                 if int(year_col) > BASE_YEAR:
                     overlaid_df.at[idx, year_col] = pd.NA
 
-            overlaid_df.at[idx, "input_source"] = "provided"
-            overlaid_df.at[idx, "source_type"] = source_type
-            overlaid_df.at[idx, "source_name"] = profile_path.name
-            overlaid_df.at[idx, "source_scope"] = economy.code
-            overlaid_df.at[idx, "source_date"] = SOURCE_DATE
-            overlaid_df.at[idx, "researcher_review_recommended"] = False
-            overlaid_df.at[idx, "review_reason"] = ""
-            overlaid_df.at[idx, "notes"] = (
-                f"{variable_name} imported from {profile_path.name}; "
-                f"transport={transport_label}, age={age}."
-            )
+            _stamp_row_source(overlaid_df, idx, source_type=source_type, source_name=profile_path.name, source_scope=economy.code, source_date=SOURCE_DATE, note=f"{variable_name} imported from {profile_path.name}; transport={transport_label}, age={age}.")
             report_rows.append(
                 {
                     "status": "applied",
@@ -4018,6 +4243,10 @@ def write_economy_package(
         default_filled_df=default_filled,
         economy=economy,
     )
+    default_filled, _ = overlay_phev_utilisation_rates(
+        default_filled_df=default_filled,
+        economy=economy,
+    )
     default_filled, model_factor_overlay_report = overlay_model_factor_sources(
         default_filled_df=default_filled,
         economy=economy,
@@ -4027,6 +4256,13 @@ def write_economy_package(
         economy=economy,
     )
     default_filled = _ensure_vehicle_type_stock_share_rows(default_filled, economy)
+    # Rows created by overlay functions may have NA in metadata columns — fill them
+    # so downstream validation (which expects strings) doesn't fail.
+    for _col, _fill in [("input_source", "provided"), ("source_type", ""), ("source_name", ""),
+                         ("source_scope", ""), ("source_date", ""), ("notes", ""),
+                         ("standardized_label_status", "standardized")]:
+        if _col in default_filled.columns:
+            default_filled[_col] = default_filled[_col].fillna(_fill)
     default_filled, final_value_override_report = apply_final_value_overrides_with_report(default_filled, economy)
     # Temporary policy: deactivate researcher-review prioritization globally so
     # all rows are presented equally for manual review.

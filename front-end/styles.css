@@ -1189,12 +1189,9 @@ body.road-panel-resizing * {
     line-height: 1;
 }
 
-.road-info-tip::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
+#road-info-tip-popup {
+    position: fixed;
+    z-index: 99999;
     background: #1e293b;
     color: #f1f5f9;
     font-size: 0.68rem;
@@ -1204,17 +1201,11 @@ body.road-panel-resizing * {
     white-space: pre-wrap;
     max-width: 240px;
     min-width: 140px;
-    z-index: 9999;
     pointer-events: none;
     display: none;
     text-align: left;
     line-height: 1.45;
     box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-}
-
-.road-info-tip:hover::after,
-.road-info-tip:focus::after {
-    display: block;
 }
 
 .road-row-meta,
@@ -1305,6 +1296,12 @@ body.road-panel-resizing * {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
     gap: 0.28rem;
+}
+
+.road-year-input {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .road-year-input label {
@@ -1470,6 +1467,27 @@ body.road-panel-resizing * {
 
 .road-input-row.no-row-label .road-row-actions .road-comment-input {
     max-width: 8rem;
+}
+
+/* Shared fuel economy sub-groups (PHEV/EREV split) */
+.road-shared-fe-row {
+    display: block;
+    padding: 0;
+}
+.road-shared-fe-subgroup {
+    display: flex;
+    align-items: center;
+    gap: 0.36rem;
+    padding: 0.25rem 0.75rem;
+}
+.road-shared-fe-sublabel {
+    font-size: 0.65rem;
+    color: var(--slate-500, #64748b);
+    white-space: nowrap;
+    width: 8rem;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 0.5rem;
 }
 
 .road-group-card.is-compact .road-breadcrumbs {

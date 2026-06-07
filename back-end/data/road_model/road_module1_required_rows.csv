@@ -1,0 +1,258 @@
+Branch Path,Variable,branch_level
+Demand\Freight road,Reconciliation Bound Lower Efficiency,transport
+Demand\Freight road,Reconciliation Bound Lower Mileage,transport
+Demand\Freight road,Reconciliation Bound Upper Efficiency,transport
+Demand\Freight road,Reconciliation Bound Upper Mileage,transport
+Demand\Freight road,Reconciliation Weight Efficiency,transport
+Demand\Freight road,Reconciliation Weight Mileage,transport
+Demand\Freight road,Reconciliation Weight Stock,transport
+Demand\Freight road\Age 0,Survival Rate,age
+Demand\Freight road\Age 0,Vintage Profile Share,age
+Demand\Freight road\Age 1,Survival Rate,age
+Demand\Freight road\Age 1,Vintage Profile Share,age
+Demand\Freight road\Age 10,Survival Rate,age
+Demand\Freight road\Age 10,Vintage Profile Share,age
+Demand\Freight road\Age 11,Survival Rate,age
+Demand\Freight road\Age 11,Vintage Profile Share,age
+Demand\Freight road\Age 12,Survival Rate,age
+Demand\Freight road\Age 12,Vintage Profile Share,age
+Demand\Freight road\Age 13,Survival Rate,age
+Demand\Freight road\Age 13,Vintage Profile Share,age
+Demand\Freight road\Age 14,Survival Rate,age
+Demand\Freight road\Age 14,Vintage Profile Share,age
+Demand\Freight road\Age 15,Survival Rate,age
+Demand\Freight road\Age 15,Vintage Profile Share,age
+Demand\Freight road\Age 16,Survival Rate,age
+Demand\Freight road\Age 16,Vintage Profile Share,age
+Demand\Freight road\Age 17,Survival Rate,age
+Demand\Freight road\Age 17,Vintage Profile Share,age
+Demand\Freight road\Age 18,Survival Rate,age
+Demand\Freight road\Age 18,Vintage Profile Share,age
+Demand\Freight road\Age 19,Survival Rate,age
+Demand\Freight road\Age 19,Vintage Profile Share,age
+Demand\Freight road\Age 2,Survival Rate,age
+Demand\Freight road\Age 2,Vintage Profile Share,age
+Demand\Freight road\Age 20,Survival Rate,age
+Demand\Freight road\Age 20,Vintage Profile Share,age
+Demand\Freight road\Age 21,Survival Rate,age
+Demand\Freight road\Age 21,Vintage Profile Share,age
+Demand\Freight road\Age 22,Survival Rate,age
+Demand\Freight road\Age 22,Vintage Profile Share,age
+Demand\Freight road\Age 23,Survival Rate,age
+Demand\Freight road\Age 23,Vintage Profile Share,age
+Demand\Freight road\Age 24,Survival Rate,age
+Demand\Freight road\Age 24,Vintage Profile Share,age
+Demand\Freight road\Age 25,Survival Rate,age
+Demand\Freight road\Age 25,Vintage Profile Share,age
+Demand\Freight road\Age 26,Survival Rate,age
+Demand\Freight road\Age 26,Vintage Profile Share,age
+Demand\Freight road\Age 27,Survival Rate,age
+Demand\Freight road\Age 27,Vintage Profile Share,age
+Demand\Freight road\Age 28,Survival Rate,age
+Demand\Freight road\Age 28,Vintage Profile Share,age
+Demand\Freight road\Age 29,Survival Rate,age
+Demand\Freight road\Age 29,Vintage Profile Share,age
+Demand\Freight road\Age 3,Survival Rate,age
+Demand\Freight road\Age 3,Vintage Profile Share,age
+Demand\Freight road\Age 30,Survival Rate,age
+Demand\Freight road\Age 30,Vintage Profile Share,age
+Demand\Freight road\Age 31,Survival Rate,age
+Demand\Freight road\Age 31,Vintage Profile Share,age
+Demand\Freight road\Age 32,Survival Rate,age
+Demand\Freight road\Age 32,Vintage Profile Share,age
+Demand\Freight road\Age 33,Survival Rate,age
+Demand\Freight road\Age 33,Vintage Profile Share,age
+Demand\Freight road\Age 34,Survival Rate,age
+Demand\Freight road\Age 34,Vintage Profile Share,age
+Demand\Freight road\Age 35,Survival Rate,age
+Demand\Freight road\Age 35,Vintage Profile Share,age
+Demand\Freight road\Age 36,Survival Rate,age
+Demand\Freight road\Age 36,Vintage Profile Share,age
+Demand\Freight road\Age 37,Survival Rate,age
+Demand\Freight road\Age 37,Vintage Profile Share,age
+Demand\Freight road\Age 4,Survival Rate,age
+Demand\Freight road\Age 4,Vintage Profile Share,age
+Demand\Freight road\Age 5,Survival Rate,age
+Demand\Freight road\Age 5,Vintage Profile Share,age
+Demand\Freight road\Age 6,Survival Rate,age
+Demand\Freight road\Age 6,Vintage Profile Share,age
+Demand\Freight road\Age 7,Survival Rate,age
+Demand\Freight road\Age 7,Vintage Profile Share,age
+Demand\Freight road\Age 8,Survival Rate,age
+Demand\Freight road\Age 8,Vintage Profile Share,age
+Demand\Freight road\Age 9,Survival Rate,age
+Demand\Freight road\Age 9,Vintage Profile Share,age
+Demand\Freight road\LCVs,Sales Share,vehicle_type
+Demand\Freight road\LCVs,Stock Share,vehicle_type
+Demand\Freight road\LCVs\BEV,Sales Share,drive
+Demand\Freight road\LCVs\BEV,Stock Share,drive
+Demand\Freight road\LCVs\ICE,Sales Share,drive
+Demand\Freight road\LCVs\ICE,Stock Share,drive
+Demand\Freight road\LCVs\PHEV,PHEV Electric Driving Share,drive
+Demand\Freight road\LCVs\PHEV,Sales Share,drive
+Demand\Freight road\LCVs\PHEV,Stock Share,drive
+Demand\Freight road\Trucks,Sales Share,vehicle_type
+Demand\Freight road\Trucks,Stock Share,vehicle_type
+Demand\Freight road\Trucks\BEV heavy,Sales Share,drive
+Demand\Freight road\Trucks\BEV heavy,Stock Share,drive
+Demand\Freight road\Trucks\BEV medium,Sales Share,drive
+Demand\Freight road\Trucks\BEV medium,Stock Share,drive
+Demand\Freight road\Trucks\EREV heavy,Sales Share,drive
+Demand\Freight road\Trucks\EREV heavy,Stock Share,drive
+Demand\Freight road\Trucks\EREV medium,Sales Share,drive
+Demand\Freight road\Trucks\EREV medium,Stock Share,drive
+Demand\Freight road\Trucks\FCEV heavy,Sales Share,drive
+Demand\Freight road\Trucks\FCEV heavy,Stock Share,drive
+Demand\Freight road\Trucks\FCEV medium,Sales Share,drive
+Demand\Freight road\Trucks\FCEV medium,Stock Share,drive
+Demand\Freight road\Trucks\ICE heavy,Sales Share,drive
+Demand\Freight road\Trucks\ICE heavy,Stock Share,drive
+Demand\Freight road\Trucks\ICE medium,Sales Share,drive
+Demand\Freight road\Trucks\ICE medium,Stock Share,drive
+Demand\Freight road\Trucks\PHEV heavy,Sales Share,drive
+Demand\Freight road\Trucks\PHEV heavy,Stock Share,drive
+Demand\Freight road\Trucks\PHEV medium,Sales Share,drive
+Demand\Freight road\Trucks\PHEV medium,Stock Share,drive
+Demand\Passenger road,Passenger Saturation Reached,transport
+Demand\Passenger road,Passenger Vehicle Saturation,transport
+Demand\Passenger road,Reconciliation Bound Lower Efficiency,transport
+Demand\Passenger road,Reconciliation Bound Lower Mileage,transport
+Demand\Passenger road,Reconciliation Bound Upper Efficiency,transport
+Demand\Passenger road,Reconciliation Bound Upper Mileage,transport
+Demand\Passenger road,Reconciliation Weight Efficiency,transport
+Demand\Passenger road,Reconciliation Weight Mileage,transport
+Demand\Passenger road,Reconciliation Weight Stock,transport
+Demand\Passenger road\Age 0,Survival Rate,age
+Demand\Passenger road\Age 0,Vintage Profile Share,age
+Demand\Passenger road\Age 1,Survival Rate,age
+Demand\Passenger road\Age 1,Vintage Profile Share,age
+Demand\Passenger road\Age 10,Survival Rate,age
+Demand\Passenger road\Age 10,Vintage Profile Share,age
+Demand\Passenger road\Age 11,Survival Rate,age
+Demand\Passenger road\Age 11,Vintage Profile Share,age
+Demand\Passenger road\Age 12,Survival Rate,age
+Demand\Passenger road\Age 12,Vintage Profile Share,age
+Demand\Passenger road\Age 13,Survival Rate,age
+Demand\Passenger road\Age 13,Vintage Profile Share,age
+Demand\Passenger road\Age 14,Survival Rate,age
+Demand\Passenger road\Age 14,Vintage Profile Share,age
+Demand\Passenger road\Age 15,Survival Rate,age
+Demand\Passenger road\Age 15,Vintage Profile Share,age
+Demand\Passenger road\Age 16,Survival Rate,age
+Demand\Passenger road\Age 16,Vintage Profile Share,age
+Demand\Passenger road\Age 17,Survival Rate,age
+Demand\Passenger road\Age 17,Vintage Profile Share,age
+Demand\Passenger road\Age 18,Survival Rate,age
+Demand\Passenger road\Age 18,Vintage Profile Share,age
+Demand\Passenger road\Age 19,Survival Rate,age
+Demand\Passenger road\Age 19,Vintage Profile Share,age
+Demand\Passenger road\Age 2,Survival Rate,age
+Demand\Passenger road\Age 2,Vintage Profile Share,age
+Demand\Passenger road\Age 20,Survival Rate,age
+Demand\Passenger road\Age 20,Vintage Profile Share,age
+Demand\Passenger road\Age 21,Survival Rate,age
+Demand\Passenger road\Age 21,Vintage Profile Share,age
+Demand\Passenger road\Age 22,Survival Rate,age
+Demand\Passenger road\Age 22,Vintage Profile Share,age
+Demand\Passenger road\Age 23,Survival Rate,age
+Demand\Passenger road\Age 23,Vintage Profile Share,age
+Demand\Passenger road\Age 24,Survival Rate,age
+Demand\Passenger road\Age 24,Vintage Profile Share,age
+Demand\Passenger road\Age 25,Survival Rate,age
+Demand\Passenger road\Age 25,Vintage Profile Share,age
+Demand\Passenger road\Age 26,Survival Rate,age
+Demand\Passenger road\Age 26,Vintage Profile Share,age
+Demand\Passenger road\Age 27,Survival Rate,age
+Demand\Passenger road\Age 27,Vintage Profile Share,age
+Demand\Passenger road\Age 28,Survival Rate,age
+Demand\Passenger road\Age 28,Vintage Profile Share,age
+Demand\Passenger road\Age 29,Survival Rate,age
+Demand\Passenger road\Age 29,Vintage Profile Share,age
+Demand\Passenger road\Age 3,Survival Rate,age
+Demand\Passenger road\Age 3,Vintage Profile Share,age
+Demand\Passenger road\Age 30,Survival Rate,age
+Demand\Passenger road\Age 30,Vintage Profile Share,age
+Demand\Passenger road\Age 31,Survival Rate,age
+Demand\Passenger road\Age 31,Vintage Profile Share,age
+Demand\Passenger road\Age 32,Survival Rate,age
+Demand\Passenger road\Age 32,Vintage Profile Share,age
+Demand\Passenger road\Age 33,Survival Rate,age
+Demand\Passenger road\Age 33,Vintage Profile Share,age
+Demand\Passenger road\Age 34,Survival Rate,age
+Demand\Passenger road\Age 34,Vintage Profile Share,age
+Demand\Passenger road\Age 35,Survival Rate,age
+Demand\Passenger road\Age 35,Vintage Profile Share,age
+Demand\Passenger road\Age 36,Survival Rate,age
+Demand\Passenger road\Age 36,Vintage Profile Share,age
+Demand\Passenger road\Age 37,Survival Rate,age
+Demand\Passenger road\Age 37,Vintage Profile Share,age
+Demand\Passenger road\Age 4,Survival Rate,age
+Demand\Passenger road\Age 4,Vintage Profile Share,age
+Demand\Passenger road\Age 5,Survival Rate,age
+Demand\Passenger road\Age 5,Vintage Profile Share,age
+Demand\Passenger road\Age 6,Survival Rate,age
+Demand\Passenger road\Age 6,Vintage Profile Share,age
+Demand\Passenger road\Age 7,Survival Rate,age
+Demand\Passenger road\Age 7,Vintage Profile Share,age
+Demand\Passenger road\Age 8,Survival Rate,age
+Demand\Passenger road\Age 8,Vintage Profile Share,age
+Demand\Passenger road\Age 9,Survival Rate,age
+Demand\Passenger road\Age 9,Vintage Profile Share,age
+Demand\Passenger road\Buses,Sales Share,vehicle_type
+Demand\Passenger road\Buses,Stock Share,vehicle_type
+Demand\Passenger road\Buses,Vehicle Equivalent Weight,vehicle_type
+Demand\Passenger road\Buses,Vehicle Equivalent Weight Lower Bound,vehicle_type
+Demand\Passenger road\Buses,Vehicle Equivalent Weight Upper Bound,vehicle_type
+Demand\Passenger road\Buses\BEV,Sales Share,drive
+Demand\Passenger road\Buses\BEV,Stock Share,drive
+Demand\Passenger road\Buses\FCEV,Sales Share,drive
+Demand\Passenger road\Buses\FCEV,Stock Share,drive
+Demand\Passenger road\Buses\ICE,Sales Share,drive
+Demand\Passenger road\Buses\ICE,Stock Share,drive
+Demand\Passenger road\Buses\PHEV,Sales Share,drive
+Demand\Passenger road\Buses\PHEV,Stock Share,drive
+Demand\Passenger road\LPVs,Sales Share,vehicle_type
+Demand\Passenger road\LPVs,Stock Share,vehicle_type
+Demand\Passenger road\LPVs,Vehicle Equivalent Weight,vehicle_type
+Demand\Passenger road\LPVs\BEV large,Sales Share,drive
+Demand\Passenger road\LPVs\BEV large,Stock Share,drive
+Demand\Passenger road\LPVs\BEV medium,Sales Share,drive
+Demand\Passenger road\LPVs\BEV medium,Stock Share,drive
+Demand\Passenger road\LPVs\BEV small,Sales Share,drive
+Demand\Passenger road\LPVs\BEV small,Stock Share,drive
+Demand\Passenger road\LPVs\EREV large,Sales Share,drive
+Demand\Passenger road\LPVs\EREV large,Stock Share,drive
+Demand\Passenger road\LPVs\EREV medium,Sales Share,drive
+Demand\Passenger road\LPVs\EREV medium,Stock Share,drive
+Demand\Passenger road\LPVs\EREV small,Sales Share,drive
+Demand\Passenger road\LPVs\EREV small,Stock Share,drive
+Demand\Passenger road\LPVs\HEV large,Sales Share,drive
+Demand\Passenger road\LPVs\HEV large,Stock Share,drive
+Demand\Passenger road\LPVs\HEV medium,Sales Share,drive
+Demand\Passenger road\LPVs\HEV medium,Stock Share,drive
+Demand\Passenger road\LPVs\HEV small,Sales Share,drive
+Demand\Passenger road\LPVs\HEV small,Stock Share,drive
+Demand\Passenger road\LPVs\ICE large,Sales Share,drive
+Demand\Passenger road\LPVs\ICE large,Stock Share,drive
+Demand\Passenger road\LPVs\ICE medium,Sales Share,drive
+Demand\Passenger road\LPVs\ICE medium,Stock Share,drive
+Demand\Passenger road\LPVs\ICE small,Sales Share,drive
+Demand\Passenger road\LPVs\ICE small,Stock Share,drive
+Demand\Passenger road\LPVs\PHEV large,PHEV Electric Driving Share,drive
+Demand\Passenger road\LPVs\PHEV large,Sales Share,drive
+Demand\Passenger road\LPVs\PHEV large,Stock Share,drive
+Demand\Passenger road\LPVs\PHEV medium,PHEV Electric Driving Share,drive
+Demand\Passenger road\LPVs\PHEV medium,Sales Share,drive
+Demand\Passenger road\LPVs\PHEV medium,Stock Share,drive
+Demand\Passenger road\LPVs\PHEV small,PHEV Electric Driving Share,drive
+Demand\Passenger road\LPVs\PHEV small,Sales Share,drive
+Demand\Passenger road\LPVs\PHEV small,Stock Share,drive
+Demand\Passenger road\Motorcycles,Sales Share,vehicle_type
+Demand\Passenger road\Motorcycles,Stock Share,vehicle_type
+Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight,vehicle_type
+Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight Lower Bound,vehicle_type
+Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight Upper Bound,vehicle_type
+Demand\Passenger road\Motorcycles\BEV,Sales Share,drive
+Demand\Passenger road\Motorcycles\BEV,Stock Share,drive
+Demand\Passenger road\Motorcycles\ICE,Sales Share,drive
+Demand\Passenger road\Motorcycles\ICE,Stock Share,drive

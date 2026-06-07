@@ -45,7 +45,8 @@ def write_frontend_static_bundle(
     static_root: Path,
     version: str,
     scenarios: list[str],
-) -> dict[str, int]:
+    allowed_variables: frozenset[str] | None = None,
+) -> dict[str, int | dict]:
     """Write frontend static CSV defaults + index.json for client-side Road Module 1.
 
     Each economy is written as a long-format CSV with columns:
@@ -62,6 +63,7 @@ def write_frontend_static_bundle(
 
     economies = list_default_economies(version=version, output_root=output_root)
     defaults_files_written = 0
+    economy_row_pairs: dict[str, set[tuple[str, str]]] = {}
 
     for economy_item in economies:
         economy_code = economy_item["economy"]
@@ -76,6 +78,15 @@ def write_frontend_static_bundle(
             defaults_df["Scenario"] = "Current Accounts"
 
         long_defaults_df = _wide_defaults_to_long(defaults_df, economy=economy_code)
+
+        if allowed_variables is not None:
+            long_defaults_df = long_defaults_df[
+                long_defaults_df["Variable"].isin(allowed_variables)
+            ].copy()
+
+        economy_row_pairs[economy_code] = set(
+            zip(long_defaults_df["Branch Path"], long_defaults_df["Variable"])
+        )
 
         csv_path = version_root / f"{economy_safe}.csv"
         long_defaults_df[MODULE1_LONG_COLUMNS].to_csv(csv_path, index=False)
@@ -103,6 +114,7 @@ def write_frontend_static_bundle(
     return {
         "economies_written": len(economies),
         "defaults_files_written": defaults_files_written,
+        "economy_row_pairs": economy_row_pairs,
     }
 
 

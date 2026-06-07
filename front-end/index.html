@@ -421,11 +421,20 @@
                     </div>
                     <p class="text-xs text-slate-500">Blank fields use the grey provided base-year value. Later-year changes are handled in LEAP adjustment variables, and missing optional values are ignored.</p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none" title="When off, one mileage value applies to every drive under each vehicle type. When on, set mileage per drive.">
+                        <input type="checkbox" id="road-detailed-mileage-toggle" class="accent-blue-500">
+                        Per-drive mileage
+                    </label>
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none" title="When off, one fuel economy applies to all fuels under each drive (PHEVs/EREVs keep electricity separate). When on, set fuel economy per fuel.">
+                        <input type="checkbox" id="road-detailed-fuel-economy-toggle" class="accent-blue-500">
+                        Per-fuel efficiency
+                    </label>
                     <div class="road-view-toggle">
                         <button id="road-list-view" class="is-active" type="button">List</button>
                         <button id="road-tree-view" type="button">Tree</button>
                     </div>
+                    <div id="road-row-stats" class="text-xs text-slate-400"></div>
                     <div id="road-validation-summary" class="text-xs font-bold text-slate-500"></div>
                 </div>
             </div>
@@ -500,6 +509,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api.js"></script> 
-<script src="app.js"></script>
+<script src="app.js?v=20260606b"></script>
 </body>
 </html>

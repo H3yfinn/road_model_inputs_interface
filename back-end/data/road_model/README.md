@@ -33,7 +33,8 @@ processed_source + manually_filled_rows
 | `road_model_structure_contract.json` | Lists active datasets, required file patterns, and required columns. |
 | `road_module1_default_parameters.json` | Structure/control-plane metadata only; not a numeric source of truth. |
 | `road_module1_source_priorities.csv` | Decides which row source wins when the same final row exists in multiple pre-overlay sources. |
-| `UPDATE_METHOD.md` | Audit log for numeric source updates and generated-source methods. |
+| `road_module1_required_rows.csv` | **Required rows manifest.** Lists every `(Branch Path, Variable)` pair that must appear in every economy's frontend output CSV. Covers fixed structure (transport, vehicle-type, age, drive levels). Mileage and Fuel Economy are validated separately by rule. Enforced as a hard error by `build_road_model_static_defaults.py`. Edit directly when the tree or measure scope changes; never regenerate from output. |
+| `UPDATE_METHOD.md` | Audit log for numeric source updates and generated-source methods. See the "Required rows manifest" section for how the manifest works and when to update it. |
 
 ## Source Priority
 

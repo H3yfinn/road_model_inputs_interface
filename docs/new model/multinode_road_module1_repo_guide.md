@@ -209,6 +209,57 @@ If a backend is added later, it can serve the same long CSV rows directly. The
 generated static CSV bundle can remain as a cache and audit artifact for GitHub
 Pages deployment, validation, and pre-publication review.
 
+### Data loading and processing pattern
+
+Use this as the formal pattern for this repo:
+
+```text
+source package
+  -> source loader/normalizer
+  -> explicit source overlays
+  -> generated default package
+  -> frontend static bundle
+  -> browser working copy
+  -> researcher overlay
+  -> exported/model-run long CSV
+```
+
+The important distinction is between processing and loading. Processing happens
+offline in Python before deployment or review. Browser loading is intentionally
+simple: fetch the generated long CSV, parse it, and convert it to the temporary
+UI-wide shape used for editing.
+
+| Stage | Owner | Contract |
+| --- | --- | --- |
+| Source package | `back-end/data/road_model/` | Documented CSV/XLSX inputs. Missing required files should fail generation. |
+| Source loader/normalizer | `back-end/core/road_module1_defaults.py` | Reads source rows, normalizes labels, applies source priority, and builds the internal wide schema. |
+| Source overlays | `overlay_*` functions | Adds or replaces specific measures from supplemental files with explicit provenance. |
+| Generated default package | `back-end/outputs/road_module1_defaults/<version>/<economy>/` | Per-economy generated output. This is not hand-authored source data. |
+| Frontend static bundle | `front-end/road-module1-static/<version>/<economy>.csv` | Canonical long CSV filtered to frontend-visible variables. |
+| Browser working copy | `front-end/app.js` | Parsed long rows converted to UI-wide rows for display and editing only. |
+| Researcher overlay | `front-end/app.js` state maps and upload preview | Edits existing row keys, validates values, and marks researcher-modified rows. |
+| Model handoff | `convertRoadWideUiRowsToLongRows()` and `run_model_router.py` | Converts the UI working copy back to the canonical long CSV and sends it to `leap_road_model`. |
+
+Rules:
+
+- The core canonical long CSV is the boundary format. It is used for the static
+  bundle, download/upload, and model handoff.
+- Browser/model-run exports may extend the core long CSV with provenance columns
+  such as `Input Status`. Downstream readers should tolerate those optional
+  columns.
+- The internal wide schema is a Python processing convenience, not the public
+  contract.
+- The UI-wide rows are a browser view model, not an output package.
+- The browser must not decide default values, source priority, branch
+  construction, or supplemental-source merging.
+- Uploads fill existing template rows. They must not introduce new row keys.
+- Static CSVs are generated artifacts. Change source files and regenerate
+  rather than editing `front-end/road-module1-static/` by hand.
+- If the handoff contract changes, decide whether the field belongs in the core
+  schema or is an optional provenance extension. Then update Python
+  `MODULE1_LONG_COLUMNS`, JavaScript `ROAD_MODULE1_LONG_COLUMNS`, upload
+  validation, and the model adapter as needed.
+
 ## 5. Canonical CSV contract
 
 ### Why long CSV
@@ -475,6 +526,27 @@ Module 1 validation should include:
 - shares are between 0 and 1 where applicable;
 - obvious share groups sum to 1 where the grouping is unambiguous; and
 - comments or source notes are present for researcher overrides where possible.
+
+### Required rows manifest
+
+`back-end/data/road_model/road_module1_required_rows.csv` is the authoritative
+list of `(Branch Path, Variable)` pairs that must be present in every economy's
+generated frontend output CSV. It defines the **fixed structure** of the model:
+what branches exist at the transport, vehicle-type, age, and drive levels, and
+what measures are required at each level.
+
+Mileage and Fuel Economy are validated separately by a rule — every depth-5
+(fuel-level) branch present in the output must have both — because the fuel mix
+varies by economy.
+
+`build_road_model_static_defaults.py` enforces both checks as a hard error at
+the end of every build. If a required `(Branch Path, Variable)` pair is absent
+the build exits with a clear error message pointing to the missing rows.
+
+**When to update the manifest:** edit `road_module1_required_rows.csv` directly
+whenever the tree changes — new vehicle type, new drive family, new supplemental
+variable, change to the age range. Do not regenerate it from a pipeline output;
+the manifest is the spec the pipeline is validated against.
 
 Module 6 remains responsible for final ESTO energy reconciliation checks,
 Device Share validation, PHEV utilisation diagnostics, and scalar-bound

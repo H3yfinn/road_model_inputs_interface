@@ -47,8 +47,28 @@ files in `back-end/data/road_model/`. The script calls
 
 1. Reads the versioned per-economy output packages from `back-end/outputs/road_module1_defaults/`.
 2. Converts each economy's wide output to long format.
-3. Writes one `{economy}.csv` per economy into `front-end/road-module1-static/{version}/`.
-4. Rewrites `index.json` to list all available versions and economies.
+3. Filters to only variables listed in `FRONTEND_ALLOWED_VARIABLES` (defined in `build_road_model_static_defaults.py`).
+4. Writes one `{economy}.csv` per economy into `front-end/road-module1-static/{version}/`.
+5. Rewrites `index.json` to list all available versions and economies.
+6. Validates every economy's output against the **required rows manifest** (see below) and exits with an error if anything is missing.
+
+## Structural validation
+
+After writing the static bundle, `build_road_model_static_defaults.py` runs two
+checks against `back-end/data/road_model/road_module1_required_rows.csv`:
+
+1. **Fixed structure check** — every `(Branch Path, Variable)` pair listed in
+   the manifest must be present in every economy's output CSV.  This covers
+   transport-level, vehicle-type-level, age-level, and drive-level rows.
+
+2. **Fuel-level rule** — every depth-5 branch (fuel-level, e.g.
+   `Demand\Passenger road\LPVs\ICE large\Motor gasoline`) must have both
+   `Mileage` and `Fuel Economy`.  These rows are not in the manifest because the
+   fuel mix is economy-specific.
+
+Both checks are hard errors — the build fails loudly if anything is missing.
+The manifest is the spec; never regenerate it from output.  Edit it directly
+when the branch tree or measure scope changes.
 
 ## Optional backend mode
 

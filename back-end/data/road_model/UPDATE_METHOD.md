@@ -1,5 +1,50 @@
 # Road model numeric data update method log
 
+---
+
+## Required rows manifest and structural validation (2026-06-05)
+
+### What this is
+
+`road_module1_required_rows.csv` (in this directory) is the authoritative
+specification of what `(Branch Path, Variable)` pairs must be present in every
+economy's frontend output CSV.  It covers the **fixed structure** of the model:
+transport-level rows (reconciliation, passenger saturation), vehicle-type-level
+rows (Stock Share, Sales Share, Vehicle Equivalent Weight), age-level rows
+(Survival Rate, Vintage Profile Share), and drive-level rows (Sales Share,
+Stock Share, PHEV Electric Driving Share).
+
+Mileage and Fuel Economy are **not** in the manifest because their branches are
+economy-specific (fuel mix varies by economy).  They are instead validated by a
+rule: every depth-5 branch present in an economy's output must have both Mileage
+and Fuel Economy.
+
+### How it is enforced
+
+`build_road_model_static_defaults.py` runs `_validate_output_completeness()`
+after writing every economy's static CSV.  This function:
+
+1. Loads `road_module1_required_rows.csv` and checks every listed
+   `(Branch Path, Variable)` pair is present in the output.
+2. Checks that every fuel-level branch (depth-5 branch path) has both
+   `Mileage` and `Fuel Economy`.
+
+If either check fails the build **errors and exits**.  No silent gaps.
+
+### When to update the manifest
+
+Edit `road_module1_required_rows.csv` directly whenever:
+
+- A new vehicle type, drive, or supplemental variable is added to the model.
+- A branch is removed or renamed.
+- A new age range is introduced (change the age rows in the manifest).
+
+Do not regenerate the manifest from the pipeline output — the manifest is the
+spec that the pipeline is checked against, not a record of what happened to be
+generated.
+
+---
+
 Use this file to record how numeric source files in `back-end/data/road_model/`
 are produced or updated.
 

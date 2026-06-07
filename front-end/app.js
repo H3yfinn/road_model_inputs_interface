@@ -23,6 +23,8 @@ const State = {
         rows: [],
         overrides: new Map(),
         sharedMileageOverrides: new Map(),
+        sharedFuelEconomyOverrides: new Map(),
+        sharedUtilisationOverrides: new Map(),
         activeFilter: '',
         structuredFilters: {
             transport: '',
@@ -34,6 +36,7 @@ const State = {
         sortDirection: 'asc',
         viewMode: 'list',
         detailedMileage: false,
+        detailedFuelEconomy: false,
         lastDraftSavedAt: null
     },
     // NEW: Open and extensible dictionary configuration for variable socio-economic drivers
@@ -60,7 +63,7 @@ const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
-const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Units', 'Source', 'Comment'];
+const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Units', 'Source', 'Comment', 'Input Status'];
 const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
     passenger: [
@@ -184,6 +187,9 @@ const DOM = {
     roadRunLogClose: document.getElementById('road-run-log-close'),
     roadRunLogDashboard: document.getElementById('road-run-log-dashboard'),
     roadRunLogWorkbook: document.getElementById('road-run-log-workbook'),
+    roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
+    roadDetailedFuelEconomyToggle: document.getElementById('road-detailed-fuel-economy-toggle'),
+    roadRowStats: document.getElementById('road-row-stats'),
     roadValidationSummary: document.getElementById('road-validation-summary'),
     roadInputContainer: document.getElementById('road-input-container'),
     roadUploadSummaryModal: document.getElementById('road-upload-summary-modal'),
@@ -476,11 +482,41 @@ function setActiveMode(mode) {
         : 'px-3 py-1.5 rounded text-xs font-bold text-blue-100 hover:bg-blue-800';
 }
 
+function setupInfoTipPopup() {
+    const popup = document.createElement('div');
+    popup.id = 'road-info-tip-popup';
+    document.body.appendChild(popup);
+
+    document.addEventListener('mouseover', (e) => {
+        const tip = e.target.closest('.road-info-tip');
+        if (!tip) return;
+        const text = tip.dataset.tip;
+        if (!text) return;
+        popup.textContent = text;
+        popup.style.display = 'block';
+        const rect = tip.getBoundingClientRect();
+        const pr = popup.getBoundingClientRect();
+        const gap = 6;
+        let top = rect.top - pr.height - gap;
+        let left = rect.left + rect.width / 2 - pr.width / 2;
+        if (top < gap) top = rect.bottom + gap;
+        if (left < gap) left = gap;
+        if (left + pr.width > window.innerWidth - gap) left = window.innerWidth - pr.width - gap;
+        popup.style.top = `${top}px`;
+        popup.style.left = `${left}px`;
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.road-info-tip')) popup.style.display = 'none';
+    });
+}
+
 function setupRoadModule1() {
     if (!DOM.roadModule1Main) return;
 
     seedRoadModule1FallbackSelectors();
     setupRoadHelpTooltips();
+    setupInfoTipPopup();
 
     if (DOM.roadLoadDefaults) {
         DOM.roadLoadDefaults.addEventListener('click', loadRoadModule1Defaults);
@@ -863,6 +899,13 @@ function setupRoadModule1ViewControls() {
             scheduleRoadModule1DraftSave();
         });
     }
+    if (DOM.roadDetailedFuelEconomyToggle) {
+        DOM.roadDetailedFuelEconomyToggle.addEventListener('change', (event) => {
+            State.roadModule1.detailedFuelEconomy = event.target.checked;
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
 }
 
 async function populateRoadModule1Selectors() {
@@ -956,7 +999,7 @@ function buildRoadModule1OverrideMapKey(override) {
     return `${rowKey}||Year=${override.year}`;
 }
 
-function buildRoadSharedMileageMapKey(sharedKey, year) {
+function buildRoadSharedOverrideMapKey(sharedKey, year) {
     return `${sharedKey}||Year=${year}`;
 }
 
@@ -973,7 +1016,10 @@ function serializeRoadModule1Draft() {
         sortDirection: State.roadModule1.sortDirection,
         viewMode: State.roadModule1.viewMode,
         detailedMileage: State.roadModule1.detailedMileage,
-        sharedMileageOverrides: Array.from(State.roadModule1.sharedMileageOverrides.values())
+        detailedFuelEconomy: State.roadModule1.detailedFuelEconomy,
+        sharedMileageOverrides: Array.from(State.roadModule1.sharedMileageOverrides.values()),
+        sharedFuelEconomyOverrides: Array.from(State.roadModule1.sharedFuelEconomyOverrides.values()),
+        sharedUtilisationOverrides: Array.from(State.roadModule1.sharedUtilisationOverrides.values())
     };
 }
 
@@ -1036,6 +1082,8 @@ function applyRoadModule1Draft(draft) {
     if (!draft) return;
     State.roadModule1.overrides = new Map();
     State.roadModule1.sharedMileageOverrides = new Map();
+    State.roadModule1.sharedFuelEconomyOverrides = new Map();
+    State.roadModule1.sharedUtilisationOverrides = new Map();
     (draft.overrides || []).forEach(override => {
         if (!override || !override.key || override.year === undefined) return;
         if (!isRoadEditableYear(override.year)) return;
@@ -1044,7 +1092,17 @@ function applyRoadModule1Draft(draft) {
     (draft.sharedMileageOverrides || []).forEach(override => {
         if (!override || !override.sharedKey || override.year === undefined) return;
         if (!isRoadEditableYear(override.year)) return;
-        State.roadModule1.sharedMileageOverrides.set(buildRoadSharedMileageMapKey(override.sharedKey, override.year), override);
+        State.roadModule1.sharedMileageOverrides.set(buildRoadSharedOverrideMapKey(override.sharedKey, override.year), override);
+    });
+    (draft.sharedFuelEconomyOverrides || []).forEach(override => {
+        if (!override || !override.sharedKey || override.year === undefined) return;
+        if (!isRoadEditableYear(override.year)) return;
+        State.roadModule1.sharedFuelEconomyOverrides.set(buildRoadSharedOverrideMapKey(override.sharedKey, override.year), override);
+    });
+    (draft.sharedUtilisationOverrides || []).forEach(override => {
+        if (!override || !override.sharedKey || override.year === undefined) return;
+        if (!isRoadEditableYear(override.year)) return;
+        State.roadModule1.sharedUtilisationOverrides.set(buildRoadSharedOverrideMapKey(override.sharedKey, override.year), override);
     });
 
     State.roadModule1.activeFilter = draft.activeFilter || '';
@@ -1060,6 +1118,7 @@ function applyRoadModule1Draft(draft) {
         State.roadModule1.viewMode = 'tree';
     }
     State.roadModule1.detailedMileage = Boolean(draft.detailedMileage);
+    State.roadModule1.detailedFuelEconomy = Boolean(draft.detailedFuelEconomy);
     State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
     applyRoadModule1FilterControlValues();
 }
@@ -1082,6 +1141,7 @@ function applyRoadModule1FilterControlValues() {
     if (DOM.roadSortBy) DOM.roadSortBy.value = State.roadModule1.sortBy;
     if (DOM.roadSortDirection) DOM.roadSortDirection.value = State.roadModule1.sortDirection;
     if (DOM.roadDetailedMileageToggle) DOM.roadDetailedMileageToggle.checked = State.roadModule1.detailedMileage;
+    if (DOM.roadDetailedFuelEconomyToggle) DOM.roadDetailedFuelEconomyToggle.checked = State.roadModule1.detailedFuelEconomy;
     updateRoadModule1ViewToggle();
 }
 
@@ -1091,11 +1151,42 @@ function updateRoadModule1ViewToggle() {
 }
 
 function getRoadModule1OverrideCount() {
-    return State.roadModule1.overrides.size + State.roadModule1.sharedMileageOverrides.size;
+    return State.roadModule1.overrides.size + State.roadModule1.sharedMileageOverrides.size + State.roadModule1.sharedFuelEconomyOverrides.size + State.roadModule1.sharedUtilisationOverrides.size;
+}
+
+function getRoadModule1RowStats() {
+    const rows = State.roadModule1.rows || [];
+    if (rows.length === 0) return null;
+    const groups = groupRoadRowsForEditors(rows.filter(row => !isRoadVehicleEquivalentBoundsRow(row)));
+    const total = groups.size;
+    const yearSuffix = '||Year=';
+    const customisedRowKeys = new Set();
+    for (const key of State.roadModule1.overrides.keys()) {
+        const cut = key.lastIndexOf(yearSuffix);
+        customisedRowKeys.add(cut >= 0 ? key.slice(0, cut) : key);
+    }
+    for (const key of State.roadModule1.sharedMileageOverrides.keys()) {
+        const cut = key.lastIndexOf(yearSuffix);
+        customisedRowKeys.add(cut >= 0 ? key.slice(0, cut) : key);
+    }
+    for (const key of State.roadModule1.sharedFuelEconomyOverrides.keys()) {
+        const cut = key.lastIndexOf(yearSuffix);
+        customisedRowKeys.add(cut >= 0 ? key.slice(0, cut) : key);
+    }
+    for (const key of State.roadModule1.sharedUtilisationOverrides.keys()) {
+        const cut = key.lastIndexOf(yearSuffix);
+        customisedRowKeys.add(cut >= 0 ? key.slice(0, cut) : key);
+    }
+    return { customised: customisedRowKeys.size, total };
 }
 
 function updateRoadModule1OverrideCount() {
-    return getRoadModule1OverrideCount();
+    if (!DOM.roadRowStats) return;
+    const stats = getRoadModule1RowStats();
+    if (!stats) { DOM.roadRowStats.textContent = ''; return; }
+    DOM.roadRowStats.textContent = stats.customised === 0
+        ? `${stats.total} values`
+        : `${stats.customised} of ${stats.total} values customised`;
 }
 
 async function loadRoadModule1Defaults() {
@@ -1119,9 +1210,11 @@ async function loadRoadModule1Defaults() {
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
+        State.roadModule1.sharedFuelEconomyOverrides = new Map();
+        State.roadModule1.sharedUtilisationOverrides = new Map();
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
         const draft = readRoadModule1Draft(version, economy);
-        if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
+        if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || (draft.sharedFuelEconomyOverrides || []).length > 0 || (draft.sharedUtilisationOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
             const savedAtLabel = draft.savedAt ? new Date(draft.savedAt).toLocaleString('en-US') : 'an earlier time';
             const accepted = await showCustomConfirm(
                 'Restore Saved Draft',
@@ -1204,6 +1297,8 @@ async function loadRoadModule1BuiltinProvidedValues() {
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
+        State.roadModule1.sharedFuelEconomyOverrides = new Map();
+        State.roadModule1.sharedUtilisationOverrides = new Map();
         populateRoadModule1StructuredFilters(State.roadModule1.rows);
         clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
@@ -1341,6 +1436,57 @@ function getRoadSharedMileageKey(row) {
         row.Region || '',
         row.Units || ''
     ].join('||');
+}
+
+function isRoadFuelEconomyRow(row) {
+    return String(row.Variable || '').trim().toLowerCase() === 'fuel economy';
+}
+
+function isRoadPhevOrErevDrive(branchPath) {
+    const parts = String(branchPath || '').split('\\').filter(Boolean);
+    const drive = parts[3] || '';
+    return /phev|erev/i.test(drive);
+}
+
+function isRoadElectricityFuel(row) {
+    const parts = getRoadPathParts(row);
+    const fuel = parts[4] || '';
+    return /electricity|electric/i.test(fuel);
+}
+
+function getRoadDriveBranchPath(row) {
+    const parts = getRoadPathParts(row);
+    return parts.slice(0, 4).join('\\') || row['Branch Path'] || '';
+}
+
+function getRoadSharedFuelEconomySubGroup(row) {
+    const drivePath = getRoadDriveBranchPath(row);
+    if (!isRoadPhevOrErevDrive(drivePath)) return 'all';
+    return isRoadElectricityFuel(row) ? 'electric' : 'other';
+}
+
+function getRoadSharedFuelEconomyKey(row) {
+    return [
+        getRoadDriveBranchPath(row),
+        getRoadSharedFuelEconomySubGroup(row),
+        row.Variable || '',
+        row.Scenario || '',
+        row.Region || '',
+        row.Units || ''
+    ].join('||');
+}
+
+function getRoadSharedFuelEconomyOverride(row, year) {
+    if (!isRoadFuelEconomyRow(row)) return null;
+    return State.roadModule1.sharedFuelEconomyOverrides.get(
+        buildRoadSharedOverrideMapKey(getRoadSharedFuelEconomyKey(row), year)
+    ) || null;
+}
+
+function getRoadDriveLevelLabel(drivePath) {
+    const parts = String(drivePath || '').split('\\').filter(Boolean);
+    const drive = parts[3] || parts[parts.length - 1] || 'drive';
+    return drive;
 }
 
 function getRoadTopLevelVehicleBranchPath(row) {
@@ -1539,8 +1685,33 @@ function getRoadTransportSharedBranchPath(row) {
 function getRoadSharedMileageOverride(row, year) {
     if (!isRoadMileageRow(row)) return null;
     return State.roadModule1.sharedMileageOverrides.get(
-        buildRoadSharedMileageMapKey(getRoadSharedMileageKey(row), year)
+        buildRoadSharedOverrideMapKey(getRoadSharedMileageKey(row), year)
     ) || null;
+}
+
+function getRoadSharedUtilisationKey(row) {
+    return [
+        getRoadTransportSharedBranchPath(row),
+        row.Variable || '',
+        row.Scenario || '',
+        row.Region || '',
+        row.Units || ''
+    ].join('||');
+}
+
+function getRoadSharedUtilisationOverride(row, year) {
+    if (!isRoadTransportLevelSharedRow(row)) return null;
+    return State.roadModule1.sharedUtilisationOverrides.get(
+        buildRoadSharedOverrideMapKey(getRoadSharedUtilisationKey(row), year)
+    ) || null;
+}
+
+function getRoadSharedUtilisationComment(sharedKey, years) {
+    for (const year of years) {
+        const override = State.roadModule1.sharedUtilisationOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
+        if (override && override.comment) return override.comment;
+    }
+    return '';
 }
 
 function getRoadInheritedMileageValue(row, year) {
@@ -1566,7 +1737,7 @@ function getRoadPathParts(row) {
 function looksLikeRoadDrive(value) {
     const normalized = normalizeRoadFilterValue(value).toLowerCase();
     if (!normalized) return false;
-    return ['bev', 'fcev', 'hev', 'ice', 'phev'].some(token => normalized.includes(token));
+    return ['bev', 'erev', 'fcev', 'hev', 'ice', 'phev'].some(token => normalized.includes(token));
 }
 
 function getRoadRowFilterMeta(row) {
@@ -1747,7 +1918,7 @@ function getRoadCommentForKeys(rowKeys, years) {
 
 function getRoadSharedMileageComment(sharedKey, years) {
     for (const year of years) {
-        const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedMileageMapKey(sharedKey, year));
+        const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
         if (override && override.comment) return override.comment;
     }
     return '';
@@ -1851,12 +2022,13 @@ function groupRoadRowsForEditors(filteredRows) {
         .filter(isRoadTransportLevelSharedRow)
         .forEach(row => {
             const branchPath = getRoadTransportSharedBranchPath(row);
-            const groupKey = `transport-shared|${branchPath}|${row.Variable}|${row.Scenario || ''}|${row.Region || ''}`;
+            const sharedKey = getRoadSharedUtilisationKey(row);
+            const groupKey = `shared-utilisation|${sharedKey}`;
             if (!groupedRows.has(groupKey)) {
                 groupedRows.set(groupKey, {
-                    groupType: 'transport-shared',
+                    groupType: 'shared-utilisation',
                     branchPath: branchPath,
-                    sharedKey: '',
+                    sharedKey: sharedKey,
                     rows: []
                 });
             }
@@ -1915,12 +2087,19 @@ function groupRoadRowsForEditors(filteredRows) {
         .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
             const useSharedMileage = isRoadMileageRow(row) && !State.roadModule1.detailedMileage;
+            const useSharedFuelEconomy = isRoadFuelEconomyRow(row) && !State.roadModule1.detailedFuelEconomy;
             const branchPath = useSharedMileage
                 ? getRoadMileageSharedBranchPath(row)
-                : (isRoadAgeSeriesRow(row) ? getRoadParentBranchPath(row['Branch Path']) : row['Branch Path']);
-            const groupType = useSharedMileage ? 'shared-mileage' : (isRoadAgeSeriesRow(row) ? 'age-series' : 'rows');
-            const sharedKey = useSharedMileage ? getRoadSharedMileageKey(row) : '';
-            const groupKey = useSharedMileage
+                : useSharedFuelEconomy
+                    ? getRoadDriveBranchPath(row)
+                    : (isRoadAgeSeriesRow(row) ? getRoadParentBranchPath(row['Branch Path']) : row['Branch Path']);
+            const groupType = useSharedMileage ? 'shared-mileage'
+                : useSharedFuelEconomy ? 'shared-fuel-economy'
+                : (isRoadAgeSeriesRow(row) ? 'age-series' : 'rows');
+            const sharedKey = useSharedMileage ? getRoadSharedMileageKey(row)
+                : useSharedFuelEconomy ? getRoadSharedFuelEconomyKey(row)
+                : '';
+            const groupKey = (useSharedMileage || useSharedFuelEconomy)
                 ? `${groupType}|${sharedKey}`
                 : `${groupType}|${branchPath}|${row.Variable}`;
             if (!groupedRows.has(groupKey)) {
@@ -2406,6 +2585,34 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         return buildRoadModule1TransportParamsEditorHtml(group, depth);
     }
 
+    if (group.groupType === 'shared-utilisation') {
+        const yearColumns = getRoadYearColumns(first);
+        const sharedKey = group.sharedKey || getRoadSharedUtilisationKey(first);
+        const sharedComment = getRoadSharedUtilisationComment(sharedKey, yearColumns);
+        const childCount = group.rows.length;
+        const yearInputs = yearColumns.map(year => {
+            const override = State.roadModule1.sharedUtilisationOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
+            const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
+            const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
+            return `
+                <div class="road-year-input" data-year="${year}">
+                    ${buildRoadCellLabelHtml(year, `${first.Variable || 'PHEV Electric Driving Share'} for ${year}. One shared value applies to all ${childCount} PHEV size variants.`)}
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="road-input-row road-shared-utilisation-row no-row-label" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-shared-utilisation-key="${encodeURIComponent(sharedKey)}">
+                <div class="road-year-grid">${yearInputs}</div>
+                <div class="road-row-actions">
+                    <button type="button" class="road-reset-button" title="Reset to the original provided value" aria-label="Reset PHEV utilisation rate">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
+                </div>
+            </div>
+        `;
+    }
+
     if (group.groupType === 'shared-mileage') {
         const yearColumns = getRoadYearColumns(first);
         const sharedKey = group.sharedKey || getRoadSharedMileageKey(first);
@@ -2414,7 +2621,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             .filter(row => isRoadMileageRow(row) && getRoadSharedMileageKey(row) === sharedKey)
             .length;
         const yearInputs = yearColumns.map(year => {
-            const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedMileageMapKey(sharedKey, year));
+            const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
             const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
@@ -2432,6 +2639,59 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <button type="button" class="road-reset-button" title="Reset shared mileage to the original provided value" aria-label="Reset shared mileage">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
                 </div>
+            </div>
+        `;
+    }
+
+    if (group.groupType === 'shared-fuel-economy') {
+        const drivePath = group.branchPath;
+        const isPhevOrErev = isRoadPhevOrErevDrive(drivePath);
+        const driveLabel = getRoadDriveLevelLabel(drivePath);
+        const yearColumns = getRoadYearColumns(first);
+        const groups = isPhevOrErev
+            ? [
+                { subGroup: 'electric', label: 'Electricity efficiency', rows: groupRows.filter(r => isRoadElectricityFuel(r)) },
+                { subGroup: 'other',    label: `Other fuels efficiency`, rows: groupRows.filter(r => !isRoadElectricityFuel(r)) }
+              ]
+            : [{ subGroup: 'all', label: '', rows: groupRows }];
+
+        const subInputs = groups.map(sg => {
+            if (!sg.rows.length) return '';
+            const refRow = sg.rows[0];
+            const sharedKey = getRoadSharedFuelEconomyKey(refRow);
+            const childCount = sg.rows.length;
+            const childNote = childCount > 1 ? ` · ${childCount} fuels` : '';
+            const inputs = yearColumns.map(year => {
+                const override = State.roadModule1.sharedFuelEconomyOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
+                const providedValue = formatRoadDefaultValue(getRoadDefaultValue(refRow, year));
+                const boundsAttrs = getRoadModule1InputBoundsAttrs(refRow.Variable);
+                return `
+                    <div class="road-year-input" data-year="${year}">
+                        ${buildRoadCellLabelHtml(year, `Fuel economy for ${year}. One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`)}
+                        <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    </div>
+                `;
+            }).join('');
+            const comment = (() => {
+                for (const year of yearColumns) {
+                    const ov = State.roadModule1.sharedFuelEconomyOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
+                    if (ov?.comment) return ov.comment;
+                }
+                return '';
+            })();
+            return `<div class="road-shared-fe-subgroup" data-shared-fe-key="${encodeURIComponent(sharedKey)}">
+                ${isPhevOrErev ? `<div class="road-shared-fe-sublabel">${escapeHtml(sg.label)}</div>` : ''}
+                <div class="road-year-grid">${inputs}</div>
+                <div class="road-row-actions">
+                    <button type="button" class="road-reset-button" title="Reset to provided value" aria-label="Reset">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+            <div class="road-input-row road-shared-fe-row no-row-label" style="--road-indent:${Math.max(0, getRoadBranchDepth(drivePath) - 2 + depth * 0.25) * 0.75}rem">
+                ${subInputs}
             </div>
         `;
     }
@@ -2564,11 +2824,13 @@ function renderRoadModule1TreeInputs(filteredRows) {
 function buildRoadModule1ListGroupHtml(group) {
     const groupRows = group.rows;
     const first = groupRows[0];
-    const isCompactGroup = group.groupType !== 'age-series' && groupRows.length === 1;
+    const isCompactGroup = group.groupType !== 'age-series' && (groupRows.length === 1 || group.groupType === 'shared-utilisation');
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
-        : `${groupRows.length} row${groupRows.length === 1 ? '' : 's'}`;
+        : (group.groupType === 'shared-mileage' || group.groupType === 'shared-fuel-economy' || group.groupType === 'shared-utilisation')
+            ? '1 value'
+            : `${groupRows.length} value${groupRows.length === 1 ? '' : 's'}`;
     const groupTitle = group.groupType === 'paired-fuel-share'
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
@@ -2669,8 +2931,18 @@ function handleRoadModule1InputChange(event) {
         return;
     }
 
+    if (rowEl.classList.contains('road-shared-utilisation-row')) {
+        handleRoadModule1SimpleSharedInputChange(rowEl, State.roadModule1.sharedUtilisationOverrides, 'sharedUtilisationKey');
+        return;
+    }
+
     if (rowEl.classList.contains('road-shared-mileage-row')) {
-        handleRoadModule1SharedMileageInputChange(rowEl);
+        handleRoadModule1SimpleSharedInputChange(rowEl, State.roadModule1.sharedMileageOverrides, 'sharedMileageKey');
+        return;
+    }
+
+    if (rowEl.classList.contains('road-shared-fe-row')) {
+        handleRoadModule1SharedFuelEconomyInputChange(rowEl);
         return;
     }
 
@@ -2719,42 +2991,92 @@ function handleRoadModule1InputChange(event) {
     scheduleRoadModule1DraftSave();
 }
 
-function handleRoadModule1SharedMileageInputChange(rowEl) {
-    const sharedKey = decodeURIComponent(rowEl.dataset.sharedMileageKey || '');
+function handleRoadModule1SimpleSharedInputChange(rowEl, overrides, datasetKey) {
+    const sharedKey = decodeURIComponent(rowEl.dataset[datasetKey] || '');
     const commentInput = rowEl.querySelector('.road-comment-input');
     const comment = commentInput.value.trim();
     let rowOverrideCount = 0;
 
     rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
         const year = yearEl.dataset.year;
-        const key = buildRoadSharedMileageMapKey(sharedKey, year);
+        const key = buildRoadSharedOverrideMapKey(sharedKey, year);
         const valueInput = yearEl.querySelector('.road-value-input');
         const value = valueInput.value.trim();
 
         if (!value) {
-            State.roadModule1.sharedMileageOverrides.delete(key);
+            overrides.delete(key);
             return;
         }
 
-        State.roadModule1.sharedMileageOverrides.set(key, {
-            sharedKey: sharedKey,
-            year: year,
-            value: value || null,
-            comment: comment
-        });
+        overrides.set(key, { sharedKey, year, value: value || null, comment });
         rowOverrideCount += 1;
     });
 
     if (comment && rowOverrideCount === 0) {
         rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
-            const key = buildRoadSharedMileageMapKey(sharedKey, yearEl.dataset.year);
-            const existing = State.roadModule1.sharedMileageOverrides.get(key);
+            const existing = overrides.get(buildRoadSharedOverrideMapKey(sharedKey, yearEl.dataset.year));
             if (existing) existing.comment = comment;
         });
     }
 
     rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
     updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1SharedFuelEconomyInputChange(rowEl) {
+    let totalOverrides = 0;
+    rowEl.querySelectorAll('.road-shared-fe-subgroup').forEach(sgEl => {
+        const sharedKey = decodeURIComponent(sgEl.dataset.sharedFeKey || '');
+        const commentInput = sgEl.querySelector('.road-comment-input');
+        const comment = commentInput ? commentInput.value.trim() : '';
+        let sgOverrides = 0;
+
+        sgEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+            const year = yearEl.dataset.year;
+            const key = buildRoadSharedOverrideMapKey(sharedKey, year);
+            const valueInput = yearEl.querySelector('.road-value-input');
+            const value = valueInput.value.trim();
+
+            if (!value) {
+                State.roadModule1.sharedFuelEconomyOverrides.delete(key);
+                return;
+            }
+            State.roadModule1.sharedFuelEconomyOverrides.set(key, {
+                sharedKey: sharedKey,
+                year: year,
+                value: value || null,
+                comment: comment
+            });
+            sgOverrides += 1;
+        });
+
+        if (comment && sgOverrides === 0) {
+            sgEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+                const key = buildRoadSharedOverrideMapKey(sharedKey, yearEl.dataset.year);
+                const existing = State.roadModule1.sharedFuelEconomyOverrides.get(key);
+                if (existing) existing.comment = comment;
+            });
+        }
+        totalOverrides += sgOverrides;
+    });
+    rowEl.classList.toggle('is-edited', totalOverrides > 0);
+    updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function resetRoadSimpleSharedOverrideRow(rowEl, overrides, datasetKey) {
+    const sharedKey = decodeURIComponent(rowEl.dataset[datasetKey] || '');
+    rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
+        overrides.delete(buildRoadSharedOverrideMapKey(sharedKey, yearEl.dataset.year));
+        const input = yearEl.querySelector('.road-value-input');
+        if (input) input.value = '';
+    });
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    if (commentInput) commentInput.value = '';
+    rowEl.classList.remove('is-edited');
+    updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
     scheduleRoadModule1DraftSave();
 }
 
@@ -2777,15 +3099,29 @@ function handleRoadModule1ResetClick(event) {
         return;
     }
 
+    if (rowEl.classList.contains('road-shared-utilisation-row')) {
+        resetRoadSimpleSharedOverrideRow(rowEl, State.roadModule1.sharedUtilisationOverrides, 'sharedUtilisationKey');
+        return;
+    }
+
     if (rowEl.classList.contains('road-shared-mileage-row')) {
-        const sharedKey = decodeURIComponent(rowEl.dataset.sharedMileageKey || '');
-        rowEl.querySelectorAll('.road-year-input').forEach(yearEl => {
-            State.roadModule1.sharedMileageOverrides.delete(buildRoadSharedMileageMapKey(sharedKey, yearEl.dataset.year));
-            const input = yearEl.querySelector('.road-value-input');
-            if (input) input.value = '';
+        resetRoadSimpleSharedOverrideRow(rowEl, State.roadModule1.sharedMileageOverrides, 'sharedMileageKey');
+        return;
+    }
+
+    if (rowEl.classList.contains('road-shared-fe-row')) {
+        const sgEl = event.target.closest('.road-shared-fe-subgroup');
+        const subgroups = sgEl ? [sgEl] : rowEl.querySelectorAll('.road-shared-fe-subgroup');
+        subgroups.forEach(sg => {
+            const sharedKey = decodeURIComponent(sg.dataset.sharedFeKey || '');
+            sg.querySelectorAll('.road-year-input').forEach(yearEl => {
+                State.roadModule1.sharedFuelEconomyOverrides.delete(buildRoadSharedOverrideMapKey(sharedKey, yearEl.dataset.year));
+                const input = yearEl.querySelector('.road-value-input');
+                if (input) input.value = '';
+            });
+            const commentInput = sg.querySelector('.road-comment-input');
+            if (commentInput) commentInput.value = '';
         });
-        const commentInput = rowEl.querySelector('.road-comment-input');
-        if (commentInput) commentInput.value = '';
         rowEl.classList.remove('is-edited');
         updateRoadModule1OverrideCount();
         renderRoadModule1Inputs();
@@ -3737,6 +4073,7 @@ function previewRoadModule1UploadedRows(uploadRows) {
         const oldValue = targetRow[yearColumn];
         if (String(oldValue ?? '').trim() === String(numericValue)) return;
         targetRow[yearColumn] = numericValue;
+        targetRow._inputStatus = 'researcher';
         if (Object.prototype.hasOwnProperty.call(uploadRow, 'Comment')) targetRow.notes = uploadRow.Comment || targetRow.notes || '';
         if (Object.prototype.hasOwnProperty.call(uploadRow, 'Source')) targetRow.source_name = uploadRow.Source || targetRow.source_name || '';
         appliedCount += 1;
@@ -3757,6 +4094,7 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.scenario = 'Current Accounts';
     State.roadModule1.overrides = new Map();
     State.roadModule1.sharedMileageOverrides = new Map();
+    State.roadModule1.sharedUtilisationOverrides = new Map();
     populateRoadModule1StructuredFilters(State.roadModule1.rows);
     clearRoadModule1Draft(version, economy);
     DOM.roadSaveOutput.disabled = false;
@@ -3814,6 +4152,39 @@ function buildRoadModule1CompletedRowsForCheckpoint() {
                     const targetRow = rowsByKey.get(rowKey);
                     if (targetRow) {
                         targetRow[String(override.year)] = Number(override.value);
+                        targetRow._inputStatus = 'researcher';
+                        appendRoadCommentToRowNotes(targetRow, override.comment);
+                    }
+                });
+        });
+
+    Array.from(State.roadModule1.sharedFuelEconomyOverrides.values())
+        .filter(override => override.value !== null && override.value !== '' && isRoadEditableYear(override.year))
+        .forEach(override => {
+            State.roadModule1.rows
+                .filter(row => isRoadFuelEconomyRow(row) && getRoadSharedFuelEconomyKey(row) === override.sharedKey)
+                .forEach(row => {
+                    const rowKey = buildRoadModule1Key(row);
+                    const targetRow = rowsByKey.get(rowKey);
+                    if (targetRow) {
+                        targetRow[String(override.year)] = Number(override.value);
+                        targetRow._inputStatus = 'researcher';
+                        appendRoadCommentToRowNotes(targetRow, override.comment);
+                    }
+                });
+        });
+
+    Array.from(State.roadModule1.sharedUtilisationOverrides.values())
+        .filter(override => override.value !== null && override.value !== '' && isRoadEditableYear(override.year))
+        .forEach(override => {
+            State.roadModule1.rows
+                .filter(row => isRoadTransportLevelSharedRow(row) && getRoadSharedUtilisationKey(row) === override.sharedKey)
+                .forEach(row => {
+                    const rowKey = buildRoadModule1Key(row);
+                    const targetRow = rowsByKey.get(rowKey);
+                    if (targetRow) {
+                        targetRow[String(override.year)] = Number(override.value);
+                        targetRow._inputStatus = 'researcher';
                         appendRoadCommentToRowNotes(targetRow, override.comment);
                     }
                 });
@@ -3828,6 +4199,7 @@ function buildRoadModule1CompletedRowsForCheckpoint() {
             const targetRow = rowsByKey.get(rowKey);
             if (targetRow) {
                 targetRow[String(override.year)] = Number(override.value);
+                targetRow._inputStatus = 'researcher';
                 appendRoadCommentToRowNotes(targetRow, override.comment);
             }
         });
@@ -3884,7 +4256,8 @@ function convertRoadWideUiRowsToLongRows(rows, economyCode, includeBlankStockSha
                 Value: value,
                 Units: row.Units || '',
                 Source: row.source_name || row.Source || '',
-                Comment: row.notes || row.Comment || ''
+                Comment: row.notes || row.Comment || '',
+                'Input Status': row._inputStatus || 'default'
             });
         });
     });
@@ -3927,6 +4300,26 @@ function buildRoadModule1ExportOverrides() {
                     year: year,
                     value: sharedOverride.value,
                     comment: sharedOverride.comment || 'Inherited from shared mileage value.'
+                });
+            });
+        });
+
+    State.roadModule1.rows
+        .filter(isRoadTransportLevelSharedRow)
+        .forEach(row => {
+            const rowKey = buildRoadModule1Key(row);
+            const keyPayload = roadModule1KeyPayload(row);
+            getRoadYearColumns(row).forEach(year => {
+                const detailedOverrideKey = `${rowKey}||Year=${year}`;
+
+                const sharedOverride = getRoadSharedUtilisationOverride(row, year);
+                if (!sharedOverride || sharedOverride.value === null || sharedOverride.value === '') return;
+
+                overridesByKey.set(detailedOverrideKey, {
+                    key: keyPayload,
+                    year: year,
+                    value: sharedOverride.value,
+                    comment: sharedOverride.comment || 'Inherited from shared PHEV utilisation rate.'
                 });
             });
         });
