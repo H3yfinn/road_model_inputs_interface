@@ -153,8 +153,19 @@ async def _sse_generator(run_id: str):
                     f"/road-results/{economy_canonical}/lifecycle_profiles/{economy_canonical}_lifecycle_profiles.zip"
                 )
 
+        reimport_csv_url: str | None = None
+        if return_code == 0:
+            reimport_candidate = (
+                _ROAD_MODEL_REPO / "results" / economy_canonical
+                / "module6" / f"{economy_canonical}_module1_reimport_reconciled.csv"
+            )
+            if reimport_candidate.exists():
+                reimport_csv_url = (
+                    f"/road-results/{economy_canonical}/module6/{economy_canonical}_module1_reimport_reconciled.csv"
+                )
+
         yield (
-            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url, 'workbook_url': workbook_url, 'lifecycle_profiles_url': lifecycle_profiles_url})}\n\n"
+            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url, 'workbook_url': workbook_url, 'lifecycle_profiles_url': lifecycle_profiles_url, 'reimport_csv_url': reimport_csv_url})}\n\n"
         )
 
 

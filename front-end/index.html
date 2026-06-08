@@ -420,9 +420,15 @@
                         </div>
                     </div>
                     <p class="text-xs text-slate-500">Blank fields use the grey provided base-year value. Later-year changes are handled in LEAP adjustment variables, and missing optional values are ignored.</p>
-                    <a href="/road-model-docs/road_transport_model_simplified.md" target="_blank" rel="noopener" class="inline-block mt-2 text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
-                        Open simplified road model documentation
-                    </a>
+                    <div class="flex items-center gap-3 mt-2">
+                        <a href="/road-model-docs/road_transport_model_simplified.md" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
+                            Open simplified road model documentation
+                        </a>
+                        <span class="text-slate-300 select-none">|</span>
+                        <button id="road-variable-map-btn" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline" type="button">
+                            View variable structure map
+                        </button>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none" title="When off, one mileage value applies to every drive under each vehicle type. When on, set mileage per drive.">
@@ -510,10 +516,11 @@
                     <h3 id="road-run-log-title" class="text-base font-bold text-slate-800">Running Road Model</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="road-run-log-dashboard" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all">Open Dashboard</button>
-                    <a id="road-run-log-workbook" class="hidden px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download>Download LEAP Workbook</a>
-                    <a id="road-run-log-lifecycle-profiles" class="hidden px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download>Download Lifecycle Profiles</a>
-                    <button id="road-run-log-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>Close</button>
+                    <button id="road-run-log-dashboard" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all" title="Open the diagnostics dashboard in a new tab — charts and tables summarising model outputs and calibration quality.">Open Dashboard</button>
+                    <a id="road-run-log-workbook" class="hidden px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download title="Download the LEAP import workbook — an Excel file formatted for direct import into LEAP to populate energy demand branches.">Download LEAP Workbook</a>
+                    <a id="road-run-log-lifecycle-profiles" class="hidden px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download title="Download lifecycle emissions profiles as a ZIP archive — vehicle-type emission intensity curves for use in lifecycle assessment tools.">Download Lifecycle Profiles</a>
+                    <a id="road-run-log-reimport-csv" class="hidden px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download title="Download the reconciled base-year values (stock, mileage, fuel economy) produced by this model run. Import this CSV into the interface to reuse the reconciled values as inputs for future runs.">Download Reconciled Inputs</a>
+                    <button id="road-run-log-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled title="Close this dialog. Available once the model run has finished.">Close</button>
                 </div>
             </div>
             <div class="p-5">
@@ -522,9 +529,26 @@
         </div>
     </div>
 
+    <!-- Road Variable Structure Map Modal -->
+    <div id="road-variable-map-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center hidden opacity-0 transition-opacity duration-200" role="dialog" aria-modal="true" aria-labelledby="road-variable-map-title">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4 overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div>
+                    <h3 id="road-variable-map-title" class="text-base font-bold text-slate-800">Variable Structure Map</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Branch path hierarchy and all user-fillable variables at a glance.</p>
+                </div>
+                <button id="road-variable-map-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">Close</button>
+            </div>
+            <div class="p-6 overflow-auto" style="max-height: 80vh;">
+                <div id="road-variable-map-diagram" class="flex justify-center"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Custom Toast Container -->
     <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[340px]"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api.js"></script>
 <script src="config/variable-help.js"></script>

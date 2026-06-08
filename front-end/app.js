@@ -196,11 +196,16 @@ const DOM = {
     roadRunLogDashboard: document.getElementById('road-run-log-dashboard'),
     roadRunLogWorkbook: document.getElementById('road-run-log-workbook'),
     roadRunLogLifecycleProfiles: document.getElementById('road-run-log-lifecycle-profiles'),
+    roadRunLogReimportCsv: document.getElementById('road-run-log-reimport-csv'),
     roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
     roadDetailedFuelEconomyToggle: document.getElementById('road-detailed-fuel-economy-toggle'),
     roadRowStats: document.getElementById('road-row-stats'),
     roadValidationSummary: document.getElementById('road-validation-summary'),
     roadInputContainer: document.getElementById('road-input-container'),
+    roadVariableMapBtn: document.getElementById('road-variable-map-btn'),
+    roadVariableMapModal: document.getElementById('road-variable-map-modal'),
+    roadVariableMapClose: document.getElementById('road-variable-map-close'),
+    roadVariableMapDiagram: document.getElementById('road-variable-map-diagram'),
     roadUploadSummaryModal: document.getElementById('road-upload-summary-modal'),
     roadUploadSummaryTitle: document.getElementById('road-upload-summary-title'),
     roadUploadSummaryText: document.getElementById('road-upload-summary-text'),
@@ -546,6 +551,12 @@ function setupRoadModule1() {
     }
     if (DOM.roadRunLogClose) {
         DOM.roadRunLogClose.addEventListener('click', hideRoadRunLogModal);
+    }
+    if (DOM.roadVariableMapBtn) {
+        DOM.roadVariableMapBtn.addEventListener('click', showRoadVariableMapModal);
+    }
+    if (DOM.roadVariableMapClose) {
+        DOM.roadVariableMapClose.addEventListener('click', hideRoadVariableMapModal);
     }
     if (DOM.roadClearDraft) {
         DOM.roadClearDraft.addEventListener('click', clearRoadModule1DraftForCurrentSelection);
@@ -3609,6 +3620,68 @@ function hideRoadRunLogModal() {
     }, 200);
 }
 
+const ROAD_VARIABLE_MAP_DIAGRAM = `
+flowchart TD
+    subgraph BRANCH["Branch path — one row per combination"]
+        direction LR
+        TRN["<b>Transport mode</b><br/>Passenger · Freight"]
+        VEH["<b>Vehicle type</b><br/>LPVs · Motorcycles · Buses<br/>LCVs · Trucks"]
+        SZ["<b>Size class</b><br/>small · medium<br/>large · heavy"]
+        DRV["<b>Drive type</b><br/>ICE · HEV · PHEV · EREV<br/>BEV · FCEV"]
+        FUL["<b>Fuel</b><br/>Gasoline · Diesel · LPG<br/>Nat. gas · LNG<br/>Electricity · Hydrogen"]
+        TRN --> VEH --> SZ --> DRV --> FUL
+    end
+
+    FUL --> LEAF(["Per-branch values"])
+
+    LEAF --> BASE["<b>Base-year fleet</b><br/>• Stock &nbsp;(vehicles)<br/>• Mileage &nbsp;(km/yr per vehicle)<br/>• Fuel Economy &nbsp;(MJ/100 km)"]
+    LEAF --> TECH["<b>Technology mix</b><br/>• Sales Share &nbsp;(%)<br/>• PHEV Electric Driving Share &nbsp;(%)"]
+    LEAF --> DYN["<b>Fleet dynamics</b><br/>• Survival Rate<br/>• Vintage Profile Share"]
+    LEAF --> GROW["<b>Growth &amp; saturation</b><br/>• Passenger Vehicle Saturation<br/>• Vehicle Equivalent Weight"]
+    LEAF --> RECON["<b>Reconciliation tuning</b><br/>• Reconciliation Weight<br/>• Lower bound · Upper bound"]
+
+    style BRANCH fill:#f0f9ff,stroke:#bae6fd,color:#0c4a6e
+    style LEAF fill:#f0fdf4,stroke:#86efac,color:#14532d
+    style BASE fill:#fff7ed,stroke:#fed7aa,color:#7c2d12
+    style TECH fill:#fff7ed,stroke:#fed7aa,color:#7c2d12
+    style DYN fill:#fff7ed,stroke:#fed7aa,color:#7c2d12
+    style GROW fill:#fff7ed,stroke:#fed7aa,color:#7c2d12
+    style RECON fill:#fff7ed,stroke:#fed7aa,color:#7c2d12
+`;
+
+let roadVariableMapRendered = false;
+
+function showRoadVariableMapModal() {
+    if (!DOM.roadVariableMapModal) return;
+    DOM.roadVariableMapModal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        DOM.roadVariableMapModal.classList.add('flex');
+        DOM.roadVariableMapModal.classList.remove('opacity-0');
+        const card = DOM.roadVariableMapModal.querySelector('[class*="scale-95"]');
+        if (card) card.classList.remove('scale-95');
+    });
+    if (!roadVariableMapRendered && DOM.roadVariableMapDiagram && window.mermaid) {
+        roadVariableMapRendered = true;
+        mermaid.initialize({ startOnLoad: false, theme: 'default', htmlLabels: true });
+        mermaid.render('road-variable-map-svg', ROAD_VARIABLE_MAP_DIAGRAM).then(({ svg }) => {
+            DOM.roadVariableMapDiagram.innerHTML = svg;
+        }).catch(() => {
+            DOM.roadVariableMapDiagram.innerHTML = '<p class="text-sm text-slate-500">Could not render diagram.</p>';
+        });
+    }
+}
+
+function hideRoadVariableMapModal() {
+    if (!DOM.roadVariableMapModal) return;
+    DOM.roadVariableMapModal.classList.add('opacity-0');
+    const card = DOM.roadVariableMapModal.querySelector('div');
+    if (card) card.classList.add('scale-95');
+    setTimeout(() => {
+        DOM.roadVariableMapModal.classList.add('hidden');
+        DOM.roadVariableMapModal.classList.remove('flex');
+    }, 200);
+}
+
 function _setRoadRunStatus(status) {
     if (!DOM.roadRunLogTitle || !DOM.roadRunLogSpinner || !DOM.roadRunLogClose) return;
 
@@ -3654,6 +3727,7 @@ async function runRoadModel() {
     if (DOM.roadRunLogDashboard) DOM.roadRunLogDashboard.classList.add('hidden');
     if (DOM.roadRunLogWorkbook) DOM.roadRunLogWorkbook.classList.add('hidden');
     if (DOM.roadRunLogLifecycleProfiles) DOM.roadRunLogLifecycleProfiles.classList.add('hidden');
+    if (DOM.roadRunLogReimportCsv) DOM.roadRunLogReimportCsv.classList.add('hidden');
     _setRoadRunStatus('running');
     showRoadRunLogModal();
 
@@ -3732,6 +3806,12 @@ async function runRoadModel() {
                     DOM.roadRunLogLifecycleProfiles.classList.remove('hidden');
                     DOM.roadRunLogLifecycleProfiles.href = lifecycleUrl;
                     _appendRoadRunLog(`Lifecycle profiles: ${lifecycleUrl}`);
+                }
+                if (data.reimport_csv_url && DOM.roadRunLogReimportCsv) {
+                    const reimportUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${data.reimport_csv_url}`;
+                    DOM.roadRunLogReimportCsv.classList.remove('hidden');
+                    DOM.roadRunLogReimportCsv.href = reimportUrl;
+                    _appendRoadRunLog(`Reconciled inputs CSV: ${reimportUrl}`);
                 }
             } else {
                 _setRoadRunStatus('error');
