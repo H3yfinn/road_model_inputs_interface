@@ -554,12 +554,15 @@ def _validate_static_contract_output(
     1. No (Branch Path, Variable) in the output that isn't in the contract.
     2. Every contract row with Current Accounts=True must appear in the CA scenario output.
     3. Every contract row with Projected Scenario=True must appear in every non-CA scenario output.
+
+    All contract rows are required unconditionally. Previously, fuel-level branches with zero ESTO
+    data were exempted via road_module1_static_fuel_branch_exclusions.csv. That file is now retired:
+    all such branches must be populated (e.g. via manually_filled_rows) before the build passes.
     """
     if not economy_row_keys:
         return
 
     contract = _load_static_contract()
-    exclusions = _load_static_fuel_branch_exclusions()
 
     # All valid (Branch Path, Variable) pairs in the contract
     contract_bp_var: frozenset[tuple[str, str]] = frozenset(
@@ -583,10 +586,6 @@ def _validate_static_contract_output(
     failures: list[str] = []
 
     for economy_code, generated_keys in sorted(economy_row_keys.items()):
-        excluded_branches = set(
-            exclusions.loc[exclusions["Economy"].eq(economy_code), "Branch Path"]
-        )
-
         ca_generated = {(bp, var) for scen, bp, var in generated_keys if scen == "Current Accounts"}
         target_generated = {(bp, var) for scen, bp, var in generated_keys if scen != "Current Accounts"}
         all_generated = {(bp, var) for _, bp, var in generated_keys}
@@ -600,30 +599,24 @@ def _validate_static_contract_output(
                 + "\n".join(f"    {key!r}" for key in sample)
             )
 
-        # Check 2: required CA rows present
-        allowed_missing_ca = {
-            (bp, var) for bp, var in ca_required
-            if bp in excluded_branches and len(bp.split("\\")) == 5
-        }
-        missing_ca = ca_required - ca_generated - allowed_missing_ca
+        # Check 2: required CA rows present (no exclusion exemptions)
+        missing_ca = ca_required - ca_generated
         if missing_ca:
             sample = sorted(missing_ca)[:20]
             failures.append(
                 f"  {economy_code}: missing required Current Accounts rows:\n"
                 + "\n".join(f"    {key!r}" for key in sample)
+                + "\n    (Add missing Mileage/Fuel Economy rows to manually_filled_rows/ to fix.)"
             )
 
-        # Check 3: required Target rows present
-        allowed_missing_target = {
-            (bp, var) for bp, var in target_required
-            if bp in excluded_branches and len(bp.split("\\")) == 5
-        }
-        missing_target = target_required - target_generated - allowed_missing_target
+        # Check 3: required Target rows present (no exclusion exemptions)
+        missing_target = target_required - target_generated
         if missing_target:
             sample = sorted(missing_target)[:20]
             failures.append(
                 f"  {economy_code}: missing required projected scenario rows:\n"
                 + "\n".join(f"    {key!r}" for key in sample)
+                + "\n    (Add missing rows to manually_filled_rows/ to fix.)"
             )
 
     if failures:

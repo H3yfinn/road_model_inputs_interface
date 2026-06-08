@@ -4,6 +4,10 @@ This is the main design and implementation guide for Road Module 1 in
 `road_model_inputs_interface`. Keep this file as the source of truth for Module
 1 behavior. The shorter docs in this folder should point back here rather than
 restate the same contract.
+
+![End-to-end road model workflow](End-to-end%20road%20model%20workflow%208062026.png)
+
+*Primary reference for the full end-to-end workflow. Some implementation detail is not shown.*
  
 ## Contents
 

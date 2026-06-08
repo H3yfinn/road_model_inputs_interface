@@ -2414,7 +2414,11 @@ def _load_manual_filled_rows(economy: EconomyInfo) -> pd.DataFrame:
         if MANUAL_DO_NOT_USE_COLUMN in source_df.columns:
             source_df = source_df[~source_df[MANUAL_DO_NOT_USE_COLUMN].map(_is_do_not_use_value)].copy()
         source_df["Economy"] = source_df["Economy"].fillna("").astype(str).str.strip()
-        source_df = source_df[source_df["Economy"].isin(allowed_economies)].copy()
+        # Normalise by stripping underscores so both "01_AUS" and "01AUS" match economy code "01AUS"
+        economy_normalized = source_df["Economy"].str.replace("_", "", regex=False)
+        source_df = source_df[
+            source_df["Economy"].isin(allowed_economies) | economy_normalized.isin(allowed_economies)
+        ].copy()
         if source_df.empty:
             continue
         share_decreased_from = (

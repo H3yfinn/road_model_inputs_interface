@@ -2301,7 +2301,7 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
 function buildRoadModule1TreeEditorHtml(group, depth) {
     const groupRows = group.rows;
     const first = groupRows[0];
-    const isCompactGroup = group.groupType !== 'age-series' && groupRows.length === 1;
+    const isCompactGroup = group.groupType !== 'age-series' && group.groupType !== 'shared-fuel-economy' && groupRows.length === 1;
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
@@ -2906,7 +2906,7 @@ function renderRoadModule1TreeInputs(filteredRows) {
 function buildRoadModule1ListGroupHtml(group) {
     const groupRows = group.rows;
     const first = groupRows[0];
-    const isCompactGroup = group.groupType !== 'age-series' && (groupRows.length === 1 || group.groupType === 'shared-utilisation');
+    const isCompactGroup = group.groupType !== 'age-series' && group.groupType !== 'shared-fuel-economy' && (groupRows.length === 1 || group.groupType === 'shared-utilisation');
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
