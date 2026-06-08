@@ -21,8 +21,6 @@ ARG LEAP_ROAD_MODEL_REPO=https://github.com/asia-pacific-energy-research-centre/
 # a commit SHA or another branch/tag only when a reproducible deployment is needed.
 ARG LEAP_ROAD_MODEL_REF=8abf212563c13ea6d7025f9308c2b958a3a94b85
 
-# Remote commit metadata helps Docker/HF invalidate this layer when main changes.
-ADD https://api.github.com/repos/asia-pacific-energy-research-centre/leap_road_model/commits/main /tmp/leap_road_model_latest_commit.json
 RUN if [ "${LEAP_ROAD_MODEL_REF}" = "main" ]; then \
         git clone --depth 1 --branch main ${LEAP_ROAD_MODEL_REPO} /app/leap_road_model; \
     else \
