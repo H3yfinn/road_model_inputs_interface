@@ -113,7 +113,7 @@ document.getElementById('content').innerHTML = marked.parse(md);
 """
 
 
-@app.get("/road-model-docs/{filepath:path}", include_in_schema=False)
+@app.get("/road-model-docs/{filepath:path}", include_in_schema=False, response_model=None)
 async def serve_road_model_docs(filepath: str) -> HTMLResponse | FileResponse:
     if not _road_model_docs_dir.exists():
         raise HTTPException(status_code=404, detail="Docs directory not available")
