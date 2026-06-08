@@ -4,7 +4,7 @@ This is the main design and implementation guide for Road Module 1 in
 `road_model_inputs_interface`. Keep this file as the source of truth for Module
 1 behavior. The shorter docs in this folder should point back here rather than
 restate the same contract.
-
+ 
 ## Contents
 
 1. [Purpose](#1-purpose)
@@ -43,6 +43,22 @@ read, normalize, validate, and export those values.
 ![Road Module 1-7 simplified interface workflow](Road%20Module%201-7%20simplified%20interface%20workflow.png)
 
 ## 2. System boundary
+
+### Repo layout — both repos must be siblings
+
+Clone both repos into the **same parent folder**:
+
+```text
+parent_folder/
+    road_model_inputs_interface/   ← this repo
+    leap_road_model/               ← sibling repo
+```
+
+Keep both open in one VS Code multi-root workspace (`File → Add Folder to Workspace`).
+`leap_road_model` resolves the Module 1 output path as
+`../road_model_inputs_interface/back-end/outputs/road_module1_defaults/` by
+convention. The offline workflow in `leap_road_model/scripts/offline_workflow.py`
+uses that path automatically.
 
 ### This repo owns Module 1
 
@@ -147,10 +163,11 @@ instead. Current active supplemental files are:
 file; it is only an optional legacy fallback. `apec_drive_fuel_split_defaults.csv`
 is not part of the active supplemental source package.
 
-Use "supplemental source merge" for this behavior: the transport export supplies
-most defaults, and specific files supply measures that are absent or weaker
-there. Only describe something as an ordered replacement operation if the code
-actually implements that ordering.
+Use "source merge" for this behavior: all source folders (`processed_source/`,
+`manually_filled_rows/`, `supplemental_source_files/`) are combined into a single
+priority-ranked pool. The transport export supplies most defaults; supplemental
+files supply measures absent from the export. Only describe something as an
+ordered replacement operation if the code actually implements that ordering.
 
 ### Update method record
 
@@ -215,10 +232,11 @@ Use this as the formal pattern for this repo:
 
 ```text
 source package
-  -> source loader/normalizer
-  -> explicit source overlays
-  -> generated default package
-  -> frontend static bundle
+  -> source merge (processed_source + manually_filled_rows + supplemental_source_files, priority-ranked)
+  -> stock share derivation
+  -> final override
+  -> build (generated default package per economy)
+  -> static sync (frontend static bundle)
   -> browser working copy
   -> researcher overlay
   -> exported/model-run long CSV
@@ -232,10 +250,9 @@ UI-wide shape used for editing.
 | Stage | Owner | Contract |
 | --- | --- | --- |
 | Source package | `back-end/data/road_model/` | Documented CSV/XLSX inputs. Missing required files should fail generation. |
-| Source loader/normalizer | `back-end/core/road_module1_defaults.py` | Reads source rows, normalizes labels, applies source priority, and builds the internal wide schema. |
-| Source overlays | `overlay_*` functions | Adds or replaces specific measures from supplemental files with explicit provenance. |
-| Generated default package | `back-end/outputs/road_module1_defaults/<version>/<economy>/` | Per-economy generated output. This is not hand-authored source data. |
-| Frontend static bundle | `front-end/road-module1-static/<version>/<economy>.csv` | Canonical long CSV filtered to frontend-visible variables. |
+| Source merge | `back-end/core/road_module1_defaults.py` | Combines `processed_source/`, `manually_filled_rows/`, and `supplemental_source_files/` into a single priority-ranked row set. Missing required rows are a hard error. |
+| Build (generated default package) | `back-end/outputs/road_module1_defaults/<version>/<economy>/` | Per-economy generated output. This is not hand-authored source data. |
+| Static sync (frontend static bundle) | `front-end/road-module1-static/<version>/<economy>.csv` | Canonical long CSV filtered to static-eligible variables and tagged with row-level interface visibility. |
 | Browser working copy | `front-end/app.js` | Parsed long rows converted to UI-wide rows for display and editing only. |
 | Researcher overlay | `front-end/app.js` state maps and upload preview | Edits existing row keys, validates values, and marks researcher-modified rows. |
 | Model handoff | `convertRoadWideUiRowsToLongRows()` and `run_model_router.py` | Converts the UI working copy back to the canonical long CSV and sends it to `leap_road_model`. |
@@ -246,6 +263,8 @@ Rules:
   bundle, download/upload, and model handoff.
 - `Input Status` is part of the canonical long CSV. Downstream readers should
   still tolerate older 9-column files where it is absent.
+- `Shown In Interface` is part of the static/download/upload CSV contract. It
+  controls browser visibility only; hidden rows remain part of the model handoff.
 - The internal wide schema is a Python processing convenience, not the public
   contract.
 - The UI-wide rows are a browser view model, not an output package.
@@ -302,6 +321,7 @@ keys that were not in the exported template.
 | Column | Meaning |
 |---|---|
 | `Input Status` | `default`, `researcher_provided`, `missing`, `not_applicable`, or similar. |
+| `Shown In Interface` | `True` to show the row in the editable browser UI; `False` to hide it while preserving it in downloads/uploads and model runs. |
 | `Source Method` | Short method label such as `transport_leap_export`, `supplemental_csv`, `researcher_override`, or `manual_review`. |
 | `Original Value` | Default value before researcher edit, useful for comparison. |
 | `Validation Message` | Short message from validation, blank when valid. |
@@ -451,7 +471,7 @@ Core base-year measures:
 | `Mileage` or `Average Mileage` | Vehicle or vehicle/drive | Use clear units, usually km/vehicle/year. |
 | `Fuel Economy` | Vehicle/drive/fuel where available | Canonical Module 1 name. Legacy `Final On-Road Fuel Economy` can be read as an alias. |
 | `Sales Share` | Vehicle/drive | Used by Module 5. |
-| `Stock Share` | Vehicle type and, where present, lower vehicle/drive levels | Vehicle-type stock split uses the five LEAP rows `Demand\Passenger road\LPVs`, `Demand\Passenger road\Motorcycles`, `Demand\Passenger road\Buses`, `Demand\Freight road\Trucks`, and `Demand\Freight road\LCVs`; lower-level stock-share rows are not used for Module 3 vehicle-type splits. Base-year shares are derived automatically from base-year Stock rows. Default anchor values at 2040 and 2060 are seeded to the base-year share; researchers can edit them to define a trajectory. Anchor years are fixed at 2040 and 2060 (`STOCK_SHARE_PROJECTION_YEARS`) — making them researcher-configurable was considered but not implemented. |
+| `Stock Share` | Vehicle type and, where present, lower vehicle/drive levels | Vehicle-type stock split uses the five LEAP rows `Demand\Passenger road\LPVs`, `Demand\Passenger road\Motorcycles`, `Demand\Passenger road\Buses`, `Demand\Freight road\Trucks`, and `Demand\Freight road\LCVs`; lower-level stock-share rows are not used for Module 3 vehicle-type splits. Base-year shares are derived automatically from base-year Stock rows. Default anchor values at 2040 and 2060 are seeded to the base-year share; researchers can edit them to define a trajectory. Anchor years are fixed at 2040 and 2060 (`STOCK_SHARE_PROJECTION_YEARS`) - making them researcher-configurable was considered but not implemented. |
 | `Device Share` | Drive/fuel | Useful for fuel split defaults and checking. |
 | `PHEV Electric Utilisation Rate` | Vehicle-level factor only for LPV and LCVs since they are the only vehicle types using PHEVs | Used by Module 6 before normal fuel reconciliation. |
 | `Passenger Saturation` | Economy-level factor | Used by Module 3. |
@@ -525,30 +545,58 @@ Module 1 validation should include:
 - obvious share groups sum to 1 where the grouping is unambiguous; and
 - comments or source notes are present for researcher overrides where possible.
 
-### Required rows manifest
+### Static row contract
 
-`back-end/data/road_model/road_module1_required_rows.csv` is the authoritative
-list of `(Branch Path, Variable)` pairs that must be present in every economy's
-generated frontend output CSV. It defines the **fixed structure** of the model:
-what branches exist at the transport, vehicle-type, age, and drive levels, and
-what measures are required at each level.
+`back-end/data/road_model/config/road_module1_static_contract.csv` is the
+authoritative static row contract. It has one row per `(Branch Path, Variable)`
+pair and controls four things:
 
-Mileage and Fuel Economy are validated separately by a rule — every depth-5
-(fuel-level) branch present in the output must have both — because the fuel mix
-varies by economy.
+- `Current Accounts`: whether the row must be present in the **Current Accounts**
+  scenario output for every economy.
+- `Projected Scenario`: whether the row must also be present in every
+  **non-Current Accounts scenario** (Target and any other projected scenarios
+  included in a run). Set this to `True` for any variable that researchers
+  supply forward projections for, not just a base-year value.
+- `Shown In Interface`: whether the row is visible in the editable browser UI.
+  Hidden rows remain part of downloads/uploads and model runs.
+- `Units`: the units in which the user must provide values, after the scale
+  factor from `road_module1_default_parameters.json` has been applied. This
+  string is displayed in the interface.
 
-`build_road_model_static_defaults.py` enforces both checks as a hard error at
-the end of every build. If a required `(Branch Path, Variable)` pair is absent
-the build exits with a clear error message pointing to the missing rows.
+`build_road_model_static_defaults.py` enforces the contract as a hard error at
+the end of every build. Three checks run per economy:
 
-**When to update the manifest:** edit `road_module1_required_rows.csv` directly
-whenever the tree changes — new vehicle type, new drive family, new supplemental
-variable, change to the age range. Do not regenerate it from a pipeline output;
-the manifest is the spec the pipeline is validated against.
+1. **No uncontracted rows** — every (Branch Path, Variable) in the output must
+   appear in the contract.
+2. **Current Accounts completeness** — every row with `Current Accounts = True`
+   must be present in the Current Accounts scenario output.
+3. **Projected scenario completeness** — every row with
+   `Projected Scenario = True` must be present in every non-Current Accounts
+   scenario output.
 
-Module 6 remains responsible for final ESTO energy reconciliation checks,
-Device Share validation, PHEV utilisation diagnostics, and scalar-bound
-diagnostics.
+Checks 2 and 3 allow an exemption for fuel-level rows (`Mileage`, `Fuel Economy`)
+that are explicitly excluded for that economy via
+`road_module1_static_fuel_branch_exclusions.csv`.
+
+Additionally, a fuel-level rule applies independently of the contract: every
+fuel-level branch path (depth 5) that appears in the output must have **both**
+`Mileage` and `Fuel Economy` rows. These variables are not listed individually
+in the contract because the active fuel branches differ by economy.
+
+Currently all 581 contract rows have `Current Accounts = True`. The 41
+`Sales Share` rows also have `Projected Scenario = True` — Sales Share is the
+main researcher policy lever and must be supplied for both the base year and
+all forward projection years. All other variables are base-year calibration
+inputs that are fixed across scenarios.
+
+**When to update the contract:** edit `config/road_module1_static_contract.csv`
+directly in any text editor or spreadsheet tool whenever the row set, required
+status, projected status, units, or interface visibility changes. The file is a
+plain CSV with no formulas or hidden structure. Update
+`config/road_module1_static_fuel_branch_exclusions.csv` only when the ESTO-zero
+fuel evidence changes. Module 6 remains responsible for final ESTO energy
+reconciliation checks, Device Share validation, PHEV utilisation diagnostics,
+and scalar-bound diagnostics.
 
 ## 9. Optional backend and model run integration
 
@@ -583,6 +631,14 @@ The downstream reader should:
 - parse `Year`/`Value` long rows into the tables Modules 2-7 need;
 - convert aliases and structures where necessary, such as `Final On-Road Fuel Economy` to `Fuel Economy` or profile rows into Module 4 profile tables; and
 - preserve source and comment metadata for diagnostics.
+
+### Running Modules 2-7 without the website
+
+The website does not need to be running for `leap_road_model` to run. The
+pre-generated Module 1 outputs committed to this repo under
+`back-end/outputs/road_module1_defaults/` are sufficient. Use
+`leap_road_model/scripts/offline_workflow.py` to run the full Modules 2-7
+pipeline offline — it discovers the sibling repo's outputs automatically.
 
 `leap_road_model` still loads population, GDP, ESTO energy, and other non-Module
 1 inputs from its own data/config pathways. These are datapoints that we do not
@@ -629,6 +685,73 @@ When the source files in `back-end/data/road_model/` are updated:
 6. Run validation and inspect changed rows.
 7. Commit source files, method notes, generated outputs, and docs together.
 
+### Regenerating defaults and static values
+
+Use this workflow when source data changes, when the static row contract changes,
+or when operator visibility flags such as `Shown In Interface` are edited.
+
+1. Update source/config files under `back-end/data/road_model/`.
+   - Numeric source changes belong in source folders such as
+     `processed_source/`, `supplemental_source_files/`, or
+     `final_value_overrides/`.
+   - Static row scope, projected-scenario requirements, units, and browser
+     visibility belong in `config/road_module1_static_contract.csv`.
+   - Economy-specific missing fuel branch exceptions belong in
+     `config/road_module1_static_fuel_branch_exclusions.csv` and must use the
+     reason `0 data for fuel in esto dataset`.
+2. Run the single generation entry point from `road_model_inputs_interface`:
+
+```powershell
+python back-end\build_road_model_static_defaults.py
+```
+
+3. Confirm the script reports generated economies and:
+
+```text
+Static contract check passed
+```
+
+4. Inspect the regenerated backend packages under:
+
+```text
+back-end/outputs/road_module1_defaults/<VERSION>/<ECONOMY>/
+```
+
+5. Inspect the regenerated browser package under:
+
+```text
+front-end/road-module1-static/<VERSION>/<ECONOMY>.csv
+```
+
+The static CSV is what the browser loads. Editing the workbook alone is not
+enough; the generator must be rerun so the CSVs receive the updated
+`Shown In Interface` values.
+
+### Showing or hiding rows in the interface
+
+The operator-facing switch for browser visibility is the `Shown In Interface`
+column in:
+
+```text
+back-end/data/road_model/config/road_module1_static_contract.csv
+```
+
+To show or hide a row, open the CSV in any text editor or spreadsheet tool,
+set `Shown In Interface` to `True` or `False` for the relevant
+`(Branch Path, Variable)` rows, save, then regenerate:
+
+```powershell
+python back-end\build_road_model_static_defaults.py
+```
+
+Then reload the browser page so it fetches the regenerated static CSV.
+
+Hidden rows are still preserved in downloads/uploads and still sent to
+`leap_road_model`; they are only removed from the editable browser view.
+
+To require a variable in projected (Target) scenarios, set its
+`Projected Scenario` to `True` in the same CSV and regenerate.
+
 ## 12. Current implementation map
 
 Current files that matter:
@@ -636,8 +759,7 @@ Current files that matter:
 | File | Current role |
 |---|---|
 | `back-end/core/road_module1_defaults.py` | Main default-generation logic and source readers. |
-| `back-end/build_road_model_static_defaults.py` | Strict source-backed generation script for static deployment. |
-| `back-end/road_module1_defaults_workflow.py` | Notebook-style workflow for package/static-bundle generation. |
+| `back-end/build_road_model_static_defaults.py` | Single source-backed generation script for Module 1 packages, the filtered static bundle, and static-bundle validation. |
 | `back-end/api/run_model_router.py` | Optional local backend route for writing Module 1 rows and launching `leap_road_model`. |
 | `front-end/road-module1-static/` | Generated static CSV bundle (long-row format) served to the browser UI. |
 | `back-end/data/road_model/UPDATE_METHOD.md` | Numeric data update method log. |
@@ -646,72 +768,3 @@ Some older code and output folders still use names such as
 `road_module1_default_filled_inputs.csv` and produce wide year columns. Treat
 that as current implementation debt. The target contract is the long CSV
 described here.
-
-## 13. Roadmap
-
-### Phase 1: Stabilize documentation and source policy
-
-- Keep this guide as the single comprehensive Module 1 guide.
-- Clarify that source files in `back-end/data/road_model/` are mandatory.
-- Clarify that researcher uploads edit existing rows only.
-
-### Phase 2: Move generated outputs to long CSV
-
-- Add a long CSV writer with `Year` and `Value`.
-- Keep any old wide CSV output only as a temporary compatibility artifact.
-- Add strict upload validation against the long-row key.
-- Keep generated output filenames stable and overwrite in place.
-
-### Phase 3: Improve source processing from leap_transport exports
-
-- Build a clear script for processing `leap_transport` output into Module 1
-  rows.
-- Current preprocessing entry point: `back-end/scripts/prepare_road_source.py`.
-  It writes per-economy intermediate CSVs under
-  `back-end/data/road_model/processed_source/` with columns
-  `Branch Path, Variable, Scenario, Year, Value, Units`.
-- Record the transformation in `UPDATE_METHOD.md`.
-- Document any recategorization needed to fit the simpler road model structure.
-- Keep branch paths and variable names close to source where practical.
-
-### Phase 4: Align leap_road_model reader
-
-- Update the Module 1 reader in `leap_road_model` to consume the long CSV
-  package.
-- Map lifecycle/vintage rows into Module 4 profile inputs.
-- Update the `leap_road_model` Markdown once the Module 1 contract is stable.
-
-### Phase 5: Decide whether a static CSV cache remains necessary
-
-- Measure whether direct processing is fast enough for the UI/backend.
-- Keep the static CSV bundle if it remains useful for GitHub Pages deployment,
-  validation, or pre-publication checks.
-- Do not add extra cache layers unless they solve a real performance or
-  validation problem.
-
-## 14. Open questions
-
-These are the only open questions that seem worth keeping after the note pass:
-
-1. ~~Should `Profile Index` be the final name for lifecycle/vintage age/profile
-   rows, or should it be split into `Age` and `Vintage Year`?~~ Resolved: no
-   separate column. Profile rows use branch path prefixes `Age Profile/<index>/...`
-   and `Vintage Profile/<index>/...` instead.
-2. ~~Should the canonical Module 1 economy code be no-underscore (`20USA`) or
-   underscore (`20_USA`)?~~ Resolved: always use underscore economy codes in this
-   repo and downstream code.
-3. ~~Do we want partial researcher CSV uploads, or should every reupload be a
-   full exported template?~~ Resolved: partial uploads are allowed only when they
-   contain a subset of existing keys and all required key columns. Add a small UI
-   note explaining this rule.
-4. ~~How much future-year input should Module 1 support in the first long-CSV
-   implementation, beyond optional rows for variables that already have future
-   source values?~~ Resolved for `Stock Share`: 2040 and 2060 anchor rows are
-   generated automatically. For other variables, future-year rows remain optional
-   and are present only when source data includes them.
-5. Should the static CSV bundle remain the normal UI artifact, or should a
-   backend serve the long rows directly when available? (The formats are now
-   identical so there is no format migration cost either way.)
-6. Should this guide include front-end UI guidance: target user experience, the
-   most important fields to show, how much source and validation detail to show
-   per row, and how much help text to include?

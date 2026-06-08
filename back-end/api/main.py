@@ -71,6 +71,14 @@ _results_dir = _road_model_repo / "results"
 _results_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/road-results", StaticFiles(directory=str(_results_dir)), name="road-results")
 
+_road_model_docs_dir = _road_model_repo / "docs" / "new model"
+if _road_model_docs_dir.exists():
+    app.mount(
+        "/road-model-docs",
+        StaticFiles(directory=str(_road_model_docs_dir)),
+        name="road-model-docs",
+    )
+
 # Serve the frontend — must be last so API routes take precedence.
 _frontend_dir = _interface_dir / "front-end"
 if _frontend_dir.exists():

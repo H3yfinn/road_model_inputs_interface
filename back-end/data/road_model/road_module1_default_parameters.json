@@ -28,6 +28,9 @@
     "canonical_names": [
       "Stock",
       "Mileage",
+      "Average Mileage",
+      "Final On-Road Mileage",
+      "Sales",
       "Fuel Economy",
       "Sales Share",
       "Vehicle Equivalent Weight",
@@ -43,6 +46,19 @@
     "aliases": {
       "Final On-Road Fuel Economy": "Fuel Economy"
     }
+  },
+  "scale_defaults_by_variable": {
+    "Stock": "Millions",
+    "Sales": "Millions",
+    "Mileage": "Thousands",
+    "Average Mileage": "Thousands",
+    "Final On-Road Mileage": "Thousands",
+    "Sales Share": "%",
+    "Stock Share": "%",
+    "Device Share": "%",
+    "PHEV Electric Driving Share": "%",
+    "Survival Rate": "%",
+    "Vintage Profile Share": "%"
   },
   "numeric_sources": [
     "processed_source/road_module1_source_<ECONOMY>.csv",

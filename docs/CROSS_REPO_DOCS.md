@@ -2,6 +2,11 @@
 
 This repository is designed to be worked on alongside `../leap_road_model`.
 
+## Contents
+
+1. [Key docs in `leap_road_model`](#key-docs-in-leap_road_model)
+2. [Working convention](#working-convention)
+
 ## Key docs in `leap_road_model`
 
 - `..\..\leap_road_model\docs\new model\road_transport_model_detailed.md`

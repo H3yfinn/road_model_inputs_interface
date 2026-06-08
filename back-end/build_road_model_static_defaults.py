@@ -6,128 +6,394 @@ It reads processed sources and supplemental source files from
 back-end/data/road_model, generates per-economy Road Module 1 workbooks/CSVs,
 and writes front-end static JSON bundles.
 
-FRONTEND_MEASURES is the authoritative contract for what rows appear in the
-frontend output.  Every entry specifies:
-  - variable:     the canonical Variable name
-  - source:       where values come from
-  - branch_level: what kind of branch the row lives at (documentation only;
-                  the actual branch logic is in the overlay functions)
-
-The contract drives two things:
-  1. Filtering: rows whose Variable is not in FRONTEND_ALLOWED_VARIABLES are
-     dropped from every economy CSV before it is written to the static bundle.
-  2. Validation: after generation, any required variable that is entirely
-     absent from an economy's output triggers a warning.
+road_module1_static_contract.csv is the row contract for the static dataset.
+It defines every (Branch Path, Variable) pair that may appear in the output,
+whether each row is in the Current Accounts scenario, and what units the user
+should provide. Edit that CSV to add/remove rows or update units.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+import re
+import shutil
 from pathlib import Path
 
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Required rows manifest
-# ---------------------------------------------------------------------------
-# road_module1_required_rows.csv defines every (Branch Path, Variable) pair
-# that must appear in every economy's frontend output CSV.
-#
-# It covers the fixed structure: transport, vehicle-type, age, and drive levels.
-# It deliberately excludes Mileage and Fuel Economy because those appear at the
-# fuel level and vary by economy (different fuel mixes in the LEAP export).
-# Those are validated separately by _validate_fuel_level_completeness().
-#
-# To update the spec: edit road_module1_required_rows.csv directly.
-# branch_level is a comment column only; validation uses Branch Path + Variable.
-
-REQUIRED_ROWS_MANIFEST_PATH = Path(__file__).resolve().parent / "data" / "road_model" / "road_module1_required_rows.csv"
-
-# Variables where completeness is checked row-by-row against the manifest.
-FIXED_REQUIRED_VARS = frozenset({
-    "Sales Share", "Stock Share",
-    "PHEV Electric Driving Share",
-    "Passenger Vehicle Saturation", "Passenger Saturation Reached",
-    "Reconciliation Weight Stock", "Reconciliation Weight Mileage", "Reconciliation Weight Efficiency",
-    "Reconciliation Bound Lower Mileage", "Reconciliation Bound Upper Mileage",
-    "Reconciliation Bound Lower Efficiency", "Reconciliation Bound Upper Efficiency",
-    "Vehicle Equivalent Weight", "Vehicle Equivalent Weight Lower Bound", "Vehicle Equivalent Weight Upper Bound",
-    "Survival Rate", "Vintage Profile Share",
-})
-
-# Variables where completeness is checked by rule (every fuel-level branch must
-# have both), because fuel mix differs across economies.
-FUEL_LEVEL_VARS = frozenset({"Mileage", "Fuel Economy"})
-
 from core.road_module1_defaults import (
+    BASE_YEAR,
     DEFAULT_SCENARIOS,
     DEFAULT_VERSION,
     DEFAULT_YEARS,
     FINAL_VALUE_OVERRIDE_COLUMNS,
     FINAL_VALUE_OVERRIDE_DIR,
+    MODULE1_LONG_COLUMNS,
+    PROJECTED_SALES_SHARE_YEARS,
     PROCESSED_SOURCE_COLUMNS,
     PROCESSED_SOURCE_DIR,
     ROAD_MODEL_DATA_DIR,
     ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH,
     SUPPLEMENTAL_SOURCE_DIR,
+    TRANSPORT_LEAP_EXPORT_HEADER_ROW,
+    TRANSPORT_LEAP_EXPORT_SHEET,
+    _wide_defaults_to_long,
+    find_transport_leap_export_path,
+    list_default_economies,
+    list_default_versions,
+    load_default_filled_inputs,
     write_all_economy_packages,
 )
-from road_module1_defaults_workflow import (
-    FRONTEND_STATIC_BUNDLE_ROOT,
-    OUTPUT_ROOT,
-    write_frontend_static_bundle,
-)
 
 
-# ---------------------------------------------------------------------------
-# Frontend output contract
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class FrontendMeasureSpec:
-    variable: str
-    source: str        # which supplemental/LEAP source provides values
-    branch_level: str  # descriptive: "transport", "vehicle_type", "phev_parent",
-                       #              "drive_or_deeper", "age", "any"
-    required: bool = True
+# --- Stable paths ---
+NOTEBOOK_DIR = Path(__file__).resolve().parent
+OUTPUT_ROOT = NOTEBOOK_DIR / "outputs" / "road_module1_defaults"
+FRONTEND_STATIC_BUNDLE_ROOT = NOTEBOOK_DIR.parent / "front-end" / "road-module1-static"
 
 
-# Each entry is one measure that MUST (required=True) or MAY (required=False)
-# appear in the frontend output CSV.  Add/remove rows here to change what users
-# see in the interface.
-FRONTEND_MEASURES: list[FrontendMeasureSpec] = [
-    # --- From the LEAP export processed source ---
-    FrontendMeasureSpec("Stock",             "leap_export",                "vehicle_type",    required=False),
-    FrontendMeasureSpec("Mileage",           "leap_export",                "drive_or_deeper", required=True),
-    FrontendMeasureSpec("Fuel Economy",      "leap_export",                "drive_or_deeper", required=True),
-    FrontendMeasureSpec("Sales Share",       "leap_export",                "vehicle_type",    required=True),
-    FrontendMeasureSpec("Stock Share",       "leap_export",                "vehicle_type",    required=True),
+def _sanitize_static_segment(value: str) -> str:
+    """Return a filesystem-safe static bundle path segment."""
+    return re.sub(r"[^a-zA-Z0-9_-]+", "_", str(value or "").strip())
 
-    # --- From supplemental source files (must be created if absent in LEAP export) ---
-    FrontendMeasureSpec("PHEV Electric Driving Share",         "phev_utilisation",         "phev_parent",   required=True),
-    FrontendMeasureSpec("Passenger Vehicle Saturation",        "passenger_saturation",     "transport",     required=True),
-    FrontendMeasureSpec("Passenger Saturation Reached",        "passenger_saturation",     "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Weight Stock",         "reconciliation_factors",   "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Weight Mileage",       "reconciliation_factors",   "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Weight Efficiency",    "reconciliation_factors",   "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Bound Lower Mileage",  "reconciliation_factors",   "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Bound Upper Mileage",  "reconciliation_factors",   "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Bound Lower Efficiency","reconciliation_factors",  "transport",     required=True),
-    FrontendMeasureSpec("Reconciliation Bound Upper Efficiency","reconciliation_factors",  "transport",     required=True),
-    FrontendMeasureSpec("Vehicle Equivalent Weight",           "vehicle_equivalent_weights","vehicle_type", required=True),
-    FrontendMeasureSpec("Vehicle Equivalent Weight Lower Bound","vehicle_equivalent_weights","vehicle_type",required=True),
-    FrontendMeasureSpec("Vehicle Equivalent Weight Upper Bound","vehicle_equivalent_weights","vehicle_type",required=True),
-    FrontendMeasureSpec("Survival Rate",                       "survival_profile",         "age",           required=True),
-    FrontendMeasureSpec("Vintage Profile Share",               "vintage_profile",          "age",           required=True),
-]
 
-# Derived set: the only Variable values allowed in a frontend output CSV.
-FRONTEND_ALLOWED_VARIABLES: frozenset[str] = frozenset(m.variable for m in FRONTEND_MEASURES)
+def _coerce_bool_text(value: bool) -> str:
+    return "True" if bool(value) else "False"
 
-# Required subset: variables that must be present for every economy output.
-FRONTEND_REQUIRED_VARIABLES: frozenset[str] = frozenset(
-    m.variable for m in FRONTEND_MEASURES if m.required
-)
+
+def _load_projected_sales_share_from_processed_source(economy_code: str) -> pd.DataFrame:
+    """Read future Sales Share rows from the processed source CSV."""
+    src_path = PROCESSED_SOURCE_DIR / f"road_module1_source_{economy_code}.csv"
+    if not src_path.exists():
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    df = pd.read_csv(src_path)
+    future = df[
+        df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
+        & pd.to_numeric(df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
+    ].copy()
+    if future.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    rows = []
+    for _, row in future.iterrows():
+        rows.append({
+            "Economy": economy_code,
+            "Scenario": row.get("Scenario", "Target") or "Target",
+            "Branch Path": row.get("Branch Path", ""),
+            "Variable": "Sales Share",
+            "Year": int(row["Year"]),
+            "Value": float(pd.to_numeric(row["Value"], errors="coerce")),
+            "Scale": "%",
+            "Units": row.get("Units", "Share") or "Share",
+            "Source": src_path.name,
+            "Comment": "Projected Sales Share from processed source CSV.",
+            "Input Status": "default",
+            "Shown In Interface": "True",
+        })
+    if not rows:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
+
+
+def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
+    """Load 2023-2060 Sales Share rows from the matched transport LEAP workbook.
+
+    Falls back to the processed source CSV when no workbook is available.
+    """
+    workbook_path = find_transport_leap_export_path(economy=economy_code)
+    if workbook_path is None:
+        return _load_projected_sales_share_from_processed_source(economy_code)
+
+    raw_df = pd.read_excel(
+        workbook_path,
+        sheet_name=TRANSPORT_LEAP_EXPORT_SHEET,
+        header=TRANSPORT_LEAP_EXPORT_HEADER_ROW,
+    )
+    required_columns = ["Branch Path", "Variable", "Scenario", "Region", "Scale", "Units"]
+    if any(column not in raw_df.columns for column in required_columns):
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    sales_df = raw_df[
+        raw_df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
+    ].copy()
+    if sales_df.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    # FOR_VIEWING workbooks put 2022-2060 values in unnamed columns immediately
+    # after Method. They are not labelled as years in the header row.
+    value_columns = [
+        column
+        for column in sales_df.columns
+        if str(column).startswith("Unnamed:")
+        and pd.to_numeric(sales_df[column], errors="coerce").notna().any()
+    ]
+    value_columns = value_columns[: len([BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])]
+    year_by_column = {
+        column: year
+        for column, year in zip(value_columns, [BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])
+        if year in PROJECTED_SALES_SHARE_YEARS
+    }
+    if not year_by_column:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    rows: list[dict[str, object]] = []
+    source_name = workbook_path.name
+    for _, source_row in sales_df.iterrows():
+        for value_column, year in year_by_column.items():
+            value = pd.to_numeric(source_row.get(value_column), errors="coerce")
+            if pd.isna(value):
+                continue
+            rows.append(
+                {
+                    "Economy": economy_code,
+                    "Scenario": source_row.get("Scenario", "Target") or "Target",
+                    "Branch Path": source_row.get("Branch Path", ""),
+                    "Variable": "Sales Share",
+                    "Year": int(year),
+                    "Value": float(value),
+                    "Scale": source_row.get("Scale", "%") or "%",
+                    "Units": source_row.get("Units", "Share") or "Share",
+                    "Source": source_name,
+                    "Comment": "Projected Sales Share from matched transport LEAP export workbook.",
+                    "Input Status": "default",
+                    "Shown In Interface": "True",
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
+
+
+ROAD_MODEL_CONFIG_DIR = Path(__file__).resolve().parent / "data" / "road_model" / "config"
+STATIC_CONTRACT_CSV_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_static_contract.csv"
+STATIC_CONTRACT_KEY_COLUMNS = ["Branch Path", "Variable"]
+STATIC_CONTRACT_REQUIRED_COLUMNS = [*STATIC_CONTRACT_KEY_COLUMNS, "Current Accounts", "Projected Scenario", "Shown In Interface", "Shown In Interface Projected", "Units"]
+STATIC_FUEL_BRANCH_EXCLUSIONS_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_static_fuel_branch_exclusions.csv"
+STATIC_FUEL_BRANCH_EXCLUSION_REASON = "0 data for fuel in esto dataset"
+STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS = ["Economy", "Branch Path", "Fuel", "Reason"]
+
+
+def _contract_bool(value: object, default: bool = True) -> bool:
+    if pd.isna(value):
+        return default
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y"}:
+        return True
+    if text in {"false", "0", "no", "n"}:
+        return False
+    return default
+
+
+def _load_static_contract() -> pd.DataFrame:
+    """Load road_module1_static_contract.csv. Returns one row per (Branch Path, Variable)."""
+    if not STATIC_CONTRACT_CSV_PATH.exists():
+        raise SystemExit(
+            f"\nERROR - static row contract not found:\n  {STATIC_CONTRACT_CSV_PATH}"
+        )
+    contract = pd.read_csv(STATIC_CONTRACT_CSV_PATH)
+    missing = [column for column in STATIC_CONTRACT_REQUIRED_COLUMNS if column not in contract.columns]
+    if missing:
+        raise SystemExit(
+            f"\nERROR - {STATIC_CONTRACT_CSV_PATH.name} is missing required columns: "
+            f"{', '.join(missing)}"
+        )
+    contract = contract.copy()
+    for column in ["Branch Path", "Variable"]:
+        contract[column] = contract[column].fillna("").astype(str).str.strip()
+    contract["Current Accounts"] = contract["Current Accounts"].map(
+        lambda value: _contract_bool(value, default=True)
+    )
+    contract["Projected Scenario"] = contract["Projected Scenario"].map(
+        lambda value: _contract_bool(value, default=False)
+    )
+    contract["Shown In Interface"] = contract["Shown In Interface"].map(
+        lambda value: _contract_bool(value, default=True)
+    )
+    contract["Shown In Interface Projected"] = contract["Shown In Interface Projected"].map(
+        lambda value: _contract_bool(value, default=True)
+    )
+    duplicate_mask = contract.duplicated(subset=STATIC_CONTRACT_KEY_COLUMNS, keep=False)
+    if duplicate_mask.any():
+        duplicates = contract.loc[duplicate_mask, STATIC_CONTRACT_KEY_COLUMNS].head(20)
+        raise SystemExit(
+            "\nERROR - duplicate row keys in static contract CSV:\n"
+            + duplicates.to_string(index=False)
+        )
+    return contract
+
+
+def _load_static_fuel_branch_exclusions() -> pd.DataFrame:
+    """Load economy-specific fuel branch exclusions from the static config folder."""
+    if not STATIC_FUEL_BRANCH_EXCLUSIONS_PATH.exists():
+        return pd.DataFrame(columns=STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS)
+
+    exclusions = pd.read_csv(STATIC_FUEL_BRANCH_EXCLUSIONS_PATH)
+    missing = [
+        column for column in STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS
+        if column not in exclusions.columns
+    ]
+    if missing:
+        raise SystemExit(
+            f"\nERROR - {STATIC_FUEL_BRANCH_EXCLUSIONS_PATH.name} is missing required columns: "
+            f"{', '.join(missing)}"
+        )
+
+    exclusions = exclusions[STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS].copy()
+    for column in STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS:
+        exclusions[column] = exclusions[column].fillna("").astype(str).str.strip()
+
+    bad_reason = exclusions["Reason"].ne(STATIC_FUEL_BRANCH_EXCLUSION_REASON)
+    if bad_reason.any():
+        sample = exclusions.loc[bad_reason, STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS].head(20)
+        raise SystemExit(
+            f"\nERROR - fuel branch exclusions must use reason "
+            f"{STATIC_FUEL_BRANCH_EXCLUSION_REASON!r}:\n"
+            + sample.to_string(index=False)
+        )
+
+    duplicate_mask = exclusions.duplicated(subset=["Economy", "Branch Path"], keep=False)
+    if duplicate_mask.any():
+        duplicates = exclusions.loc[duplicate_mask, ["Economy", "Branch Path"]].head(20)
+        raise SystemExit(
+            "\nERROR - duplicate static fuel branch exclusions:\n"
+            + duplicates.to_string(index=False)
+        )
+
+    return exclusions
+
+
+def _apply_static_contract(long_df: pd.DataFrame, contract: pd.DataFrame, economy_code: str) -> pd.DataFrame:
+    """Apply row visibility from the static contract and fail on uncontracted rows.
+
+    Merges on (Branch Path, Variable) only — Scenario and Year are not part of the
+    contract key. CA rows use 'Shown In Interface'; projected rows use
+    'Shown In Interface Projected'.
+    """
+    if long_df.empty:
+        return long_df
+    df = long_df.copy()
+    merged = df.merge(
+        contract[["Branch Path", "Variable", "Shown In Interface", "Shown In Interface Projected"]],
+        on=["Branch Path", "Variable"],
+        how="left",
+        indicator=True,
+        suffixes=("", "_contract"),
+    )
+    missing_contract = merged["_merge"].eq("left_only")
+    if missing_contract.any():
+        sample = merged.loc[missing_contract, ["Branch Path", "Variable"]].drop_duplicates().head(20)
+        raise SystemExit(
+            f"\nERROR - {economy_code} generated rows that are not in "
+            f"{STATIC_CONTRACT_CSV_PATH.name}:\n"
+            + sample.to_string(index=False)
+        )
+    is_ca = merged["Scenario"].eq("Current Accounts")
+    ca_visibility = merged["Shown In Interface_contract"]
+    projected_visibility = merged["Shown In Interface Projected"]
+    merged["Shown In Interface"] = ca_visibility.where(is_ca, projected_visibility).map(_coerce_bool_text)
+    merged = merged.drop(columns=["Shown In Interface_contract", "Shown In Interface Projected", "_merge"], errors="ignore")
+    return merged[MODULE1_LONG_COLUMNS].copy()
+
+
+def _filter_to_static_contract(long_df: pd.DataFrame, contract: pd.DataFrame) -> pd.DataFrame:
+    """Keep only rows whose (Branch Path, Variable) pair is in the static contract."""
+    if long_df.empty:
+        return long_df
+    contract_keys = contract[STATIC_CONTRACT_KEY_COLUMNS].drop_duplicates()
+    filtered = long_df.merge(
+        contract_keys,
+        on=STATIC_CONTRACT_KEY_COLUMNS,
+        how="inner",
+    )
+    return filtered[MODULE1_LONG_COLUMNS].copy()
+
+
+def write_frontend_static_bundle(
+    output_root: Path,
+    static_root: Path,
+    version: str,
+) -> dict[str, int | dict]:
+    """Write frontend static CSV defaults and index.json."""
+    static_root.mkdir(parents=True, exist_ok=True)
+    static_contract = _load_static_contract()
+
+    version_root = static_root / _sanitize_static_segment(version)
+    shutil.rmtree(version_root, ignore_errors=True)
+    version_root.mkdir(parents=True, exist_ok=True)
+
+    economies = list_default_economies(version=version, output_root=output_root)
+    defaults_files_written = 0
+    economy_row_keys: dict[str, set[tuple[str, str, str]]] = {}
+
+    for economy_item in economies:
+        economy_code = economy_item["economy"]
+        economy_safe = _sanitize_static_segment(economy_code)
+        defaults_df = load_default_filled_inputs(
+            economy=economy_code,
+            version=version,
+            output_root=output_root,
+        )
+        if "Scenario" in defaults_df.columns:
+            defaults_df = defaults_df.copy()
+            defaults_df["Scenario"] = "Current Accounts"
+
+        long_defaults_df = _wide_defaults_to_long(defaults_df, economy=economy_code)
+
+        projected_sales_df = _load_projected_sales_share_long_rows(economy_code)
+        if not projected_sales_df.empty:
+            long_defaults_df = pd.concat([long_defaults_df, projected_sales_df], ignore_index=True)
+
+        long_defaults_df = _filter_to_static_contract(
+            long_df=long_defaults_df,
+            contract=static_contract,
+        )
+        long_defaults_df = _apply_static_contract(
+            long_df=long_defaults_df,
+            contract=static_contract,
+            economy_code=economy_code,
+        )
+
+        economy_row_keys[economy_code] = set(
+            zip(
+                long_defaults_df["Scenario"],
+                long_defaults_df["Branch Path"],
+                long_defaults_df["Variable"],
+            )
+        )
+
+        csv_path = version_root / f"{economy_safe}.csv"
+        long_defaults_df[MODULE1_LONG_COLUMNS].to_csv(csv_path, index=False)
+        defaults_files_written += 1
+
+    versions_index = []
+    available_versions = [
+        v for v in list_default_versions(output_root=output_root)
+        if not str(v).startswith("_tmp")
+    ]
+    for available_version in available_versions:
+        versions_index.append(
+            {
+                "version": available_version,
+                "economies": list_default_economies(version=available_version, output_root=output_root),
+            }
+        )
+
+    index_payload = {
+        "default_version": version,
+        "versions": versions_index,
+    }
+    (static_root / "index.json").write_text(
+        json.dumps(index_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    return {
+        "economies_written": len(economies),
+        "defaults_files_written": defaults_files_written,
+        "economy_row_keys": economy_row_keys,
+    }
 
 
 REQUIRED_ROAD_MODEL_INPUTS = [
@@ -277,64 +543,97 @@ def _validate_input_schemas(data_dir: Path) -> list[str]:
     return issues
 
 
-def _load_required_rows_manifest() -> pd.DataFrame:
-    """Load the required rows manifest CSV.  Raises clearly if the file is missing."""
-    if not REQUIRED_ROWS_MANIFEST_PATH.exists():
-        raise SystemExit(
-            f"\nERROR — required rows manifest not found:\n  {REQUIRED_ROWS_MANIFEST_PATH}\n\n"
-            "This file defines what (Branch Path, Variable) pairs must appear in every "
-            "economy's frontend output CSV.  It should be committed to the repository.\n"
-            "To regenerate it from a correct output, run the regeneration helper in "
-            "build_road_model_static_defaults.py."
-        )
-    return pd.read_csv(REQUIRED_ROWS_MANIFEST_PATH)
 
 
-def _validate_output_completeness(economy_row_pairs: dict[str, set[tuple[str, str]]]) -> None:
-    """Raise if any required (Branch Path, Variable) pair is missing from any economy's output.
+def _validate_static_contract_output(
+    economy_row_keys: dict[str, set[tuple[str, str, str]]],
+) -> None:
+    """Validate generated static rows against road_module1_static_contract.csv.
 
-    Two separate checks are run:
-    1. Fixed structure (manifest): every (Branch Path, Variable) in
-       road_module1_required_rows.csv must be present.
-    2. Fuel level (rule): every fuel-level branch present in the output must
-       have both Mileage and Fuel Economy — because fuel mix is economy-specific.
+    Three checks per economy:
+    1. No (Branch Path, Variable) in the output that isn't in the contract.
+    2. Every contract row with Current Accounts=True must appear in the CA scenario output.
+    3. Every contract row with Projected Scenario=True must appear in every non-CA scenario output.
     """
-    if not economy_row_pairs:
+    if not economy_row_keys:
         return
 
-    manifest = _load_required_rows_manifest()
-    required_pairs = frozenset(zip(manifest["Branch Path"], manifest["Variable"]))
+    contract = _load_static_contract()
+    exclusions = _load_static_fuel_branch_exclusions()
+
+    # All valid (Branch Path, Variable) pairs in the contract
+    contract_bp_var: frozenset[tuple[str, str]] = frozenset(
+        zip(contract["Branch Path"], contract["Variable"])
+    )
+    # Pairs required in the Current Accounts scenario
+    ca_required: frozenset[tuple[str, str]] = frozenset(
+        zip(
+            contract.loc[contract["Current Accounts"], "Branch Path"],
+            contract.loc[contract["Current Accounts"], "Variable"],
+        )
+    )
+    # Pairs required in non-CA (Target and other projected) scenarios
+    target_required: frozenset[tuple[str, str]] = frozenset(
+        zip(
+            contract.loc[contract["Projected Scenario"], "Branch Path"],
+            contract.loc[contract["Projected Scenario"], "Variable"],
+        )
+    )
 
     failures: list[str] = []
 
-    for economy_code, pairs_present in sorted(economy_row_pairs.items()):
-        # --- Check 1: fixed manifest ---
-        missing_fixed = required_pairs - pairs_present
-        if missing_fixed:
-            for bp, var in sorted(missing_fixed):
-                failures.append(f"  {economy_code}: missing ({bp!r}, {var!r})")
-
-        # --- Check 2: fuel-level rule ---
-        # Find every fuel-level branch (depth 5) that has at least one fuel-level variable.
-        fuel_branches = {
-            bp for bp, var in pairs_present
-            if len(bp.split("\\")) == 5 and var in FUEL_LEVEL_VARS
-        }
-        for bp in sorted(fuel_branches):
-            for var in FUEL_LEVEL_VARS:
-                if (bp, var) not in pairs_present:
-                    failures.append(f"  {economy_code}: fuel branch missing {var!r}: {bp!r}")
-
-    if failures:
-        block = "\n".join(failures)
-        raise SystemExit(
-            f"\nERROR — required rows missing from output CSV(s):\n{block}\n\n"
-            "Fixed-structure rows must match road_module1_required_rows.csv.\n"
-            "Fuel-level branches must each have both Mileage and Fuel Economy.\n"
-            "Check supplemental source files and overlay functions in road_module1_defaults.py."
+    for economy_code, generated_keys in sorted(economy_row_keys.items()):
+        excluded_branches = set(
+            exclusions.loc[exclusions["Economy"].eq(economy_code), "Branch Path"]
         )
 
-    print("Completeness check passed: all required rows present in every economy output.")
+        ca_generated = {(bp, var) for scen, bp, var in generated_keys if scen == "Current Accounts"}
+        target_generated = {(bp, var) for scen, bp, var in generated_keys if scen != "Current Accounts"}
+        all_generated = {(bp, var) for _, bp, var in generated_keys}
+
+        # Check 1: no uncontracted (Branch Path, Variable) pairs
+        uncontracted = all_generated - contract_bp_var
+        if uncontracted:
+            sample = sorted(uncontracted)[:20]
+            failures.append(
+                f"  {economy_code}: generated rows absent from {STATIC_CONTRACT_CSV_PATH.name}:\n"
+                + "\n".join(f"    {key!r}" for key in sample)
+            )
+
+        # Check 2: required CA rows present
+        allowed_missing_ca = {
+            (bp, var) for bp, var in ca_required
+            if bp in excluded_branches and len(bp.split("\\")) == 5
+        }
+        missing_ca = ca_required - ca_generated - allowed_missing_ca
+        if missing_ca:
+            sample = sorted(missing_ca)[:20]
+            failures.append(
+                f"  {economy_code}: missing required Current Accounts rows:\n"
+                + "\n".join(f"    {key!r}" for key in sample)
+            )
+
+        # Check 3: required Target rows present
+        allowed_missing_target = {
+            (bp, var) for bp, var in target_required
+            if bp in excluded_branches and len(bp.split("\\")) == 5
+        }
+        missing_target = target_required - target_generated - allowed_missing_target
+        if missing_target:
+            sample = sorted(missing_target)[:20]
+            failures.append(
+                f"  {economy_code}: missing required projected scenario rows:\n"
+                + "\n".join(f"    {key!r}" for key in sample)
+            )
+
+    if failures:
+        raise SystemExit(
+            f"\nERROR - static bundle rows do not match {STATIC_CONTRACT_CSV_PATH.name}:\n"
+            + "\n".join(failures)
+            + f"\n\nUpdate {STATIC_CONTRACT_CSV_PATH.name} if the generated static dataset changed intentionally."
+        )
+
+    print(f"Static contract check passed: generated rows match {STATIC_CONTRACT_CSV_PATH.name}.")
 
 
 def main() -> None:
@@ -365,8 +664,6 @@ def main() -> None:
         output_root=OUTPUT_ROOT,
         static_root=FRONTEND_STATIC_BUNDLE_ROOT,
         version=DEFAULT_VERSION,
-        scenarios=list(DEFAULT_SCENARIOS),
-        allowed_variables=FRONTEND_ALLOWED_VARIABLES,
     )
 
     print(f"Generated defaults for {len(generated)} economies.")
@@ -374,7 +671,9 @@ def main() -> None:
     print(f"Static bundle root: {FRONTEND_STATIC_BUNDLE_ROOT}")
     print(f"Defaults JSON files written: {static_summary.get('defaults_files_written', 0)}")
 
-    _validate_output_completeness(static_summary.get("economy_row_pairs", {}))
+    _validate_static_contract_output(
+        static_summary.get("economy_row_keys", {}),
+    )
 
 
 if __name__ == "__main__":

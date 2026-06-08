@@ -117,3 +117,52 @@ def test_run_model_503_when_workflow_missing(tmp_path, client, monkeypatch):
 def test_stream_404_unknown_run_id(client):
     response = client.get("/api/v1/road-module1/run-model-stream?run_id=not-a-real-id")
     assert response.status_code == 404
+
+
+def test_road_model_docs_served_from_model_repo(client):
+    response = client.get("/road-model-docs/road_transport_model_simplified.md")
+
+    assert response.status_code == 200
+    assert "compact conceptual description" in response.text
+
+
+# ---------------------------------------------------------------------------
+# Static contract drivetrain scope check
+# Mirrors valid_drive_types_by_vehicle_type in
+# leap_road_model/codebase/config/vehicle_mappings.yaml — update both together.
+# ---------------------------------------------------------------------------
+
+
+_VALID_DRIVES_BY_VEHICLE_TYPE = {
+    "LPVs":        {"ICE", "HEV", "EREV", "PHEV", "BEV", "FCEV"},
+    "Motorcycles": {"ICE", "BEV", "FCEV"},
+    "Buses":       {"ICE", "BEV", "FCEV"},
+    "Trucks":      {"ICE", "BEV", "FCEV"},
+    "LCVs":        {"ICE", "PHEV", "BEV", "FCEV"},
+}
+
+def test_static_contract_drivetrains_match_vehicle_mappings():
+    import csv as csv_mod
+    contract = (
+        Path(__file__).parent.parent
+        / "data" / "road_model" / "config" / "road_module1_static_contract.csv"
+    )
+    violations = []
+    with contract.open(encoding="utf-8-sig") as f:
+        for row in csv_mod.DictReader(f):
+            if row["branch_level"] != "drive_or_size":
+                continue
+            parts = row["Branch Path"].split("\\")
+            if len(parts) < 4:
+                continue
+            vehicle_type = parts[2]
+            drive_type = parts[3].split()[0]  # strip size suffix ("ICE heavy" → "ICE")
+            allowed = _VALID_DRIVES_BY_VEHICLE_TYPE.get(vehicle_type)
+            if allowed is not None and drive_type not in allowed:
+                violations.append(
+                    f"{row['Branch Path']!r}: {drive_type!r} not allowed for {vehicle_type!r}"
+                )
+    assert not violations, (
+        "static_contract has drivetrains outside vehicle_mappings.yaml scope:\n"
+        + "\n".join(violations)
+    )

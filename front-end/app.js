@@ -21,6 +21,7 @@ const State = {
         scenario: 'Current Accounts',
         keyColumns: [],
         rows: [],
+        hiddenRows: [],
         overrides: new Map(),
         sharedMileageOverrides: new Map(),
         sharedFuelEconomyOverrides: new Map(),
@@ -63,7 +64,7 @@ const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
-const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Units', 'Source', 'Comment', 'Input Status'];
+const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
 const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
     passenger: [
@@ -76,6 +77,11 @@ const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
         'Demand\\Freight road\\LCVs'
     ]
 };
+const ROAD_MODULE1_TRANSPORT_PARAM_GROUPS_ENABLED = {
+    ownership: true,
+    fleetWeighting: true,
+    freightProjection: true
+};
 const ROAD_MODULE1_VALUE_RULES = {
     'Stock': { min: 0 },
     'Sales Share': { min: 0, max: 100 },
@@ -84,7 +90,9 @@ const ROAD_MODULE1_VALUE_RULES = {
     'Fuel Economy': { min: 0 },
     'Mileage': { min: 0 },
     'Passenger Vehicle Saturation': { min: 0 },
+    'Passenger Stock Growth Rate Adjustment': { min: 0, max: 2 },
     'PHEV Electric Driving Share': { min: 0, max: 100 },
+    'Freight GDP Elasticity Adjustment': { min: 0, max: 2 },
     'Reconciliation Bound Lower': { min: 0 },
     'Reconciliation Bound Upper': { min: 0 },
     'Reconciliation Weight': { min: 0 },
@@ -187,6 +195,7 @@ const DOM = {
     roadRunLogClose: document.getElementById('road-run-log-close'),
     roadRunLogDashboard: document.getElementById('road-run-log-dashboard'),
     roadRunLogWorkbook: document.getElementById('road-run-log-workbook'),
+    roadRunLogLifecycleProfiles: document.getElementById('road-run-log-lifecycle-profiles'),
     roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
     roadDetailedFuelEconomyToggle: document.getElementById('road-detailed-fuel-economy-toggle'),
     roadRowStats: document.getElementById('road-row-stats'),
@@ -707,7 +716,7 @@ async function loadRoadModule1DefaultsFromStaticBundle(version, economy) {
         ...row,
         Year: row.Year === '' ? row.Year : Number(row.Year),
         Value: row.Value === '' ? row.Value : Number(row.Value),
-        Scenario: 'Current Accounts'
+        Scenario: row.Scenario || 'Current Accounts'
     }));
 
     if (rows.length === 0) {
@@ -730,6 +739,25 @@ function normalizeRoadModule1RowsForUi(rows) {
         ...row,
         researcher_review_recommended: false
     }));
+}
+
+function isRoadModule1ShownInInterface(row) {
+    const rawValue = row?.['Shown In Interface'] ?? row?.shown_in_interface ?? row?.shownInInterface;
+    if (rawValue === undefined || rawValue === null || rawValue === '') return true;
+    return !['false', '0', 'no', 'n'].includes(String(rawValue).trim().toLowerCase());
+}
+
+function splitRoadModule1RowsByVisibility(rows) {
+    const visibleRows = [];
+    const hiddenRows = [];
+    (Array.isArray(rows) ? rows : []).forEach(row => {
+        if (isRoadModule1ShownInInterface(row)) {
+            visibleRows.push(row);
+        } else {
+            hiddenRows.push(row);
+        }
+    });
+    return { visibleRows, hiddenRows };
 }
 
 function isRoadVehicleTypeStockShareRow(row) {
@@ -761,7 +789,7 @@ function convertRoadLongRowsToWideUiRows(longRows) {
             Variable: row.Variable ?? '',
             Scenario: row.Scenario ?? '',
             Region: region,
-            Scale: String(row.Variable || '').includes('Share') ? '%' : '',
+            Scale: row.Scale ?? (String(row.Variable || '').includes('Share') ? '%' : ''),
             Units: row.Units ?? '',
             'Per...': '',
             input_source: inputStatus,
@@ -1209,7 +1237,9 @@ async function loadRoadModule1Defaults() {
         State.roadModule1.economy = economy;
         State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
-        State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
+        const splitRows = splitRoadModule1RowsByVisibility(response.rows);
+        State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
+        State.roadModule1.hiddenRows = splitRows.hiddenRows;
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
@@ -1296,7 +1326,9 @@ async function loadRoadModule1BuiltinProvidedValues() {
         State.roadModule1.economy = economy;
         State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
-        State.roadModule1.rows = normalizeRoadModule1RowsForUi(response.rows);
+        const splitRows = splitRoadModule1RowsByVisibility(response.rows);
+        State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
+        State.roadModule1.hiddenRows = splitRows.hiddenRows;
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
@@ -1617,7 +1649,9 @@ function isRoadTransportParamRow(row) {
     return [
         normalizeRoadTextToken('Vehicle Equivalent Weight'),
         normalizeRoadTextToken('Passenger Vehicle Saturation'),
-        normalizeRoadTextToken('Passenger Saturation Reached')
+        normalizeRoadTextToken('Passenger Saturation Reached'),
+        normalizeRoadTextToken('Passenger Stock Growth Rate Adjustment'),
+        normalizeRoadTextToken('Freight GDP Elasticity Adjustment')
     ].includes(variable);
 }
 
@@ -1626,7 +1660,35 @@ function getRoadTransportParamRole(row) {
     if (variable === normalizeRoadTextToken('Vehicle Equivalent Weight')) return 'vew';
     if (variable === normalizeRoadTextToken('Passenger Vehicle Saturation')) return 'pvs';
     if (variable === normalizeRoadTextToken('Passenger Saturation Reached')) return 'pvs_reached';
+    if (variable === normalizeRoadTextToken('Passenger Stock Growth Rate Adjustment')) return 'passenger_growth_adjustment';
+    if (variable === normalizeRoadTextToken('Freight GDP Elasticity Adjustment')) return 'freight_elasticity_adjustment';
     return '';
+}
+
+function isRoadTransportParamRoleEnabled(role) {
+    if (role === 'pvs' || role === 'pvs_reached' || role === 'passenger_growth_adjustment') {
+        return ROAD_MODULE1_TRANSPORT_PARAM_GROUPS_ENABLED.ownership;
+    }
+    if (role === 'vew') {
+        return ROAD_MODULE1_TRANSPORT_PARAM_GROUPS_ENABLED.fleetWeighting;
+    }
+    if (role === 'freight_elasticity_adjustment') {
+        return ROAD_MODULE1_TRANSPORT_PARAM_GROUPS_ENABLED.freightProjection;
+    }
+    return false;
+}
+
+function getRoadTransportParamGroupTitle(group) {
+    const roles = new Set((group?.rows || []).map(getRoadTransportParamRole).filter(Boolean));
+    const hasOwnership = roles.has('pvs') || roles.has('pvs_reached') || roles.has('passenger_growth_adjustment');
+    const hasFleetWeighting = roles.has('vew');
+    const hasFreightProjection = roles.has('freight_elasticity_adjustment');
+    if (hasFreightProjection && !hasOwnership && !hasFleetWeighting) return 'Freight projection assumptions';
+    if (hasFreightProjection) return 'Projection assumptions';
+    if (hasOwnership && hasFleetWeighting) return 'Fleet assumptions';
+    if (hasOwnership) return 'Ownership assumptions';
+    if (hasFleetWeighting) return 'Fleet weighting';
+    return 'Model assumptions';
 }
 
 function getRoadTransportParamBranchPath(row) {
@@ -2071,6 +2133,7 @@ function groupRoadRowsForEditors(filteredRows) {
 
     filteredRows
         .filter(isRoadTransportParamRow)
+        .filter(row => isRoadTransportParamRoleEnabled(getRoadTransportParamRole(row)))
         .forEach(row => {
             const branchPath = getRoadTransportParamBranchPath(row);
             const groupKey = `transport-params|${getRoadTransportParamGroupKey(row)}`;
@@ -2222,7 +2285,7 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
         : (group.groupType === 'reconciliation-controls'
             ? 'Reconciliation controls'
             : (group.groupType === 'transport-params'
-                ? 'Transport parameters'
+                ? getRoadTransportParamGroupTitle(group)
                 : (first.Variable || 'Measure')));
     return `
         <section class="road-graph-editor">
@@ -2248,7 +2311,7 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? 'Ownership & fleet weighting'
+                ? getRoadTransportParamGroupTitle(group)
                 : first.Variable));
     return `
         <section class="road-group-card road-tree-editor ${isCompactGroup ? 'is-compact' : ''}" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
@@ -2316,7 +2379,7 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
             : '';
         return `
             <div class="road-year-input road-paired-share-input" data-share-role="${role}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
-                ${buildRoadCellLabelHtml(label, `${label}: enter a fraction between 0 and 1 for this transport type.`)}
+                ${buildRoadCellLabelHtml(label, ROAD_VARIABLE_HELP.pairedFuelShare[role] || `${label}: enter a fraction between 0 and 1 for this transport type.`)}
                 <input type="number" step="any" ${getRoadPairedFuelShareBoundsAttrs()} class="road-value-input road-paired-share-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
@@ -2326,7 +2389,7 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
     return `
         <div class="road-input-row road-paired-share-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}">
             <div class="road-row-label">
-                <div class="road-row-title" title="Conventional gasoline/diesel split at the top-level vehicle type">${pairedTitle} ${buildRoadInfoTooltip('Only the conventional gasoline/diesel split is shown here; alternative fuels such as biogasoline are excluded.')}</div>
+                <div class="road-row-title" title="Conventional gasoline/diesel split at the top-level vehicle type">${pairedTitle} ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.pairedFuelShare.rowTitle)}</div>
             </div>
             <div class="road-year-grid road-paired-share-grid">
                 ${shareInput('gasoline', 'Gasoline share')}
@@ -2406,27 +2469,27 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
         pickWeightRole('weight_stock'),
         pickLowerRole('bound_lower_stock'),
         pickUpperRole('bound_upper_stock'),
-        'Share of the energy correction applied by adjusting vehicle stock.',
-        'Minimum allowed stock adjustment factor (e.g. 0.85 = −15%).',
-        'Maximum allowed stock adjustment factor (e.g. 1.15 = +15%).'
+        ROAD_VARIABLE_HELP.reconciliation.stockWeight,
+        ROAD_VARIABLE_HELP.reconciliation.stockLower,
+        ROAD_VARIABLE_HELP.reconciliation.stockUpper
     );
     const mileageSection = componentSection(
         'Mileage',
         pickWeightRole('weight_mileage'),
         pickLowerRole('bound_lower_mileage'),
         pickUpperRole('bound_upper_mileage'),
-        'Share of the energy correction applied by adjusting annual km per vehicle.',
-        'Minimum allowed mileage adjustment factor (e.g. 0.85 = −15%).',
-        'Maximum allowed mileage adjustment factor (e.g. 1.15 = +15%).'
+        ROAD_VARIABLE_HELP.reconciliation.mileageWeight,
+        ROAD_VARIABLE_HELP.reconciliation.mileageLower,
+        ROAD_VARIABLE_HELP.reconciliation.mileageUpper
     );
     const efficiencySection = componentSection(
         'Efficiency',
         pickWeightRole('weight_efficiency'),
         pickLowerRole('bound_lower_efficiency'),
         pickUpperRole('bound_upper_efficiency'),
-        'Share of the energy correction applied by adjusting fuel economy.',
-        'Minimum allowed efficiency adjustment factor (e.g. 0.90 = −10%).',
-        'Maximum allowed efficiency adjustment factor (e.g. 1.10 = +10%).'
+        ROAD_VARIABLE_HELP.reconciliation.efficiencyWeight,
+        ROAD_VARIABLE_HELP.reconciliation.efficiencyLower,
+        ROAD_VARIABLE_HELP.reconciliation.efficiencyUpper
     );
 
     const sectionCount = [stockSection, mileageSection, efficiencySection]
@@ -2437,7 +2500,7 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
     return `
         <div class="road-input-row road-reconciliation-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}">
             <div class="road-row-label">
-                <div class="road-row-title">Fuel reconciliation controls ${buildRoadInfoTooltip('These values constrain how reconciliation adjusts stock, mileage, and/or efficiency to match fuel totals.')}</div>
+                <div class="road-row-title">Fuel reconciliation controls ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.reconciliation.rowTitle)}</div>
                 <div class="road-row-meta">${escapeHtml(reconciliationDescription)} ${sectionCount > 1 ? `(${sectionCount} control groups)` : ''}</div>
             </div>
             <div class="road-reconciliation-components">
@@ -2454,9 +2517,13 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
 }
 
 function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
-    const pvsRows = group.rows.filter(row => getRoadTransportParamRole(row) === 'pvs');
-    const pvsReachedRows = group.rows.filter(row => getRoadTransportParamRole(row) === 'pvs_reached');
+    const enabledRows = group.rows.filter(row => isRoadTransportParamRoleEnabled(getRoadTransportParamRole(row)));
+    const pvsRows = enabledRows.filter(row => getRoadTransportParamRole(row) === 'pvs');
+    const pvsReachedRows = enabledRows.filter(row => getRoadTransportParamRole(row) === 'pvs_reached');
+    const passengerGrowthRows = enabledRows.filter(row => getRoadTransportParamRole(row) === 'passenger_growth_adjustment');
+    const freightElasticityRows = enabledRows.filter(row => getRoadTransportParamRole(row) === 'freight_elasticity_adjustment');
     const vewRows = group.rows
+        .filter(row => isRoadTransportParamRoleEnabled(getRoadTransportParamRole(row)))
         .filter(row => getRoadTransportParamRole(row) === 'vew')
         .sort((a, b) => getRoadFleetWeightCanonicalClass(a).localeCompare(getRoadFleetWeightCanonicalClass(b), 'en-US', { numeric: true }));
 
@@ -2466,6 +2533,9 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
         const keyPayload = encodeURIComponent(JSON.stringify(roadModule1KeyPayload(row)));
         const yearColumns = getRoadYearColumns(row);
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
+        const _paramVarName = ROAD_VARIABLE_HELP.paramRoles[role];
+        const _paramHelpText = _paramVarName ? (ROAD_VARIABLE_HELP.variables[_paramVarName] || '') : '';
+        const _paramHelpTip = _paramHelpText ? ` ${buildRoadInfoTooltip(_paramHelpText)}` : '';
         const yearInputs = yearColumns.map(year => {
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
@@ -2495,7 +2565,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
         const unitPill = row.Units ? `<span class="road-unit-pill">${escapeHtml(row.Units)}</span>` : '';
         return `
             <div class="road-transport-param-measure" data-param-role="${role}">
-                <div class="road-transport-param-label">${escapeHtml(labelText)}${unitPill}</div>
+                <div class="road-transport-param-label">${escapeHtml(labelText)}${_paramHelpTip}${unitPill}</div>
                 <div class="road-year-grid">${yearInputs}</div>
             </div>
         `;
@@ -2503,9 +2573,14 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
 
     const ownershipHtml = [
         ...pvsRows.map(row => paramSection(row, 'pvs', 'Ownership saturation')),
-        ...pvsReachedRows.map(row => paramSection(row, 'pvs_reached', 'Passenger saturation reached'))
+        ...pvsReachedRows.map(row => paramSection(row, 'pvs_reached', 'Passenger saturation reached')),
+        ...passengerGrowthRows.map(row => paramSection(row, 'passenger_growth_adjustment', 'Passenger stock growth adjustment'))
     ]
         .filter(Boolean)
+        .join('');
+
+    const freightProjectionHtml = freightElasticityRows
+        .map(row => paramSection(row, 'freight_elasticity_adjustment', 'Freight elasticity adjustment'))
         .join('');
 
     const canonicalFleetRows = (() => {
@@ -2533,7 +2608,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
         .map(row => paramSection(row, 'vew', `Vehicle equivalence weight — ${getRoadFleetWeightCanonicalClass(row)}`))
         .join('');
 
-    const allRows = [...pvsRows, ...pvsReachedRows, ...canonicalFleetRows];
+    const allRows = [...pvsRows, ...pvsReachedRows, ...passengerGrowthRows, ...freightElasticityRows, ...canonicalFleetRows];
 
     const allRowKeys = allRows.map(row => buildRoadModule1Key(row));
     const allYears = allRows.flatMap(row => getRoadYearColumns(row));
@@ -2559,6 +2634,12 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
                 <div class="road-transport-param-group">
                     <div class="road-transport-param-group-title">Fleet weighting</div>
                     ${fleetRowsHtml}
+                </div>
+                ` : ''}
+                ${freightProjectionHtml ? `
+                <div class="road-transport-param-group">
+                    <div class="road-transport-param-group-title">Freight projection</div>
+                    ${freightProjectionHtml}
                 </div>
                 ` : ''}
             </div>
@@ -2591,14 +2672,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const yearColumns = getRoadYearColumns(first);
         const sharedKey = group.sharedKey || getRoadSharedUtilisationKey(first);
         const sharedComment = getRoadSharedUtilisationComment(sharedKey, yearColumns);
-        const childCount = group.rows.length;
         const yearInputs = yearColumns.map(year => {
             const override = State.roadModule1.sharedUtilisationOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
             const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `${first.Variable || 'PHEV Electric Driving Share'} for ${year}. One shared value applies to all ${childCount} PHEV size variants.`)}
+                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[first.Variable] || ROAD_VARIABLE_HELP.variables['PHEV Electric Driving Share']}`)}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
                 </div>
             `;
@@ -2628,7 +2708,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `Mileage for ${year}. One shared series is used across all drives and fuels in this vehicle type.`)}
+                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables['Mileage']} One shared series is used across all drives and fuels in this vehicle type.`)}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
                 </div>
             `;
@@ -2669,7 +2749,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 const boundsAttrs = getRoadModule1InputBoundsAttrs(refRow.Variable);
                 return `
                     <div class="road-year-input" data-year="${year}">
-                        ${buildRoadCellLabelHtml(year, `Fuel economy for ${year}. One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`)}
+                        ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`)}
                         <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
                     </div>
                 `;
@@ -2741,7 +2821,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         return `
             <div class="road-input-row road-series-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
                 <div class="road-row-label">
-                    <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}${first.review_reason ? ` ${buildRoadInfoTooltip(first.review_reason)}` : ''}</div>
+                    <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}${first.review_reason ? ` ${buildRoadInfoTooltip(first.review_reason)}` : ROAD_VARIABLE_HELP.variables[first.Variable] ? ` ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[first.Variable])}` : ''}</div>
                     <div class="road-row-meta">${escapeHtml(rowMeta)} | ages ${defaultPoints[0]?.age ?? ''}-${defaultPoints[defaultPoints.length - 1]?.age ?? ''}</div>
                     <div class="road-series-legend">
                         <span><i class="default"></i>Loaded</span>
@@ -2774,7 +2854,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const isReadOnlyBaseStockShare = isRoadVehicleTypeStockShareRow(row) && Number(year) === ROAD_MODULE1_BASE_YEAR;
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `${row.Variable || 'Value'} for ${year}. Leave blank to keep the provided default value.`)}
+                    ${buildRoadCellLabelHtml(year, `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`)}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} placeholder="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : (override ? escapeHtml(override.value) : '')}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>
@@ -2788,7 +2868,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             <div class="road-input-row ${hideRowLabel ? 'no-row-label' : ''}" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
                 ${hideRowLabel ? '' : `
                 <div class="road-row-label">
-                    <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}${row.review_reason ? ` ${buildRoadInfoTooltip(row.review_reason)}` : ''}</div>
+                    <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}${row.review_reason ? ` ${buildRoadInfoTooltip(row.review_reason)}` : ROAD_VARIABLE_HELP.variables[row.Variable] ? ` ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[row.Variable])}` : ''}</div>
                     ${rowMeta ? `<div class="road-row-meta">${escapeHtml(rowMeta)}</div>` : ''}
                 </div>
                 `}
@@ -2838,7 +2918,7 @@ function buildRoadModule1ListGroupHtml(group) {
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
             : (group.groupType === 'transport-params'
-                ? 'Ownership & fleet weighting'
+                ? getRoadTransportParamGroupTitle(group)
                 : first.Variable));
     return `
         <section class="road-group-card ${isCompactGroup ? 'is-compact' : ''}">
@@ -3573,11 +3653,15 @@ async function runRoadModel() {
     if (DOM.roadRunLogOutput) DOM.roadRunLogOutput.innerHTML = '';
     if (DOM.roadRunLogDashboard) DOM.roadRunLogDashboard.classList.add('hidden');
     if (DOM.roadRunLogWorkbook) DOM.roadRunLogWorkbook.classList.add('hidden');
+    if (DOM.roadRunLogLifecycleProfiles) DOM.roadRunLogLifecycleProfiles.classList.add('hidden');
     _setRoadRunStatus('running');
     showRoadRunLogModal();
 
     const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
-    const completedLongRows = convertRoadWideUiRowsToLongRows(completedRows, State.roadModule1.economy);
+    const completedLongRows = [
+        ...convertRoadWideUiRowsToLongRows(completedRows, State.roadModule1.economy),
+        ...(Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [])
+    ];
     _appendRoadRunLog(`Sending ${completedLongRows.length.toLocaleString('en-US')} long rows to backend...`);
 
     let runId, economyCanonical;
@@ -3642,6 +3726,12 @@ async function runRoadModel() {
                     DOM.roadRunLogWorkbook.classList.remove('hidden');
                     DOM.roadRunLogWorkbook.href = wbUrl;
                     _appendRoadRunLog(`LEAP workbook: ${wbUrl}`);
+                }
+                if (data.lifecycle_profiles_url && DOM.roadRunLogLifecycleProfiles) {
+                    const lifecycleUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${data.lifecycle_profiles_url}`;
+                    DOM.roadRunLogLifecycleProfiles.classList.remove('hidden');
+                    DOM.roadRunLogLifecycleProfiles.href = lifecycleUrl;
+                    _appendRoadRunLog(`Lifecycle profiles: ${lifecycleUrl}`);
                 }
             } else {
                 _setRoadRunStatus('error');
@@ -3759,6 +3849,8 @@ function buildRoadRowsFromFactorsSheet(factorRows, contextDefaults) {
 
     const parameterMap = {
         'phev_electric_utilisation_rate': 'PHEV Electric Driving Share',
+        'passenger_stock_growth_rate_adjustment': 'Passenger Stock Growth Rate Adjustment',
+        'freight_gdp_elasticity_adjustment': 'Freight GDP Elasticity Adjustment',
         'reconciliation_bound_lower': 'Reconciliation Bound Lower',
         'reconciliation_bound_upper': 'Reconciliation Bound Upper',
         'stock_reconciliation_weight': 'Reconciliation Weight',
@@ -4073,8 +4165,11 @@ function previewRoadModule1UploadedRows(uploadRows) {
         }
 
         const oldValue = targetRow[yearColumn];
-        if (String(oldValue ?? '').trim() === String(numericValue)) return;
+        const oldScale = targetRow.Scale || '';
+        const uploadedScale = Object.prototype.hasOwnProperty.call(uploadRow, 'Scale') ? (uploadRow.Scale || '') : oldScale;
+        if (String(oldValue ?? '').trim() === String(numericValue) && String(oldScale).trim() === String(uploadedScale).trim()) return;
         targetRow[yearColumn] = numericValue;
+        targetRow.Scale = uploadedScale;
         targetRow._inputStatus = 'researcher';
         if (Object.prototype.hasOwnProperty.call(uploadRow, 'Comment')) targetRow.notes = uploadRow.Comment || targetRow.notes || '';
         if (Object.prototype.hasOwnProperty.call(uploadRow, 'Source')) targetRow.source_name = uploadRow.Source || targetRow.source_name || '';
@@ -4256,10 +4351,12 @@ function convertRoadWideUiRowsToLongRows(rows, economyCode, includeBlankStockSha
                 Variable: row.Variable || '',
                 Year: Number(year),
                 Value: value,
+                Scale: row.Scale || '',
                 Units: row.Units || '',
                 Source: row.source_name || row.Source || '',
                 Comment: row.notes || row.Comment || '',
-                'Input Status': row._inputStatus || 'default'
+                'Input Status': row._inputStatus || 'default',
+                'Shown In Interface': 'True'
             });
         });
     });

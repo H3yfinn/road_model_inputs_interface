@@ -1,0 +1,1326 @@
+Economy,Branch Path,Fuel,Reason
+01AUS,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+01AUS,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE heavy\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE large\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+02BD,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+03CDA,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+04CHL,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+05PRC,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE heavy\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE large\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+06HKC,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+07INA,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+08JPN,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+09ROK,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+10MAS,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+11MEX,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+12NZ,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE heavy\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE large\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+13PNG,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+14PE,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+15PHL,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\LCVs\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\BEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV heavy\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Freight road\Trucks\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Buses\PHEV\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\BEV large\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\BEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\BEV small\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV large\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\EREV small\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV large\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV medium\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\LPVs\PHEV small\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Motorcycles\BEV\Electricity,Electricity,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+16RUS,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV heavy\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\PHEV\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV large\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV medium\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV small\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Motorcycles\ICE\Biogasoline,Biogasoline,0 data for fuel in esto dataset
+17SGP,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\LCVs\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE heavy\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Buses\ICE\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE large\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE medium\Natural gas,Natural gas,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+18CT,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+19THA,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+20USA,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\ICE\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\LCVs\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\EREV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\EREV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\FCEV heavy\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\FCEV medium\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE heavy\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE heavy\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE heavy\LNG,LNG,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE heavy\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE medium\LNG,LNG,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\PHEV heavy\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Freight road\Trucks\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\FCEV\Hydrogen,Hydrogen,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\ICE\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\ICE\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\ICE\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\PHEV\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Buses\PHEV\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV large\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\EREV small\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV large\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\HEV small\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE large\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE large\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE large\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE medium\Biogas,Biogas,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE medium\LPG,LPG,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\ICE small\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV large\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV large\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV medium\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV medium\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV small\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\LPVs\PHEV small\Efuel,Efuel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Motorcycles\ICE\Biodiesel,Biodiesel,0 data for fuel in esto dataset
+21VN,Demand\Passenger road\Motorcycles\ICE\Efuel,Efuel,0 data for fuel in esto dataset

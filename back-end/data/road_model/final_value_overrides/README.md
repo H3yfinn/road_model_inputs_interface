@@ -25,12 +25,11 @@ Optional column:
 
 - `Region`
 
-These files are applied after all normal sources have run, including:
+These files are applied after the full source merge and stock share derivation
+have run. That means after:
 
-- `processed_source/road_module1_source_<ECONOMY>.csv`
-- supplemental source CSV/XLSX files
-- survival and vintage profile overlays
-- derived vehicle-type `Stock Share` rows
+- the source merge (`processed_source/`, `manually_filled_rows/`, `supplemental_source_files/`)
+- stock share derivation (vehicle-type `Stock Share` % computed from `Stock` rows)
 
 Override rows must match an existing generated row by `Branch Path`, `Variable`,
 `Scenario`, and `Year`.

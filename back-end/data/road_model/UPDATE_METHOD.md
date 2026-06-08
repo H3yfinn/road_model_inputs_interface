@@ -1,303 +1,305 @@
-# Road model numeric data update method log
+# Road Module 1 Data Update Method
 
----
+This file describes the current method for updating numeric source files and
+regenerating the Road Module 1 default package. It is written as operating
+guidance, not as a change log.
 
-## Required rows manifest and structural validation (2026-06-05)
+For a folder-level guide to this data package, see `README.md` in this
+directory.
 
-### What this is
+## Current Pipeline
 
-`road_module1_required_rows.csv` (in this directory) is the authoritative
-specification of what `(Branch Path, Variable)` pairs must be present in every
-economy's frontend output CSV.  It covers the **fixed structure** of the model:
-transport-level rows (reconciliation, passenger saturation), vehicle-type-level
-rows (Stock Share, Sales Share, Vehicle Equivalent Weight), age-level rows
-(Survival Rate, Vintage Profile Share), and drive-level rows (Sales Share,
-Stock Share, PHEV Electric Driving Share).
+Module 1 defaults are generated in two stages.
 
-Mileage and Fuel Economy are **not** in the manifest because their branches are
-economy-specific (fuel mix varies by economy).  They are instead validated by a
-rule: every depth-5 branch present in an economy's output must have both Mileage
-and Fuel Economy.
+Source prep is only needed when the upstream LEAP export workbook changes:
 
-### How it is enforced
+```text
+leap_import_workbooks/
+  -> back-end/scripts/prepare_road_source.py
+  -> processed_source/
+```
 
-`build_road_model_static_defaults.py` runs `_validate_output_completeness()`
-after writing every economy's static CSV.  This function:
+The regular build is used after any source, supplemental, override, contract, or
+visibility change:
 
-1. Loads `road_module1_required_rows.csv` and checks every listed
-   `(Branch Path, Variable)` pair is present in the output.
-2. Checks that every fuel-level branch (depth-5 branch path) has both
-   `Mileage` and `Fuel Economy`.
+```text
+processed_source/ + manually_filled_rows/ + supplemental_source_files/
+  -> source merge with priority rules
+  -> Stock Share derivation from base-year Stock rows
+  -> final_value_overrides/
+  -> back-end/outputs/road_module1_defaults/<VERSION>/<ECONOMY>/
+  -> front-end/road-module1-static/
+```
 
-If either check fails the build **errors and exits**.  No silent gaps.
+The supported build entry point is:
 
-### When to update the manifest
+```powershell
+cd C:\Users\Work\github\road_model_inputs_interface
+python back-end\build_road_model_static_defaults.py
+```
 
-Edit `road_module1_required_rows.csv` directly whenever:
+Use only this build entry point for regular regeneration. Static CSVs are
+generated outputs and should be recreated from the source package, not edited as
+source data.
 
-- A new vehicle type, drive, or supplemental variable is added to the model.
-- A branch is removed or renamed.
-- A new age range is introduced (change the age rows in the manifest).
+## Source Files
 
-Do not regenerate the manifest from the pipeline output — the manifest is the
-spec that the pipeline is checked against, not a record of what happened to be
-generated.
+The active source folders under `back-end/data/road_model/` are:
 
----
+| Path | Purpose | Update method |
+|---|---|---|
+| `leap_import_workbooks/` | Upstream LEAP-style transport export workbooks. | Replace when upstream exports change, then run source prep. |
+| `processed_source/` | Per-economy LEAP-shaped rows generated from the upstream export workbook. | Regenerate with `prepare_road_source.py`; do not hand-edit for normal updates. |
+| `manually_filled_rows/` | Rows absent from the processed source, including model assumption rows. | Edit directly and document the value/provenance. |
+| `supplemental_source_files/` | APEC-wide or economy-wide inputs not covered by the LEAP export. | Edit directly and document the source/provenance. |
+| `final_value_overrides/` | Optional final replacements applied after normal source generation. | Edit directly for reviewed overrides; overrides must match existing generated rows. |
+| `config/` | Static row contract, visibility, and fuel-branch exclusions. | Edit directly when the frontend/model hand-off contract changes. |
+| `archive/` | Historical files not used by current generation. | Do not use as an active source. |
 
-Use this file to record how numeric source files in `back-end/data/road_model/`
-are produced or updated.
+`road_module1_default_parameters.json` is control-plane metadata. It provides
+economy names, canonical variable names, aliases, and default scale labels. It
+is not a numeric source of truth.
 
-For a folder-level explanation of how the files in this directory are used, see
-`back-end/data/road_model/README.md`.
+`road_module1_source_priorities.csv` resolves conflicts when more than one
+source provides the same final row. Lower numeric priority wins. Use negative
+priorities for deliberate high-priority rows and large positive priorities for
+fallback rows.
 
-The intended style is script-by-script record keeping. We do not need a large
-general ingestion framework yet. We do need a clear audit trail for every source
-file or generated default package that changes.
+## Source Prep
 
-## Output versioning and tall CSV package
+Run source prep only when the upstream LEAP export workbook in
+`leap_import_workbooks/` changes.
 
-- Date: 2026-06-05
-- Author: Codex, with user review required
-- Change summary: Switched the active generated output version from the older
-  `v2026_05_25_best_guess` folder to the dated
-  `v2026_06_05_road_module1_sources` package, and documented that production
-  generations should use immutable dated version folders.
-- Source inputs:
-  - `back-end/data/road_model/processed_source/road_module1_source_<ECONOMY>.csv`
-  - `back-end/data/road_model/manually_filled_rows/`
-  - `back-end/data/road_model/supplemental_source_files/`
-  - `back-end/data/road_model/final_value_overrides/`
-- Generation method:
-  - Set `DEFAULT_VERSION = "v2026_06_05_road_module1_sources"` in
-    `back-end/core/road_module1_defaults.py`.
-  - Run `back-end/build_road_model_static_defaults.py` to regenerate all
-    economy packages and the frontend static bundle from the same version.
-- Recategorizations or mappings:
-  - No new mapping changes. This is a packaging/versioning change.
-- Output files changed:
-  - `back-end/outputs/road_module1_defaults/v2026_06_05_road_module1_sources/`
-  - `front-end/road-module1-static/`
-  - `back-end/data/road_model/README.md`
-  - `docs/new model/multinode_road_module1_repo_guide.md`
-- Validation checks run:
-  - Confirm all economy outputs use `road_module1_values_<ECONOMY>.csv`.
-  - Confirm generated files use the tall `Economy, Scenario, Branch Path,
-    Variable, Year, Value, Units, Source, Comment` format.
-  - Run static source schema validation before generation.
-- Notes/limitations:
-  - Older files named `road_module1_default_filled_inputs_<ECONOMY>.csv` in
-    older version folders are legacy wide-format artifacts. Treat them as
-    historical snapshots, not the active package.
+The prep script reads the LEAP `FOR_VIEWING` sheet, filters road transport rows,
+reshapes annual values into long rows, and writes:
 
-## Archived seed defaults (archived; not used by current Module 1 generation)
+```text
+processed_source/road_module1_source_<ECONOMY>.csv
+```
 
-- Date: 2026-06-02
-- Author: Codex, with user review required
-- Change summary: Historical seed CSV files for Module 1 default vehicle
-  types, drive shares, valid drive combinations, mileage, efficiency, and
-  scalar assumptions. These files are archived and are not used when current
-  Module 1 defaults are generated.
-- Source inputs: Old hard-coded Python constants that used to live in
-  `back-end/core/road_module1_defaults.py`. These were copied out only to
-  preserve an audit record of the previous implementation.
-- Generation method: Manual extraction from the previous Python constants into
-  CSV files. This was a one-time archival step, not a current data-generation
-  method.
-- Output files changed:
-  - `road_module1_default_vehicle_types.csv`
-  - `road_module1_default_drive_shares.csv`
-  - `road_module1_valid_drives_by_vehicle_type.csv`
-  - `road_module1_default_mileage_km_per_year.csv`
-  - `road_module1_default_efficiency_mj_per_km.csv`
-  - `road_module1_default_assumptions.csv`
-- Validation checks run: Import smoke check for `core.road_module1_defaults`;
-  `back-end/scripts/audit_road_model_data_sourcing.py`.
-- Notes/limitations: These archived seed defaults are retained only for
-  historical traceability. They should not be treated as active sources or as
-  fallback data.
+The current upstream source is the combined all-economies workbook in
+`leap_import_workbooks/`. The individual per-economy export workbooks are not
+part of the active source package.
 
-- Archive update: On 2026-06-04, these seed CSVs were moved to
-  `back-end/data/road_model/archive/seed_csv_defaults/`. Runtime Module 1
-  generation no longer imports them. The active primary source path is
-  `back-end/data/road_model/processed_source/road_module1_source_<ECONOMY>.csv`,
-  with `road_model_default_input_workbook.xlsx` retained as a fallback while
-  processed-source coverage is incomplete.
+After source prep, run the regular build so generated outputs and frontend
+static CSVs use the refreshed processed sources.
 
-## Active supplemental source files
+## Source Merge
 
-Active files in `back-end/data/road_model/supplemental_source_files/` and what they supply:
+`back-end/core/road_module1_defaults.py` owns source merge behavior.
 
-- `apec_phev_utilisation_rates.csv` — PHEV electric driving share by economy
-- `apec_reconciliation_factors.csv` — reconciliation weights and scalar bounds (required by Module 6)
-- `apec_vehicle_equivalent_weights.csv` — LPV-equivalent weights by vehicle type (Module 3)
-- `apec_passenger_vehicle_saturation.csv` — saturation level by economy (Module 3)
-- `apec_lifecycle_profile_factors.csv` — survival curve calibration parameters (Module 4)
-- `vehicle_survival_modified_00_APEC.xlsx` — age-based survival probabilities (Module 4)
-- `vintage_modelled_from_survival_00_APEC.xlsx` — base-year vintage age distribution (Module 4)
+The merge treats `processed_source/`, `manually_filled_rows/`, and
+`supplemental_source_files/` as one priority-ranked source pool. Supplemental
+files are not a late overlay; they are normal source inputs with priority rules.
 
-When any of these files is updated, add a dated entry to this log.
+Required rows must come from the source pool or from an explicitly supported
+derivation. Missing required rows should fail the build. Do not add silent
+row-completion fallbacks.
 
-## Individual per-economy LEAP workbooks removed
+## Stock Share Derivation
 
-- Date: 2026-06-05
-- Author: Finn Maunsell
-- Change summary: Confirmed that the 21 individual per-economy LEAP export
-  workbooks (`transport_leap_export_combined_XX_*.xlsx`) are byte-for-byte
-  equivalent to the combined all-economies workbook when processed through
-  `prepare_road_source.py`. Both produce the same 855,243 long rows across the
-  same 21 regions. The individual files were deleted to remove redundancy.
-- Source inputs: All 21 individual workbooks compared against
-  `transport_leap_export_combined_ALL_ECONS_domestic_international_Target_20260526.xlsx`
-- Generation method: Automated comparison via `prepare_road_source.load_road_export_rows`
-  and `expand_export_to_long`; output DataFrames sorted and compared element-wise.
-- Output files changed:
-  - Deleted: `back-end/data/road_model/leap_import_workbooks/transport_leap_export_combined_01_AUS_*.xlsx`
-    through `transport_leap_export_combined_21_VN_*.xlsx`
-  - The combined all-economies workbook remains as the sole upstream source.
-- Notes/limitations: The combined workbook and the default input workbook are kept
-  locally and gitignored. Run `prepare_road_source.py` to regenerate
-  `processed_source/` CSVs if the upstream workbook changes.
+`Stock Share` rows are derived from base-year `Stock` rows after the source
+merge. They should not be maintained as ordinary source rows.
 
-## Road source preprocessing and vehicle-type Stock Share rows
+Final overrides can still replace derived `Stock Share` values after derivation.
 
-- Date: 2026-06-04
-- Author: Codex, with user review required
-- Change summary: Added the preprocessing entry point for converting a LEAP
-  export workbook into per-economy processed source CSVs and aligned
-  vehicle-type stock split inputs to LEAP `Stock Share` rows.
-- Source inputs:
-  - `back-end/data/road_model/leap_import_workbooks/transport_leap_export_combined_ALL_ECONS_domestic_international_Target_20260526.xlsx`
-- Generation method:
-  - Run `back-end/scripts/prepare_road_source.py` from an interactive Python
-    session after setting `RUN_PREPARE_ROAD_SOURCE = True`.
-  - The script reads the `FOR_VIEWING` sheet, filters to
-    `Demand\Passenger road` and `Demand\Freight road`, melts annual year
-    columns into long rows, and writes one CSV per economy.
-  - Output files are written to
-    `back-end/data/road_model/processed_source/road_module1_source_<ECONOMY>.csv`.
-- Recategorizations or mappings:
-  - Preserve the exact vehicle-type stock-share rows:
-    `Demand\Freight road\Trucks`, `Demand\Freight road\LCVs`,
-    `Demand\Passenger road\Motorcycles`, `Demand\Passenger road\Buses`, and
-    `Demand\Passenger road\LPVs`, all with `Variable = Stock Share`.
-- Output files changed:
-  - `back-end/scripts/prepare_road_source.py`
-  - `back-end/data/road_model/processed_source/road_module1_source_<ECONOMY>.csv`
-    for all 21 APEC economies.
-  - generated Module 1 packages now use `road_module1_values_<ECONOMY>.csv`.
-- Validation checks run:
-  - Confirmed 21 regions and 105 canonical vehicle-type `Stock Share` rows in
-    the all-economies source workbook.
-  - Confirmed each processed-source file has five canonical stock-share rows;
-    Russia uses the latest prior year (`2021`) as the `2022` base fallback for
-    those rows because the source workbook has those values at `2021`.
-  - Python compile checks for the backend modules.
-  - Frontend JavaScript syntax check.
-- Notes/limitations:
-  - `Stock Share` values are LEAP-style percentages and should sum to 100
-    within passenger and freight groups.
-  - The old USA-only `C:\Users\Work\github\leap_utilities\data\full model export.xlsx`
-    remains useful as a format reference, but it is not the all-economies
-    processed-source input.
+## Supplemental Sources
 
-## Final value overrides
+Active supplemental source files include:
 
-- Date: 2026-06-05
-- Author: Codex, with user review required
-- Change summary: Added an optional spreadsheet overlay folder for replacing
-  final generated Module 1 values after all processed-source and supplemental
-  source overlays have been applied.
-- Source inputs:
-  - `back-end/data/road_model/processed_source/road_module1_source_<ECONOMY>.csv`
-  - Active supplemental source files in
-    `back-end/data/road_model/supplemental_source_files/`
-  - Optional override files in
-    `back-end/data/road_model/final_value_overrides/`
-- Generation method:
-  - Create a CSV/XLSX file named
-    `module1_final_value_overrides_<ECONOMY>.csv` or
-    `module1_final_value_overrides_<ECONOMY>.xlsx`.
-  - Use LEAP-facing final row columns:
-    `Branch Path`, `Variable`, `Scenario`, `Year`, `Value`, and `Units`.
-  - Add the required override-control column `share_decreased_from`.
-  - Optional `Region` values may be blank, the economy code, or the LEAP
-    region name for the same economy.
-  - Override rows must match existing generated rows by `Branch Path`,
-    `Variable`, `Scenario`, and `Year`, after all normal source overlays have
-    run.
-- Recategorizations or mappings:
-  - For `Sales Share` and `Stock Share`, overrides are checked within the
-    sibling branch group: same parent `Branch Path`, same `Variable`, same
-    `Scenario`, and same `Year`.
-  - If the group no longer sums to 100, a non-empty `share_decreased_from`
-    identifies the sibling branch that should absorb the difference. It can be
-    a full branch path or just the sibling branch name, such as `ICE large`.
-  - If `share_decreased_from` is blank, the sibling group is normalized to sum
-    to 100.
-- Output files changed:
-  - `back-end/core/road_module1_defaults.py`
-  - `back-end/build_road_model_static_defaults.py`
-  - `back-end/data/road_model/road_model_structure_contract.json`
-  - `back-end/data/road_model/final_value_overrides/README.md`
-  - `back-end/data/road_model/final_value_overrides/.gitkeep`
-- Validation checks run:
-  - Override file headers are checked during static-default generation when
-    override files are present.
-  - Active final overrides write
-    `road_module1_final_value_override_report.csv` and
-    `road_module1_final_value_override_report.html` beside the generated
-    economy output file, with before/after values and simple inline-SVG charts.
-  - Python compile checks for the backend modules.
-- Notes/limitations:
-  - Override files replace existing generated rows only; they do not create new
-    LEAP branches or new row keys.
-  - A share adjustment fails if the requested `share_decreased_from` sibling is
-    missing or would be reduced below zero.
+| File | Supplies |
+|---|---|
+| `apec_phev_utilisation_rates.csv` | PHEV electric driving share by economy |
+| `apec_reconciliation_factors.csv` | Module 6 reconciliation weights and scalar bounds |
+| `apec_vehicle_equivalent_weights.csv` | Vehicle equivalent weights for Module 3 |
+| `apec_passenger_vehicle_saturation.csv` | Passenger vehicle saturation for Module 3 |
+| `apec_lifecycle_profile_factors.csv` | Survival curve calibration parameters |
+| `vehicle_survival_modified_00_APEC.xlsx` | Age-based survival probabilities |
+| `vintage_modelled_from_survival_00_APEC.xlsx` | Base-year vintage age distribution |
 
-## Static bundle switched from JSON to CSV
+When any supplemental source changes, record the source, method, affected file,
+and validation checks in a new entry at the end of this file.
 
-- Date: 2026-06-05
-- Author: Finn Maunsell
-- Change summary: Replaced the per-economy JSON static bundle
-  (`{version}/{economy}.json`) with plain CSV files (`{version}/{economy}.csv`)
-  using the same long-row schema as the 'download filled CSV' and
-  'upload filled CSV' actions. This removes a separate serialisation step and
-  makes the static bundle, the CSV download, and the CSV upload share one schema.
-- Source inputs:
-  - `back-end/outputs/road_module1_defaults/` (versioned per-economy packages)
-- Generation method:
-  - `write_frontend_static_bundle()` in `back-end/road_module1_defaults_workflow.py`
-    now calls `long_defaults_df[MODULE1_LONG_COLUMNS].to_csv()` instead of
-    building a JSON payload. Column order:
-    `Economy, Scenario, Branch Path, Variable, Year, Value, Units, Source, Comment, Input Status`
-  - `front-end/app.js` `loadRoadModule1DefaultsFromStaticBundle()` now fetches
-    the `.csv` path and parses it with the existing `parseCsvText()` helper,
-    coercing `Year` and `Value` to numbers.
-  - `index.json` format is unchanged; it still lists versions and economies.
-- Output files changed:
-  - `back-end/road_module1_defaults_workflow.py`
-  - `front-end/app.js`
-  - `front-end/road-module1-static/README.md`
-  - All per-economy static bundle files converted from `.json` to `.csv`
-- Validation checks run:
-  - Confirmed `write_frontend_static_bundle` writes 21 `.csv` files per version
-    for both `v2026_05_25_best_guess` and `v2026_06_05_road_module1_sources`.
-  - Confirmed CSV column order matches `MODULE1_LONG_COLUMNS`.
-- Notes/limitations:
-  - The `_json_safe_value` helper and `from typing import Any` import were removed
-    from `road_module1_defaults_workflow.py` as no longer needed.
-  - Any cached `.json` bundle files from previous runs can be deleted; they are
-    no longer fetched by the frontend.
+## Final Value Overrides
 
-## Required entry template
+Use `final_value_overrides/` when a reviewed value must replace the generated
+value after all normal source processing has run.
+
+Override files are named:
+
+```text
+module1_final_value_overrides_<ECONOMY>.csv
+module1_final_value_overrides_<ECONOMY>.xlsx
+```
+
+Required row-matching columns are:
+
+```text
+Branch Path, Variable, Scenario, Year, Value, Units, share_decreased_from
+```
+
+Optional region values may be blank, the compact economy code, the canonical
+economy code, or the LEAP region name for the same economy.
+
+Overrides can only replace existing generated rows. They do not create new row
+keys, new branches, or new variables.
+
+For `Sales Share` and `Stock Share`, `share_decreased_from` can identify the
+sibling branch that absorbs the balancing change. It may be a full branch path
+or a sibling branch leaf name. If it is blank, sibling shares are normalized so
+the group sums to 100.
+
+When overrides are applied, the build writes review outputs beside the generated
+economy CSV:
+
+```text
+road_module1_final_value_override_report.csv
+road_module1_final_value_override_report.html
+```
+
+Open the HTML report before treating an override run as reviewed.
+
+## Static Row Contract
+
+`config/road_module1_static_contract.csv` is the active static row contract. It
+is the only allow-list for `(Branch Path, Variable)` pairs in the frontend static
+bundle.
+
+The contract controls:
+
+- Whether a row is required for `Current Accounts`.
+- Whether a row is required for projected scenarios such as `Target`.
+- Whether each scenario's row is shown in the browser editor.
+- The units displayed by the interface.
+
+The static bundle writer filters generated rows to the contract and then runs
+hard completeness checks. Every row present in the generated static CSV is part
+of the browser/model hand-off contract, even if `Shown In Interface` is `False`.
+Hidden rows must still be preserved through load, edit, download/upload, and
+model run export.
+
+`config/road_module1_static_fuel_branch_exclusions.csv` is the only supported
+economy-specific exception list for missing fuel branches. The accepted reason
+is exactly:
+
+```text
+0 data for fuel in esto dataset
+```
+
+Fuel-level branches are globally required. A missing fuel branch is valid only
+when the economy/fuel combination has zero road data in
+`leap_road_model/input_data/esto_transport_2000_2022.csv` and is listed in the
+exclusion config.
+
+## Scale Labels
+
+Generated long Module 1 CSVs use LEAP-style display scales. The default scale
+labels are configured in `road_module1_default_parameters.json` under
+`scale_defaults_by_variable`.
+
+Typical defaults are:
+
+| Variable | Scale |
+|---|---|
+| `Stock` | `Millions` |
+| `Sales` | `Millions` |
+| `Mileage` | `Thousands` |
+| `Average Mileage` | `Thousands` |
+| `Final On-Road Mileage` | `Thousands` |
+| Share and percentage rows | `%` |
+
+Internal generation uses raw model units. Long CSV output divides by the display
+scale, and long CSV loading multiplies supported numeric scales back to raw
+units before model calculations.
+
+## Static Bundle And Model Hand-Off
+
+The frontend static CSV is the authoritative Module 1 package for local
+interface-driven model runs.
+
+```text
+front-end/road-module1-static/<VERSION>/<ECONOMY_COMPACT>.csv
+```
+
+When the user runs the model from the interface, the backend writes the browser's
+completed long CSV payload to:
+
+```text
+leap_road_model/input_data/module1_defaults/<VERSION>/<ECONOMY>/road_module1_values_<ECONOMY>.csv
+```
+
+That model-side file is a runtime copy, not a separate source of defaults. If it
+is missing rows that exist in the static CSV, treat it as stale or as evidence of
+a browser/API hand-off issue. Do not add model-side fallbacks to compensate for a
+stale runtime copy.
+
+## Generated Outputs
+
+The build writes versioned per-economy packages to:
+
+```text
+back-end/outputs/road_module1_defaults/<VERSION>/<ECONOMY>/
+```
+
+The main generated file is:
+
+```text
+road_module1_values_<ECONOMY>.csv
+```
+
+The static sync writes browser-ready long CSVs and `index.json` to:
+
+```text
+front-end/road-module1-static/
+```
+
+Production versions should use immutable dated names, for example:
+
+```text
+v2026_06_05_road_module1_sources
+```
+
+For exploratory work, use a temporary version name and do not point the frontend
+at it unless that is the intended test.
+
+## Validation Checklist
+
+After changing source data or the static contract:
+
+1. Run `python back-end\build_road_model_static_defaults.py`.
+2. Confirm the generated package exists under
+   `back-end/outputs/road_module1_defaults/<VERSION>/`.
+3. Confirm `front-end/road-module1-static/index.json` points to the intended
+   version and economies.
+4. Inspect at least one affected economy CSV in
+   `front-end/road-module1-static/<VERSION>/`.
+5. For hand-off changes, confirm `leap_road_model` can load the long CSV for an
+   affected economy.
+6. For model-impacting changes, run a direct road model smoke test for at least
+   one affected economy.
+
+Example direct model smoke test:
+
+```powershell
+cd C:\Users\Work\github\leap_road_model
+python codebase\road_workflow.py 20_USA --scenario Target --no-vis
+```
+
+## Update Entry Template
+
+Use this template when a numeric source file, source-prep method, supplemental
+source, final override, or static hand-off contract changes.
+
+```text
+## <Short update name>
 
 - Date:
 - Author:
 - Change summary:
 - Source inputs:
-- Generation method:
+- Update method:
 - Recategorizations or mappings:
 - Output files changed:
 - Validation checks run:
 - Notes/limitations:
+```

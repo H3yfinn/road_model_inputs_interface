@@ -142,8 +142,19 @@ async def _sse_generator(run_id: str):
                     f"/road-results/{economy_canonical}/module6/{economy_canonical}_leap_import.xlsx"
                 )
 
+        lifecycle_profiles_url: str | None = None
+        if return_code == 0:
+            lifecycle_candidate = (
+                _ROAD_MODEL_REPO / "results" / economy_canonical
+                / "lifecycle_profiles" / f"{economy_canonical}_lifecycle_profiles.zip"
+            )
+            if lifecycle_candidate.exists():
+                lifecycle_profiles_url = (
+                    f"/road-results/{economy_canonical}/lifecycle_profiles/{economy_canonical}_lifecycle_profiles.zip"
+                )
+
         yield (
-            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url, 'workbook_url': workbook_url})}\n\n"
+            f"data: {json.dumps({'type': 'done', 'return_code': return_code, 'dashboard_url': dashboard_url, 'workbook_url': workbook_url, 'lifecycle_profiles_url': lifecycle_profiles_url})}\n\n"
         )
 
 
@@ -193,7 +204,15 @@ async def start_road_model_run(payload: RunModelRequest):
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
-    cmd = [sys.executable, str(_ROAD_WORKFLOW), economy_canonical]
+    cmd = [
+        sys.executable,
+        str(_ROAD_WORKFLOW),
+        economy_canonical,
+        "--module1-defaults-dir",
+        str(_MODULE1_INPUT_DIR),
+        "--module1-defaults-version",
+        payload.version,
+    ]
     if payload.enable_visualisations:
         cmd.append("--vis")
 

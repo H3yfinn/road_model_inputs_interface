@@ -1,3 +1,4 @@
 source_type,source_name,priority,notes
 processed_source,*,10,Primary prepared Road Module 1 source files.
-manual_missing_rows,manually_entered_missing_rows.csv,-1,Blank rows generated from LEAP row coverage diagnostics; fill Value to activate as low-priority fallback source rows. More negative values such as -2 are lower priority than -1.
+manual_missing_rows,model_assumption_defaults.csv,50,APEC-wide model assumption defaults. Override per-economy by adding a higher-priority row in processed_source or manually_filled_rows.
+manual_missing_rows,manually_entered_missing_rows.csv,100,Blank rows generated from LEAP row coverage diagnostics; fill Value to activate as low-priority fallback source rows.

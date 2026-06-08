@@ -21,34 +21,32 @@ DATA_ROOT = BACKEND_ROOT / "data"
 LEAP_EXPORT_DIR = DATA_ROOT / "road_model" / "leap_import_workbooks"
 MULTINODE_DIR = DATA_ROOT / "multinodeenergy_backend"
 
-ECONOMY_CODE_TO_LEAP_REGION_NAMES = {
-    "01AUS": ["Australia"],
-    "02BD": ["Brunei Darussalam"],
-    "03CDA": ["Canada"],
-    "04CHL": ["Chile"],
-    "05PRC": ["People's Republic of China", "China"],
-    "06HKC": ["Hong Kong, China"],
-    "07INA": ["Indonesia"],
-    "08JPN": ["Japan"],
-    "09ROK": ["Republic of Korea", "Korea"],
-    "10MAS": ["Malaysia"],
-    "11MEX": ["Mexico"],
-    "12NZ": ["New Zealand"],
-    "13PNG": ["Papua New Guinea"],
-    "14PE": ["Peru"],
-    "15PHL": ["Philippines"],
-    "16RUS": ["Russia"],
-    "17SGP": ["Singapore"],
-    "18CT": ["Chinese Taipei"],
-    "19THA": ["Thailand"],
-    "20USA": ["United States of America", "United States"],
-    "21VN": ["Viet Nam"],
+ECONOMY_CODE_TO_LEAP_REGION_NAMES: dict[str, str] = {
+    "01AUS": "Australia",
+    "02BD":  "Brunei Darussalam",
+    "03CDA": "Canada",
+    "04CHL": "Chile",
+    "05PRC": "China",
+    "06HKC": "Hong Kong, China",
+    "07INA": "Indonesia",
+    "08JPN": "Japan",
+    "09ROK": "Republic of Korea",
+    "10MAS": "Malaysia",
+    "11MEX": "Mexico",
+    "12NZ":  "New Zealand",
+    "13PNG": "Papua New Guinea",
+    "14PE":  "Peru",
+    "15PHL": "The Philippines",
+    "16RUS": "Russia",
+    "17SGP": "Singapore",
+    "18CT":  "Chinese Taipei",
+    "19THA": "Thailand",
+    "20USA": "United States",
+    "21VN":  "Viet Nam",
 }
 
 REGION_TO_ECONOMY_CODE = {
-    region: code
-    for code, regions in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
-    for region in regions
+    name: code for code, name in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
 }
 
 

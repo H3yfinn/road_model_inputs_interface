@@ -420,6 +420,9 @@
                         </div>
                     </div>
                     <p class="text-xs text-slate-500">Blank fields use the grey provided base-year value. Later-year changes are handled in LEAP adjustment variables, and missing optional values are ignored.</p>
+                    <a href="/road-model-docs/road_transport_model_simplified.md" target="_blank" rel="noopener" class="inline-block mt-2 text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
+                        Open simplified road model documentation
+                    </a>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none" title="When off, one mileage value applies to every drive under each vehicle type. When on, set mileage per drive.">
@@ -495,11 +498,12 @@
                 <div class="flex items-center gap-2">
                     <button id="road-run-log-dashboard" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all">Open Dashboard</button>
                     <a id="road-run-log-workbook" class="hidden px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download>Download LEAP Workbook</a>
+                    <a id="road-run-log-lifecycle-profiles" class="hidden px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-md text-xs font-bold active:scale-95 transition-all" download>Download Lifecycle Profiles</a>
                     <button id="road-run-log-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled>Close</button>
                 </div>
             </div>
             <div class="p-5">
-                <pre id="road-run-log-output" class="w-full h-96 text-xs border border-slate-200 rounded-md p-3 font-mono text-slate-700 bg-slate-950 text-green-400 overflow-auto whitespace-pre-wrap break-words" aria-label="Road model run log" aria-live="polite"></pre>
+                <pre id="road-run-log-output" class="w-full h-96 text-xs border border-slate-200 rounded-md p-3 font-mono bg-slate-950 text-white overflow-auto whitespace-pre-wrap break-words" aria-label="Road model run log" aria-live="polite"></pre>
             </div>
         </div>
     </div>
@@ -508,7 +512,8 @@
     <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-[340px]"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="api.js"></script> 
+<script src="api.js"></script>
+<script src="config/variable-help.js"></script>
 <script src="app.js?v=20260606b"></script>
 </body>
 </html>

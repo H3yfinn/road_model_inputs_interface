@@ -1,0 +1,15 @@
+import pandas as pd
+df = pd.read_csv('back-end/data/road_model/config/road_module1_static_contract.csv')
+sep = chr(92)
+depth = df['Branch Path'].apply(lambda x: len(x.split(sep)))
+print('Mileage rows:', len(df[df['Variable']=='Mileage']))
+print('Fuel Economy rows:', len(df[df['Variable']=='Fuel Economy']))
+fuel5 = df[depth == 5]
+print('Depth-5 variable counts:')
+print(fuel5['Variable'].value_counts().to_string())
+m = set(df[(df['Variable']=='Mileage') & (depth==5)]['Branch Path'])
+fe = set(df[(df['Variable']=='Fuel Economy') & (depth==5)]['Branch Path'])
+print('Depth-5 branches with Mileage:', len(m))
+print('Depth-5 branches with Fuel Economy:', len(fe))
+print('Mileage only (no FE):', m - fe)
+print('FE only (no Mileage):', fe - m)

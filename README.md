@@ -71,6 +71,30 @@ Demand\Passenger road\LPVs          Stock Share
 These values are LEAP-style percentages and each transport group should sum to
 100.
 
+## Repo setup — both repos must be siblings
+
+Both repos must be cloned into the **same parent folder**:
+
+```text
+parent_folder/
+    road_model_inputs_interface/  ← this repo
+    leap_road_model/              ← sibling repo
+```
+
+Keep both repos open together in one VS Code multi-root workspace
+(`File → Add Folder to Workspace`). Each repo uses its own `.venv`.
+
+`leap_road_model` reads Module 1 outputs from:
+
+```text
+back-end/outputs/road_module1_defaults/
+```
+
+These outputs are committed to this repo and are always up to date without
+running the website. `leap_road_model` can run its full Modules 2-7 pipeline
+offline using those static files — see `scripts/offline_workflow.py` in the
+sibling repo.
+
 ## Where it fits in the multi-repo workflow
 
 | Repo | Role |

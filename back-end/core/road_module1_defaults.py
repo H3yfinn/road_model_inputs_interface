@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,6 +19,7 @@ BASE_YEAR = 2022
 DEFAULT_SCENARIOS = ["current_accounts"]
 DEFAULT_YEARS = [2022]
 YEAR_COLUMNS = [str(year) for year in DEFAULT_YEARS]
+PROJECTED_SALES_SHARE_YEARS = list(range(BASE_YEAR + 1, 2061))
 # Future years where stock-share trajectories are anchored for researchers to edit.
 STOCK_SHARE_PROJECTION_YEARS = [2040, 2060]
 TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN = "transport_leap_export_combined_ALL_ECONS*.xlsx"
@@ -54,6 +56,7 @@ PROCESSED_SOURCE_DIR = ROAD_MODEL_DATA_DIR / "processed_source"
 SUPPLEMENTAL_SOURCE_DIR = ROAD_MODEL_DATA_DIR / "supplemental_source_files"
 MANUALLY_FILLED_ROWS_DIR = ROAD_MODEL_DATA_DIR / "manually_filled_rows"
 SOURCE_PRIORITY_PATH = ROAD_MODEL_DATA_DIR / "road_module1_source_priorities.csv"
+ROAD_MODULE1_DEFAULT_PARAMETERS_PATH = ROAD_MODEL_DATA_DIR / "road_module1_default_parameters.json"
 ROAD_MODULE1_DEFAULTS_OUTPUT_ROOT = _output_root / "road_module1_defaults"
 ROAD_MODULE1_RESEARCHER_OUTPUT_ROOT = _output_root / "road_module1_researcher_outputs"
 ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH = ROAD_MODEL_DATA_DIR / "road_model_default_input_workbook.xlsx"
@@ -91,41 +94,39 @@ def _assumption_value(key: str, default: float = 0.0) -> float:
 
 _DEFAULT_ASSUMPTIONS: dict[str, float] = {}
 
-ECONOMY_CODE_TO_LEAP_REGION_NAMES = {
-    "01AUS": ["Australia"],
-    "02BD": ["Brunei Darussalam"],
-    "03CDA": ["Canada"],
-    "04CHL": ["Chile"],
-    "05PRC": ["People's Republic of China", "China"],
-    "06HKC": ["Hong Kong, China"],
-    "07INA": ["Indonesia"],
-    "08JPN": ["Japan"],
-    "09ROK": ["Republic of Korea", "Korea"],
-    "10MAS": ["Malaysia"],
-    "11MEX": ["Mexico"],
-    "12NZ": ["New Zealand"],
-    "13PNG": ["Papua New Guinea"],
-    "14PE": ["Peru"],
-    "15PHL": ["Philippines"],
-    "16RUS": ["Russia"],
-    "17SGP": ["Singapore"],
-    "18CT": ["Chinese Taipei"],
-    "19THA": ["Thailand"],
-    "20USA": ["United States of America", "United States"],
-    "21VN": ["Viet Nam"],
+ECONOMY_CODE_TO_LEAP_REGION_NAMES: dict[str, str] = {
+    "01AUS": "Australia",
+    "02BD":  "Brunei Darussalam",
+    "03CDA": "Canada",
+    "04CHL": "Chile",
+    "05PRC": "China",
+    "06HKC": "Hong Kong, China",
+    "07INA": "Indonesia",
+    "08JPN": "Japan",
+    "09ROK": "Republic of Korea",
+    "10MAS": "Malaysia",
+    "11MEX": "Mexico",
+    "12NZ":  "New Zealand",
+    "13PNG": "Papua New Guinea",
+    "14PE":  "Peru",
+    "15PHL": "The Philippines",
+    "16RUS": "Russia",
+    "17SGP": "Singapore",
+    "18CT":  "Chinese Taipei",
+    "19THA": "Thailand",
+    "20USA": "United States",
+    "21VN":  "Viet Nam",
 }
 LEAP_REGION_NAME_TO_ECONOMY_CODE = {
-    region_name: economy_code
-    for economy_code, region_names in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
-    for region_name in region_names
+    name: code for code, name in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
 }
 
 # Population is intentionally not required for the strict, source-backed
 # Module 1 workflow (workbook + overlays). Keep a zero-population fallback for
 # legacy synthetic defaults paths only.
 ECONOMIES = [
-    (economy_code, region_names[0], 0.0)
-    for economy_code, region_names in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
+    (code, name, 0.0)
+    for code, name in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
 ]
 
 VEHICLE_TYPES: list[tuple[str, str, float, float]] = []
@@ -213,10 +214,12 @@ MODULE1_LONG_KEY_COLUMNS = [
 
 MODULE1_LONG_VALUE_COLUMNS = [
     "Value",
+    "Scale",
     "Units",
     "Source",
     "Comment",
     "Input Status",
+    "Shown In Interface",
 ]
 
 MODULE1_LONG_COLUMNS = [
@@ -344,6 +347,8 @@ PARAMETER_TO_LEAP_VARIABLE = {
     "mileage": "Mileage",
     "passenger_saturation": "Passenger Vehicle Saturation",
     "passenger_saturation_reached": "Passenger Saturation Reached",
+    "passenger_stock_growth_rate_adjustment": "Passenger Stock Growth Rate Adjustment",
+    "freight_gdp_elasticity_adjustment": "Freight GDP Elasticity Adjustment",
     "phev_electric_driving_share": "PHEV Electric Driving Share",
     "reconciliation_weight_stock": "Reconciliation Weight Stock",
     "reconciliation_weight_mileage": "Reconciliation Weight Mileage",
@@ -369,6 +374,8 @@ PARAMETER_TO_LEAP_METADATA = {
     "mileage": ("", "Kilometer", ""),
     "passenger_saturation": ("", "Device", "1000 people"),
     "passenger_saturation_reached": ("", "Boolean", ""),
+    "passenger_stock_growth_rate_adjustment": ("", "Multiplier", ""),
+    "freight_gdp_elasticity_adjustment": ("", "Multiplier", ""),
     "phev_electric_driving_share": ("%", "Share", ""),
     "reconciliation_weight_stock": ("", "Weight", ""),
     "reconciliation_weight_mileage": ("", "Weight", ""),
@@ -422,6 +429,16 @@ MODULE1_VALUE_VALIDATION_RULES = {
         "min": 0,
         "max": 1,
         "description": "Passenger Saturation Reached must be 0 or 1.",
+    },
+    "Passenger Stock Growth Rate Adjustment": {
+        "min": 0,
+        "max": 2,
+        "description": "Passenger Stock Growth Rate Adjustment must be between 0 and 2.",
+    },
+    "Freight GDP Elasticity Adjustment": {
+        "min": 0,
+        "max": 2,
+        "description": "Freight GDP Elasticity Adjustment must be between 0 and 2.",
     },
     "PHEV Electric Driving Share": {
         "min": 0,
@@ -495,7 +512,7 @@ def _economies_from_default_input(default_input_df: pd.DataFrame) -> list[Econom
         code = LEAP_REGION_NAME_TO_ECONOMY_CODE.get(region)
         if not code or code in seen:
             continue
-        canonical_name = ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(code, [region])[0]
+        canonical_name = ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(code, region)
         economies.append(EconomyInfo(code=code, name=canonical_name, population_million=0.0))
         seen.add(code)
     return economies
@@ -630,6 +647,28 @@ def _phev_rate_for_branch(
     return float(rate), source_row
 
 
+PHEV_UTILISATION_BRANCH_PATH = "Demand\\PHEV electric driving share"
+
+
+def _economy_level_phev_rate(
+    source_rows: pd.DataFrame,
+) -> tuple[float, pd.Series] | tuple[None, None]:
+    """Return the single economy-level PHEV utilisation rate used by Module 6."""
+    valid_rows = source_rows.dropna(subset=["phev_utilisation_rate"]).copy()
+    if valid_rows.empty:
+        return None, None
+
+    if "vehicle_type" in valid_rows.columns:
+        economy_level_rows = valid_rows[valid_rows["vehicle_type"].isna()]
+        if not economy_level_rows.empty:
+            source_row = economy_level_rows.iloc[0]
+            return float(source_row["phev_utilisation_rate"]), source_row
+
+    source_row = valid_rows.iloc[0].copy()
+    source_row["phev_utilisation_rate"] = valid_rows["phev_utilisation_rate"].astype(float).mean()
+    return float(source_row["phev_utilisation_rate"]), source_row
+
+
 def overlay_phev_utilisation_rates(
     default_filled_df: pd.DataFrame,
     economy: EconomyInfo,
@@ -672,6 +711,66 @@ def overlay_phev_utilisation_rates(
                 }
             ]
         )
+
+    overlaid_df = default_filled_df.copy()
+    report_rows = []
+    rate, source_row = _economy_level_phev_rate(source_rows)
+    if rate is None:
+        report_rows.append({
+            "status": "fail",
+            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
+            "Variable": "PHEV Electric Driving Share",
+            "Scenario": "",
+            "Region": economy.name,
+            "source_year": "",
+            "details": f"No usable PHEV utilisation value found for {economy.code}.",
+        })
+        return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
+
+    overlaid_df = overlaid_df[~overlaid_df["Variable"].eq("PHEV Electric Driving Share")].copy()
+    scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
+    note = (
+        f"PHEV utilisation rate from {resolved_path.name}; source data_year "
+        f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
+        f"evidence_grade {source_row['evidence_grade']}; "
+        f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
+        f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
+    )
+    new_rows: list[dict] = []
+    for scenario in scenarios:
+        new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+        new_row.update({
+            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
+            "Variable": "PHEV Electric Driving Share",
+            "Scenario": scenario,
+            "Region": economy.name,
+            "Scale": _default_scale_for_variable("PHEV Electric Driving Share"),
+            "Units": "Share",
+            "Per...": "",
+            str(BASE_YEAR): rate,
+            "input_source": "provided",
+            "source_type": "apec_phev_utilisation_rates",
+            "source_name": resolved_path.name,
+            "source_scope": economy.code,
+            "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
+            "notes": note,
+            "standardized_label_status": "standardized",
+            "researcher_review_recommended": False,
+            "review_reason": "",
+        })
+        new_rows.append(new_row)
+        report_rows.append({
+            "status": "applied",
+            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
+            "Variable": "PHEV Electric Driving Share",
+            "Scenario": scenario,
+            "Region": economy.name,
+            "source_year": new_row["source_date"],
+            "details": f"{BASE_YEAR}={rate}",
+        })
+
+    overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
+    return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
 
     overlaid_df = default_filled_df.copy()
     target_mask = overlaid_df["Variable"].eq("PHEV Electric Driving Share")
@@ -729,7 +828,7 @@ def overlay_phev_utilisation_rates(
                     "Variable": "PHEV Electric Driving Share",
                     "Scenario": scenario,
                     "Region": economy.name,
-                    "Scale": "%",
+                    "Scale": _default_scale_for_variable("PHEV Electric Driving Share"),
                     "Units": "Share",
                     "Per...": "",
                     str(BASE_YEAR): rate,
@@ -1749,7 +1848,7 @@ def overlay_survival_and_vintage_profiles(
                         "Variable": variable_name,
                         "Scenario": scenario,
                         "Region": economy.name,
-                        "Scale": "%",
+                        "Scale": _default_scale_for_variable(variable_name),
                         "Units": "Share",
                         "Per...": "",
                         str(BASE_YEAR): float(profile_value),
@@ -1882,7 +1981,9 @@ def find_transport_leap_export_path(
 
 def _transport_leap_source_regions(economy: EconomyInfo) -> list[str]:
     regions = [economy.name]
-    regions.extend(ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code, []))
+    canonical = ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code)
+    if canonical and canonical not in regions:
+        regions.append(canonical)
     seen = set()
     unique_regions = []
     for region in regions:
@@ -1925,7 +2026,7 @@ def _transport_leap_source_scope(
 ) -> str:
     if source_region == economy.name:
         return "exact_region_match"
-    if source_region in ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code, []):
+    if source_region == ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code):
         return "leap_region_alias_match"
     if source_region == "APEC":
         return "apec_fallback_non_absolute"
@@ -2173,6 +2274,66 @@ PERCENT_SCALE_VARIABLES = {
     "Survival Rate",
     "Vintage Profile Share",
 }
+SCALE_MULTIPLIERS = {
+    "": 1.0,
+    "%": 1.0,
+    "thousand": 1_000.0,
+    "thousands": 1_000.0,
+    "million": 1_000_000.0,
+    "millions": 1_000_000.0,
+    "billion": 1_000_000_000.0,
+    "billions": 1_000_000_000.0,
+}
+
+
+@lru_cache(maxsize=1)
+def _load_road_module1_default_parameters() -> dict:
+    if not ROAD_MODULE1_DEFAULT_PARAMETERS_PATH.exists():
+        return {}
+    with ROAD_MODULE1_DEFAULT_PARAMETERS_PATH.open("r", encoding="utf-8") as f:
+        loaded = json.load(f)
+    return loaded if isinstance(loaded, dict) else {}
+
+
+@lru_cache(maxsize=1)
+def _scale_defaults_by_variable() -> dict[str, str]:
+    configured = _load_road_module1_default_parameters().get("scale_defaults_by_variable", {})
+    if not isinstance(configured, dict):
+        return {}
+    return {
+        str(variable).strip(): str(scale).strip()
+        for variable, scale in configured.items()
+        if str(variable).strip() and str(scale).strip()
+    }
+
+
+def _default_scale_for_variable(variable: object) -> str:
+    variable_name = str(variable or "").strip()
+    configured_scale = _scale_defaults_by_variable().get(variable_name)
+    if configured_scale is not None:
+        return configured_scale
+    return "%" if variable_name in PERCENT_SCALE_VARIABLES else ""
+
+
+def _scale_multiplier(scale: object) -> float:
+    if pd.isna(scale):
+        return 1.0
+    return SCALE_MULTIPLIERS.get(str(scale).strip().lower(), 1.0)
+
+
+def _to_display_value(value: object, scale: object) -> object:
+    if pd.isna(value):
+        return value
+    multiplier = _scale_multiplier(scale)
+    if multiplier == 1.0:
+        return value
+    return float(value) / multiplier
+
+
+def _to_internal_value(value: object, scale: object) -> object:
+    if pd.isna(value):
+        return value
+    return float(value) * _scale_multiplier(scale)
 
 
 def _processed_source_path(economy: EconomyInfo) -> Path:
@@ -2195,11 +2356,7 @@ def _final_value_override_paths(economy: EconomyInfo) -> list[Path]:
 
 
 def _source_priority_sort_value(priority: int | float) -> float:
-    """Sort value for source priorities: 1 is highest; negative values are fallback tiers."""
-    priority = int(priority)
-    if priority < 0:
-        return 1_000_000 + abs(priority)
-    return float(priority)
+    return float(int(priority))
 
 
 def _load_source_priorities(path: Path = SOURCE_PRIORITY_PATH) -> dict[tuple[str, str], int]:
@@ -2260,13 +2417,19 @@ def _load_manual_filled_rows(economy: EconomyInfo) -> pd.DataFrame:
         source_df = source_df[source_df["Economy"].isin(allowed_economies)].copy()
         if source_df.empty:
             continue
+        share_decreased_from = (
+            source_df["share_decreased_from"].fillna("").astype(str).str.strip()
+            if "share_decreased_from" in source_df.columns
+            else ""
+        )
         source_df = source_df[PROCESSED_SOURCE_COLUMNS].copy()
         source_df["_source_type"] = "manual_missing_rows"
         source_df["_source_name"] = path.name
         source_df["_source_note"] = "Loaded from manually filled missing-row source."
+        source_df["_share_decreased_from"] = share_decreased_from
         frames.append(source_df)
     if not frames:
-        return pd.DataFrame(columns=[*PROCESSED_SOURCE_COLUMNS, "_source_type", "_source_name", "_source_note"])
+        return pd.DataFrame(columns=[*PROCESSED_SOURCE_COLUMNS, "_source_type", "_source_name", "_source_note", "_share_decreased_from"])
     return pd.concat(frames, ignore_index=True)
 
 
@@ -2359,7 +2522,7 @@ def _normalize_final_value_override_rows(
         df[column] = df[column].fillna("").astype(str).str.strip()
     if "Region" in df.columns:
         df["Region"] = df["Region"].fillna("").astype(str).str.strip()
-        allowed_regions = {"", economy.code, economy.name, *ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code, [])}
+        allowed_regions = {"", economy.code, economy.name, ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code, "")}
         bad_region_mask = ~df["Region"].isin(allowed_regions)
         if bad_region_mask.any():
             sample = df.loc[bad_region_mask, ["Region", "Branch Path", "Variable"]].head(5).to_dict(orient="records")
@@ -2803,10 +2966,54 @@ def load_processed_source_inputs(
     )
     source_df = source_df.drop_duplicates(subset=key_columns, keep="first").copy()
 
+    if "_share_decreased_from" in source_df.columns:
+        source_df["_share_decreased_from"] = source_df["_share_decreased_from"].fillna("")
+        manual_share_mask = (
+            source_df["_source_type"].eq("manual_missing_rows")
+            & source_df["Variable"].isin(SHARE_BALANCED_VARIABLES)
+            & source_df["_share_decreased_from"].ne("")
+        )
+        for _, row in source_df[manual_share_mask].iterrows():
+            branch_path = str(row["Branch Path"])
+            variable = str(row["Variable"])
+            scenario = str(row["Scenario"])
+            year = str(row["Year"])
+            value = float(row["Value"])
+            decreased_from = _resolve_share_decreased_from_branch(branch_path, str(row["_share_decreased_from"]))
+            if not decreased_from:
+                continue
+            if _branch_parent(decreased_from) != _branch_parent(branch_path):
+                raise ValueError(
+                    f"share_decreased_from must be in the same sibling group. "
+                    f"Manual row: {branch_path}; share_decreased_from: {decreased_from}"
+                )
+            sibling_mask = (
+                source_df["Branch Path"].eq(decreased_from)
+                & source_df["Variable"].eq(variable)
+                & source_df["Scenario"].eq(scenario)
+                & source_df["Year"].eq(year)
+            )
+            if not sibling_mask.any():
+                raise ValueError(
+                    f"share_decreased_from branch not found: "
+                    f"{branch_path} | {variable} | {scenario} | {year} -> {decreased_from}"
+                )
+            sibling_idx = source_df[sibling_mask].index[0]
+            old_val = float(source_df.at[sibling_idx, "Value"])
+            new_val = old_val - value
+            if new_val < -0.000001:
+                raise ValueError(
+                    f"share_decreased_from adjustment would make {decreased_from} negative: "
+                    f"{old_val} - {value} = {new_val}"
+                )
+            source_df.at[sibling_idx, "Value"] = max(0.0, new_val)
+            existing_note = str(source_df.at[sibling_idx, "_source_note"] or "")
+            source_df.at[sibling_idx, "_source_note"] = (
+                f"{existing_note} Reduced by {value} due to share_decreased_from on {branch_path}."
+            ).strip()
+
     source_df["Region"] = economy.name
-    source_df["Scale"] = source_df["Variable"].map(
-        lambda variable: "%" if str(variable) in PERCENT_SCALE_VARIABLES else ""
-    )
+    source_df["Scale"] = source_df["Variable"].map(_default_scale_for_variable)
     source_df["Per..."] = ""
     source_df["input_source"] = "provided"
     source_df["standardized_label_status"] = "standardized"
@@ -3004,6 +3211,7 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
             value = row.get(year_col)
             if pd.isna(value):
                 continue
+            scale = row.get("Scale", "")
             rows.append(
                 {
                     "Economy": economy,
@@ -3011,11 +3219,13 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
                     "Branch Path": row.get("Branch Path", ""),
                     "Variable": row.get("Variable", ""),
                     "Year": int(year_col),
-                    "Value": value,
+                    "Value": _to_display_value(value, scale),
+                    "Scale": scale,
                     "Units": row.get("Units", ""),
                     "Source": source,
                     "Comment": comment,
                     "Input Status": input_status,
+                    "Shown In Interface": True,
                 }
             )
 
@@ -3036,8 +3246,12 @@ def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: 
         df["Source"] = ""
     if "Comment" not in df.columns:
         df["Comment"] = ""
+    if "Scale" not in df.columns:
+        df["Scale"] = ""
+    df["Scale"] = df["Scale"].fillna("").astype(str).str.strip()
+    df["Value"] = df.apply(lambda row: _to_internal_value(row["Value"], row["Scale"]), axis=1)
 
-    index_cols = ["Branch Path", "Variable", "Scenario", "Region", "Units", "Source", "Comment"]
+    index_cols = ["Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Source", "Comment"]
     wide = (
         df.pivot_table(
             index=index_cols,
@@ -3052,7 +3266,8 @@ def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: 
     for column in MODULE1_INPUT_COLUMNS:
         if column not in wide.columns:
             wide[column] = pd.NA
-    wide["Scale"] = wide["Variable"].map(lambda variable: "%" if str(variable) in {"Sales Share", "Stock Share", "PHEV Electric Driving Share", "Survival Rate", "Vintage Profile Share"} else "")
+    missing_scale_mask = wide["Scale"].fillna("").astype(str).str.strip().eq("")
+    wide.loc[missing_scale_mask, "Scale"] = wide.loc[missing_scale_mask, "Variable"].map(_default_scale_for_variable)
     wide["Per..."] = ""
     wide["input_source"] = "provided"
     wide["standardized_label_status"] = "standardized"
@@ -3133,7 +3348,7 @@ def _ensure_vehicle_type_stock_share_rows(defaults_df: pd.DataFrame, economy: Ec
                 if existing_mask.any():
                     for idx in df[existing_mask].index:
                         df.at[idx, str(BASE_YEAR)] = share
-                        df.at[idx, "Scale"] = "%"
+                        df.at[idx, "Scale"] = _default_scale_for_variable("Stock Share")
                         df.at[idx, "Units"] = "Share"
                         df.at[idx, "Per..."] = ""
                         # Seed future years to base-year share only if researcher hasn't set them.
@@ -3152,7 +3367,7 @@ def _ensure_vehicle_type_stock_share_rows(defaults_df: pd.DataFrame, economy: Ec
                         "Variable": "Stock Share",
                         "Scenario": scenario,
                         "Region": economy.name,
-                        "Scale": "%",
+                        "Scale": _default_scale_for_variable("Stock Share"),
                         "Units": "Share",
                         "Per...": "",
                         str(BASE_YEAR): share,
@@ -3182,6 +3397,40 @@ def _ensure_vehicle_type_stock_share_rows(defaults_df: pd.DataFrame, economy: Ec
         str(yr) for yr in STOCK_SHARE_PROJECTION_YEARS if str(yr) not in MODULE1_INPUT_COLUMNS
     ]
     return df[[c for c in output_cols if c in df.columns]]
+
+
+_REQUIRED_MODEL_ASSUMPTION_ROWS: list[tuple[str, str]] = [
+    ("Demand\\Passenger road", "Passenger Stock Growth Rate Adjustment"),
+    ("Demand\\Freight road", "Freight GDP Elasticity Adjustment"),
+]
+
+
+def _raise_if_required_model_assumption_rows_missing(
+    default_filled_df: pd.DataFrame,
+    economy: EconomyInfo,
+) -> None:
+    """Raise if any required model-assumption row is absent for every scenario present."""
+    scenarios = (
+        default_filled_df["Scenario"].dropna().astype(str).loc[lambda s: s.ne("")].unique().tolist()
+        or ["Current Accounts"]
+    )
+    missing: list[str] = []
+    for branch_path, variable in _REQUIRED_MODEL_ASSUMPTION_ROWS:
+        for scenario in scenarios:
+            exists = (
+                default_filled_df["Branch Path"].eq(branch_path)
+                & default_filled_df["Variable"].eq(variable)
+                & default_filled_df["Scenario"].eq(scenario)
+            ).any()
+            if not exists:
+                missing.append(f"  {variable} | {branch_path} | {scenario}")
+
+    if missing:
+        raise ValueError(
+            f"Required model-assumption rows are missing for {economy.code}.\n"
+            "Add them to processed_source/, manually_filled_rows/, or supplemental_source_files/:\n"
+            + "\n".join(missing)
+        )
 
 
 def build_default_assumptions(economy: EconomyInfo, scenarios: Iterable[str], years: Iterable[int]) -> pd.DataFrame:
@@ -4210,28 +4459,23 @@ def write_economy_package(
             f"{_processed_source_path(economy)} or provide {ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH}."
         )
 
-    # Harmonize legacy naming/scopes from seed workbooks to the current policy:
+    # Harmonize legacy naming/scopes from seed workbooks to the current policy
+    # (valid_drive_types_by_vehicle_type in vehicle_mappings.yaml):
     # - Use Fuel Economy variable name.
-    # - Keep HEV/EREV only for LPV branches.
-    # - Remove truck PHEV rows.
+    # - HEV and EREV are LPV-only; drop them from all other segments.
+    # - Trucks and Buses have no PHEV; drop those rows too.
     default_filled["Variable"] = default_filled["Variable"].replace(
         {"Final On-Road Fuel Economy": "Fuel Economy"}
     )
     branch_series = default_filled["Branch Path"].astype(str)
     is_hev_or_erev = branch_series.str.contains(r"\\(?:HEV|EREV)(?:\\|$)", regex=True)
     is_lpv_branch = branch_series.str.startswith("Demand\\Passenger road\\LPVs\\")
-    is_truck_phev = branch_series.str.startswith("Demand\\Freight road\\Trucks\\") & branch_series.str.contains(
-        r"\\PHEV(?:\\|$)",
-        regex=True,
-    )
-    # HEV is out of scope for Motorcycles (LPV-only policy), but PHEV and FCEV
-    # are in scope — they should appear with 0 stock in the base year.
-    is_motorcycle_hev = (
-        branch_series.str.startswith("Demand\\Passenger road\\Motorcycles\\")
-        & branch_series.str.contains(r"\\HEV(?:\\|$)", regex=True)
+    is_truck_or_bus_phev = (
+        branch_series.str.contains(r"\\(?:Trucks|Buses)\\", regex=True)
+        & branch_series.str.contains(r"\\PHEV(?:\\|$)", regex=True)
     )
     default_filled = default_filled[
-        ~((is_hev_or_erev & ~is_lpv_branch) | is_truck_phev | is_motorcycle_hev)
+        ~((is_hev_or_erev & ~is_lpv_branch) | is_truck_or_bus_phev)
     ].copy()
 
     # Vehicle equivalent weights are only required for passenger branches.
@@ -4261,6 +4505,7 @@ def write_economy_package(
         economy=economy,
     )
     default_filled = _ensure_vehicle_type_stock_share_rows(default_filled, economy)
+    _raise_if_required_model_assumption_rows_missing(default_filled, economy)
     # Rows created by overlay functions may have NA in metadata columns — fill them
     # so downstream validation (which expects strings) doesn't fail.
     for _col, _fill in [("input_source", "provided"), ("source_type", ""), ("source_name", ""),
@@ -4627,6 +4872,10 @@ def _apply_long_provided_values_file(
         value = provided_row.get("Value", pd.NA)
         if pd.isna(value):
             continue
+        provided_scale = ""
+        if "Scale" in normalized_provided_df.columns:
+            provided_scale = str(provided_row.get("Scale", "") or "").strip()
+        internal_value = _to_internal_value(value, provided_scale)
         branch_path = provided_row["Branch Path"]
         variable = provided_row["Variable"]
         scenario = provided_row["Scenario"]
@@ -4640,9 +4889,11 @@ def _apply_long_provided_values_file(
             completed_df[year_col] = pd.NA
         for idx in completed_df[target_mask].index:
             old_value = completed_df.at[idx, year_col]
-            if pd.notna(old_value) and float(old_value) == float(value):
+            if pd.notna(old_value) and float(old_value) == float(internal_value):
                 continue
-            completed_df.at[idx, year_col] = float(value)
+            completed_df.at[idx, year_col] = float(internal_value)
+            if provided_scale:
+                completed_df.at[idx, "Scale"] = provided_scale
             completed_df.at[idx, "input_source"] = "provided"
             completed_df.at[idx, "source_type"] = "researcher_provided_file"
             completed_df.at[idx, "source_name"] = source_name
