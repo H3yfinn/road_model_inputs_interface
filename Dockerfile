@@ -19,7 +19,7 @@ COPY requirements.txt ./interface-requirements.txt
 ARG LEAP_ROAD_MODEL_REPO=https://github.com/asia-pacific-energy-research-centre/leap_road_model
 # Defaults to the latest leap_road_model main branch. Set LEAP_ROAD_MODEL_REF to
 # a commit SHA or another branch/tag only when a reproducible deployment is needed.
-ARG LEAP_ROAD_MODEL_REF=8abf212563c13ea6d7025f9308c2b958a3a94b85
+ARG LEAP_ROAD_MODEL_REF=0825a481d73bcdcc329ed197ba3e35637680a280
 
 RUN if [ "${LEAP_ROAD_MODEL_REF}" = "main" ]; then \
         git clone --depth 1 --branch main ${LEAP_ROAD_MODEL_REPO} /app/leap_road_model; \
