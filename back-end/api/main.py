@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 import os
 from pathlib import Path
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+import json
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 import uvicorn
 
 # Imported data_ingestor alongside the router to handle eager loading
@@ -72,12 +74,63 @@ _results_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/road-results", StaticFiles(directory=str(_results_dir)), name="road-results")
 
 _road_model_docs_dir = _road_model_repo / "docs" / "new model"
-if _road_model_docs_dir.exists():
-    app.mount(
-        "/road-model-docs",
-        StaticFiles(directory=str(_road_model_docs_dir)),
-        name="road-model-docs",
-    )
+
+_MD_PAGE_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{title}</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <style>
+    body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         margin:0;padding:0;background:#f5f5f5;color:#333;line-height:1.6}}
+    .page-wrap{{max-width:860px;margin:0 auto;padding:32px 24px 60px}}
+    h1,h2,h3,h4{{color:#1a237e}}
+    h1{{border-bottom:2px solid #e0e0e0;padding-bottom:10px}}
+    h2{{border-bottom:1px solid #e0e0e0;padding-bottom:6px}}
+    a{{color:#1a237e}}
+    pre{{background:#f0f4ff;border:1px solid #c5cae9;border-radius:6px;padding:14px;overflow-x:auto}}
+    code{{background:#f0f4ff;border-radius:3px;padding:2px 5px;font-size:.9em}}
+    pre code{{background:none;padding:0}}
+    blockquote{{border-left:4px solid #7986cb;margin:0;padding:8px 16px;background:#e8eaf6;border-radius:0 4px 4px 0}}
+    img{{max-width:100%;height:auto;border-radius:6px;border:1px solid #e0e0e0;margin:12px 0;display:block}}
+    table{{border-collapse:collapse;width:100%}}
+    th,td{{border:1px solid #e0e0e0;padding:8px 12px;text-align:left}}
+    th{{background:#e8eaf6}}
+    tr:nth-child(even){{background:#f5f5f5}}
+  </style>
+</head>
+<body>
+<div class="page-wrap" id="content"></div>
+<script>
+const md = {content_json};
+document.getElementById('content').innerHTML = marked.parse(md);
+</script>
+</body>
+</html>
+"""
+
+
+@app.get("/road-model-docs/{filepath:path}", include_in_schema=False)
+async def serve_road_model_docs(filepath: str) -> HTMLResponse | FileResponse:
+    if not _road_model_docs_dir.exists():
+        raise HTTPException(status_code=404, detail="Docs directory not available")
+    full_path = (_road_model_docs_dir / filepath).resolve()
+    if not full_path.is_relative_to(_road_model_docs_dir.resolve()):
+        raise HTTPException(status_code=403)
+    if not full_path.exists() or not full_path.is_file():
+        raise HTTPException(status_code=404)
+    if filepath.lower().endswith(".md"):
+        content = full_path.read_text(encoding="utf-8")
+        title = full_path.stem.replace("_", " ").title()
+        html = _MD_PAGE_TEMPLATE.format(
+            title=title,
+            content_json=json.dumps(content),
+        )
+        return HTMLResponse(html)
+    return FileResponse(str(full_path))
 
 # Serve the frontend — must be last so API routes take precedence.
 _frontend_dir = _interface_dir / "front-end"
