@@ -21,9 +21,7 @@ exports a Module 1 package for `leap_road_model`.
 
 ## Overview diagrams
 
-![Road Module 1-7 simplified interface workflow](docs/new%20model/Road%20Module%201-7%20simplified%20interface%20workflow.png)
-
-![Road Module 1 workflow diagram](docs/new%20model/Road%20Module%201%20workflow%20diagram.png)
+![End-to-end road model workflow](docs/new%20model/End-to-end%20road%20model%20workflow%208062026.png)
 
 ## What this site is for
 

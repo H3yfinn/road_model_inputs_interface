@@ -163,7 +163,7 @@ function buildRoadHelperHtml(row, year) {
     const e = roadHelperEscape;
 
     if (!row) {
-        return '<p class="road-helper-default-text">Click a cell in the table to see what that assumption means. The helper will explain the selected variable and the main parts of the branch path.</p>';
+        return '<p class="road-helper-default-text">Click or hover over a cell in the table to the right to learn about it. The helper will explain the variable, vehicle and drive type for that cell.</p>';
     }
 
     const branchParts = roadHelperParseBranchPath(row);

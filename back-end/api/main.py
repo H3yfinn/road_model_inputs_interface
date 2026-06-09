@@ -123,7 +123,7 @@ async def serve_road_model_docs(filepath: str) -> HTMLResponse | FileResponse:
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404)
     if filepath.lower().endswith(".md"):
-        content = full_path.read_text(encoding="utf-8")
+        content = full_path.read_text(encoding="utf-8-sig")
         title = full_path.stem.replace("_", " ").title()
         html = _MD_PAGE_TEMPLATE.format(
             title=title,
