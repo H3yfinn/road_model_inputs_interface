@@ -900,24 +900,17 @@ body.road-panel-resizing * {
     font-weight: 900;
 }
 
+.road-flag-icon {
+    color: #3b82f6;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
 .road-tree-count {
     color: #64748b;
     font-size: 0.62rem;
     font-weight: 900;
     text-transform: uppercase;
-}
-
-.road-stock-badge {
-    background: #dbeafe;
-    border: 1px solid #93c5fd;
-    border-radius: 0.25rem;
-    color: #1d4ed8;
-    font-size: 0.6rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    padding: 0.1rem 0.35rem;
-    text-transform: uppercase;
-    white-space: nowrap;
 }
 
 .road-tree-children {

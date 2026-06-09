@@ -10,8 +10,8 @@
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans overflow-hidden">
     
     <header class="bg-blue-900 text-white shadow-md z-20 flex-shrink-0">
-        <div class="px-6 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-wide">Road data preparation model</h1>
+        <div class="px-6 py-2 flex justify-center items-center">
+            <h1 class="text-base font-bold tracking-wide">Road data preparation model</h1>
         </div>
     </header>
 
@@ -20,6 +20,43 @@
             <div id="road-left-resizer" class="road-left-resizer" role="separator" aria-orientation="vertical" aria-label="Resize settings panel"></div>
             <div class="p-5 border-b border-slate-200 bg-slate-50 space-y-4">
                 <div>
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Road Input Data</h2>
+                        <div class="relative group flex-shrink-0">
+                            <button class="road-help-button" aria-label="View road input glossary">?</button>
+                            <div class="road-help-tooltip">
+                                <h4>Road input glossary</h4>
+                                <ul>
+                                    <li><strong>Core CSV fields:</strong> <code>Branch Path</code>, <code>Variable</code>, <code>Region</code>, <code>Scale</code>, <code>Units</code>, <code>Per...</code>, and <code>2022</code>. The scenario is always <strong>Current Accounts</strong>.</li>
+                                    <li><strong>Partial rows:</strong> Fine to leave some cells blank or omit non-essential columns entirely.</li>
+                                    <li><strong>Ignored values:</strong> Blank or non-existent values are skipped by the loader.</li>
+                                    <li><strong>Stock:</strong> Base-year vehicle count for a branch.</li>
+                                    <li><strong>Mileage:</strong> Annual distance travelled per vehicle.</li>
+                                    <li><strong>Final On-Road Fuel Economy:</strong> Energy used per distance travelled.</li>
+                                    <li><strong>Passenger Vehicle Saturation:</strong> Passenger-road-only saturation shared across passenger road.</li>
+                                    <li><strong>Vehicle Equivalent Weight:</strong> Weight used to convert vehicle types into equivalent vehicle activity.</li>
+                                    <li><strong>Reconciliation Bound Lower:</strong> Minimum allowed road-sector reconciliation adjustment.</li>
+                                    <li><strong>Reconciliation Bound Upper:</strong> Maximum allowed road-sector reconciliation adjustment.</li>
+                                    <li><strong>Reconciliation Weight:</strong> Priority weight used when reconciling road-sector values.</li>
+                                    <li><strong>Sales Share:</strong> New vehicle sales split by drive or fuel.</li>
+                                    <li><strong>PHEV Electric Driving Share:</strong> Shared PHEV road-sector series.</li>
+                                    <li><strong>Survival Rate:</strong> Road-sector age series for remaining vehicle vintages.</li>
+                                    <li><strong>Vintage Profile Share:</strong> Road-sector age distribution used for the stock profile.</li>
+                                    <li><strong>Blank fields:</strong> Export the grey provided base-year value unless you enter an override. Missing optional fields are ignored.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-2">Use the comment section to record your data source and other notes. Projected sales shares and mileage and efficiency adjustments are handled within LEAP. Press Run Road Model to generate the LEAP inputs.</p>
+                    <div class="flex items-center gap-2 mb-1">
+                        <a href="/road-model-docs/road_transport_model_simplified.md" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
+                            Open simplified road model documentation
+                        </a>
+                        <span class="text-slate-300 select-none">|</span>
+                        <button id="road-variable-map-btn" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline" type="button">
+                            View variable structure map
+                        </button>
+                    </div>
                     <div class="space-y-3">
                         <div class="hidden" aria-hidden="true">
                             <select id="road-version-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none"></select>
@@ -48,6 +85,8 @@
                             <button id="road-density-less" class="is-active" type="button">Less</button>
                             <button id="road-density-more" type="button">More</button>
                         </div>
+                        <div id="road-row-stats" class="text-xs text-slate-400 ml-auto"></div>
+                        <div id="road-validation-summary" class="text-xs font-bold text-slate-500"></div>
                         <div class="relative group flex-shrink-0">
                             <button class="road-help-button" aria-label="Explain data density">?</button>
                             <div class="road-help-tooltip road-version-tooltip">
@@ -77,8 +116,7 @@
                         <div>
                             <label>Sort by</label>
                             <select id="road-sort-by" class="road-filter-select">
-                                <option value="stock-rank">By stock importance</option>
-                                <option value="energy-rank">By energy use</option>
+                                <option value="energy-rank">By prelim energy use</option>
                                 <option value="branch">Branch path</option>
                                 <option value="measure">Measure</option>
                                 <option value="transport">Transport type</option>
@@ -109,7 +147,7 @@
                         <div class="road-help-tooltip road-version-tooltip">
                             <h4>Upload Filled CSV</h4>
                             <p>Loads a filled CSV into the interface. The loader reads each row's values and applies them as overrides — blank cells and missing columns are skipped.</p>
-                            <p class="mt-2">Use this to enter data prepared outside the interface, such as from a spreadsheet or another tool.</p>
+                            <p class="mt-2">Use this to enter data prepared outside the interface, such as a spreadsheet, another tool or even reconciled values after the model has been run.</p>
                         </div>
                     </div>
                 </div>
@@ -147,52 +185,6 @@
         </aside>
 
         <section class="flex-1 flex flex-col overflow-hidden">
-            <div class="px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between gap-4">
-                <div>
-                    <div class="flex items-center gap-1.5">
-                        <h2 class="text-base font-bold text-slate-800">Road Input Data and Provided Values</h2>
-                        <div class="relative group flex-shrink-0">
-                            <button class="road-help-button" aria-label="View road input glossary">?</button>
-                            <div class="road-help-tooltip">
-                                <h4>Road input glossary</h4>
-                                <ul>
-                                    <li><strong>Core CSV fields:</strong> <code>Branch Path</code>, <code>Variable</code>, <code>Region</code>, <code>Scale</code>, <code>Units</code>, <code>Per...</code>, and <code>2022</code>. The scenario is always <strong>Current Accounts</strong>.</li>
-                                    <li><strong>Partial rows:</strong> Fine to leave some cells blank or omit non-essential columns entirely.</li>
-                                    <li><strong>Ignored values:</strong> Blank or non-existent values are skipped by the loader.</li>
-                                    <li><strong>Stock:</strong> Base-year vehicle count for a branch.</li>
-                                    <li><strong>Mileage:</strong> Annual distance travelled per vehicle.</li>
-                                    <li><strong>Final On-Road Fuel Economy:</strong> Energy used per distance travelled.</li>
-                                    <li><strong>Passenger Vehicle Saturation:</strong> Passenger-road-only saturation shared across passenger road.</li>
-                                    <li><strong>Vehicle Equivalent Weight:</strong> Weight used to convert vehicle types into equivalent vehicle activity.</li>
-                                    <li><strong>Reconciliation Bound Lower:</strong> Minimum allowed road-sector reconciliation adjustment.</li>
-                                    <li><strong>Reconciliation Bound Upper:</strong> Maximum allowed road-sector reconciliation adjustment.</li>
-                                    <li><strong>Reconciliation Weight:</strong> Priority weight used when reconciling road-sector values.</li>
-                                    <li><strong>Sales Share:</strong> New vehicle sales split by drive or fuel.</li>
-                                    <li><strong>PHEV Electric Driving Share:</strong> Shared PHEV road-sector series.</li>
-                                    <li><strong>Survival Rate:</strong> Road-sector age series for remaining vehicle vintages.</li>
-                                    <li><strong>Vintage Profile Share:</strong> Road-sector age distribution used for the stock profile.</li>
-                                    <li><strong>Blank fields:</strong> Export the grey provided base-year value unless you enter an override. Missing optional fields are ignored.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-slate-500">Use the comment section to record your data source and other notes. Projected sales shares and mileage and efficiency adjustments are handled within LEAP. Press Run Road Model to generate the LEAP inputs.</p>
-                    <div class="flex items-center gap-3 mt-2">
-                        <a href="/road-model-docs/road_transport_model_simplified.md" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
-                            Open simplified road model documentation
-                        </a>
-                        <span class="text-slate-300 select-none">|</span>
-                        <button id="road-variable-map-btn" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline" type="button">
-                            View variable structure map
-                        </button>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <div id="road-row-stats" class="text-xs text-slate-400"></div>
-                    <div id="road-validation-summary" class="text-xs font-bold text-slate-500"></div>
-                </div>
-            </div>
-
             <div id="road-input-container" class="flex-1 overflow-auto custom-scrollbar p-6">
                 <div class="h-full flex items-center justify-center text-slate-400 text-sm">
                     Load an economy to review Road model provided values.

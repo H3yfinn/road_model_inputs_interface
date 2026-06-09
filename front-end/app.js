@@ -33,7 +33,7 @@ const State = {
             drive: '',
             measure: ''
         },
-        sortBy: 'stock-rank',
+        sortBy: 'energy-rank',
         sortDirection: 'desc',
         viewMode: 'list',
         dataDensity: 'less',
@@ -940,9 +940,6 @@ async function populateRoadModule1Selectors() {
             DOM.roadVersionSelect.value = getRoadStaticIndexDefaultVersion(staticIndex, versions);
             await populateRoadModule1Economies(DOM.roadVersionSelect.value);
             roadModule1SuppressAutoLoad = false;
-            if (DOM.roadSaveStatus) {
-                DOM.roadSaveStatus.innerText = 'Using packaged static Road Module 1 selector metadata.';
-            }
             await autoLoadRoadModule1OnSelectionChange();
             return;
         }
@@ -1802,6 +1799,19 @@ function looksLikeRoadDrive(value) {
     return ['bev', 'erev', 'fcev', 'hev', 'ice', 'phev'].some(token => normalized.includes(token));
 }
 
+const ROAD_FLAGGED_VARIABLES = new Set(['Stock', 'Stock Share', 'Sales Share']);
+
+function isRoadRowFlagged(row) {
+    if (!ROAD_FLAGGED_VARIABLES.has(row.Variable)) return false;
+    const stockMap = State.roadModule1.stockMap;
+    if (!stockMap) return false;
+    const parts = String(row['Branch Path'] || '').split('\\').filter(Boolean);
+    const lookupPath = row.Variable === 'Stock'
+        ? row['Branch Path']
+        : parts.slice(0, -1).join('\\');
+    return (stockMap.get(lookupPath) ?? 0) > 0;
+}
+
 function getRoadRowFilterMeta(row) {
     const parts = getRoadPathParts(row);
     const transport = parts[1] || '';
@@ -1824,7 +1834,7 @@ function getRoadRowFilterMeta(row) {
         fuel: fuel,
         measure: row.Variable || '',
         source: row.input_source || '',
-        review: row.researcher_review_recommended ? 'needs-review' : 'not-needed',
+        review: isRoadRowFlagged(row) ? 'needs-review' : 'not-needed',
         units: row.Units || '',
         isAgeSeries: isAgeSeries ? 'age-series' : 'single-row'
     };
@@ -1849,7 +1859,8 @@ function getUniqueRoadFilterValues(rows, metaKey) {
 }
 
 function populateRoadModule1StructuredFilters(rows) {
-    addRoadSelectOptions(DOM.roadFilterTransport, getUniqueRoadFilterValues(rows, 'transport'));
+    const transportRows = rows.filter(row => row.Variable !== 'PHEV Electric Driving Share');
+    addRoadSelectOptions(DOM.roadFilterTransport, getUniqueRoadFilterValues(transportRows, 'transport'));
     addRoadSelectOptions(DOM.roadFilterVehicle, getUniqueRoadFilterValues(rows, 'vehicle'));
     addRoadSelectOptions(DOM.roadFilterDrive, getUniqueRoadFilterValues(rows, 'drive'));
     addRoadSelectOptions(DOM.roadFilterMeasure, getUniqueRoadFilterValues(rows, 'measure'));
@@ -1956,7 +1967,7 @@ function formatRoadEnergy(rawEnergy) {
 
 function updateRoadSortDirectionLabels() {
     if (!DOM.roadSortDirection) return;
-    const isRanked = State.roadModule1.sortBy === 'stock-rank' || State.roadModule1.sortBy === 'energy-rank';
+    const isRanked = State.roadModule1.sortBy === 'energy-rank';
     const opts = DOM.roadSortDirection.options;
     if (opts[0]) opts[0].text = isRanked ? 'Least first' : 'A–Z';
     if (opts[1]) opts[1].text = isRanked ? 'Most first' : 'Z–A';
@@ -1964,24 +1975,6 @@ function updateRoadSortDirectionLabels() {
 
 function sortRoadRows(rows) {
     const directionMultiplier = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
-
-    if (State.roadModule1.sortBy === 'stock-rank') {
-        const stockMap = State.roadModule1.stockMap || new Map();
-        return [...rows].sort((a, b) => {
-            const aParts = String(a['Branch Path'] || '').split('\\').filter(Boolean);
-            const bParts = String(b['Branch Path'] || '').split('\\').filter(Boolean);
-            const aTransportStock = stockMap.get(aParts.slice(0, 2).join('\\')) ?? 0;
-            const bTransportStock = stockMap.get(bParts.slice(0, 2).join('\\')) ?? 0;
-            const transportCmp = (aTransportStock - bTransportStock) * directionMultiplier;
-            if (transportCmp !== 0) return transportCmp;
-            const aVehicleStock = stockMap.get(aParts.slice(0, 3).join('\\')) ?? 0;
-            const bVehicleStock = stockMap.get(bParts.slice(0, 3).join('\\')) ?? 0;
-            const vehicleCmp = (aVehicleStock - bVehicleStock) * directionMultiplier;
-            if (vehicleCmp !== 0) return vehicleCmp;
-            return String(a['Branch Path'] || '').localeCompare(String(b['Branch Path'] || ''), 'en-US', { numeric: true })
-                || String(a.Variable || '').localeCompare(String(b.Variable || ''), 'en-US', { numeric: true });
-        });
-    }
 
     if (State.roadModule1.sortBy === 'energy-rank') {
         const energyMap = State.roadModule1.energyMap || new Map();
@@ -2353,15 +2346,7 @@ function countRoadTreeRows(node) {
 function renderRoadModule1GraphChildren(node, depth = 0, parentPath = '') {
     let childEntries = [...node.children.entries()];
 
-    if (State.roadModule1.sortBy === 'stock-rank') {
-        const stockMap = State.roadModule1.stockMap || new Map();
-        const dir = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
-        childEntries.sort((a, b) => {
-            const aStock = stockMap.get(parentPath ? `${parentPath}\\${a[0]}` : a[0]) ?? 0;
-            const bStock = stockMap.get(parentPath ? `${parentPath}\\${b[0]}` : b[0]) ?? 0;
-            return (aStock - bStock) * dir;
-        });
-    } else if (State.roadModule1.sortBy === 'energy-rank') {
+    if (State.roadModule1.sortBy === 'energy-rank') {
         const energyMap = State.roadModule1.energyMap || new Map();
         const dir = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
         childEntries.sort((a, b) => {
@@ -2391,9 +2376,9 @@ function renderRoadModule1GraphNode(label, node, depth, parentPath = '') {
     const rowCount = countRoadTreeRows(node);
     const measureCount = new Set(node.groups.map(group => group.rows[0]?.Variable).filter(Boolean)).size;
     const isLeaf = node.children.size === 0;
-    const stockVal = (State.roadModule1.stockMap || new Map()).get(fullPath);
-    const stockBadge = stockVal !== undefined
-        ? `<span class="road-stock-badge" title="${stockVal.toFixed(3)}M vehicles (base year stock)">${stockVal.toFixed(2)}M</span>`
+    const nodeHasFlaggedRows = node.groups.some(group => group.rows.some(isRoadRowFlagged));
+    const nodeFlagIcon = nodeHasFlaggedRows
+        ? `<svg class="road-flag-icon" viewBox="0 0 10 13" width="10" height="13" aria-label="Key input"><path d="M1.5 1v11M1.5 1.5h7L5.5 5.5l3 4H1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         : '';
     return `
         <li class="road-graph-node-group ${isLeaf ? 'is-leaf' : ''}">
@@ -2402,10 +2387,9 @@ function renderRoadModule1GraphNode(label, node, depth, parentPath = '') {
                     <div class="road-graph-card-header">
                         <div class="min-w-0">
                             <div class="road-graph-level">Level ${depth}</div>
-                            <div class="road-graph-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+                            <div class="road-graph-title" title="${escapeHtml(label)}">${nodeFlagIcon}${escapeHtml(label)}</div>
                         </div>
                         <div class="road-graph-card-meta">
-                            ${stockBadge}
                             <span>${rowCount} row${rowCount === 1 ? '' : 's'}</span>
                             ${measureCount ? `<span>${measureCount} measure${measureCount === 1 ? '' : 's'}</span>` : ''}
                         </div>
@@ -3060,17 +3044,17 @@ function buildRoadModule1ListGroupHtml(group) {
             : (group.groupType === 'transport-params'
                 ? getRoadTransportParamGroupTitle(group)
                 : first.Variable));
-    const stockVal = (State.roadModule1.stockMap || new Map()).get(group.branchPath);
-    const stockBadge = stockVal !== undefined
-        ? `<span class="road-stock-badge" title="${stockVal.toFixed(3)}M vehicles (base year stock)">${stockVal.toFixed(2)}M</span>`
+    const isFlagged = groupRows.some(isRoadRowFlagged);
+    const flagIcon = isFlagged
+        ? `<svg class="road-flag-icon" viewBox="0 0 10 13" width="10" height="13" aria-label="Key input"><path d="M1.5 1v11M1.5 1.5h7L5.5 5.5l3 4H1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
         : '';
     return `
         <section class="road-group-card ${isCompactGroup ? 'is-compact' : ''}">
             <div class="road-group-header">
                 <div class="min-w-0">
-                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}${stockBadge}</div>
+                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
                     <div class="road-group-title-row">
-                        <div class="road-group-title">${escapeHtml(groupTitle)}</div>
+                        ${flagIcon}<div class="road-group-title">${escapeHtml(groupTitle)}</div>
                         ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
                     </div>
                 </div>
