@@ -33,11 +33,10 @@ const State = {
             drive: '',
             measure: ''
         },
-        sortBy: 'branch',
-        sortDirection: 'asc',
+        sortBy: 'stock-rank',
+        sortDirection: 'desc',
         viewMode: 'list',
-        detailedMileage: false,
-        detailedFuelEconomy: false,
+        dataDensity: 'less',
         lastDraftSavedAt: null
     },
     // NEW: Open and extensible dictionary configuration for variable socio-economic drivers
@@ -161,9 +160,6 @@ const DOM = {
     btnToggleCompact: document.getElementById('btn-toggle-compact'),
     displayZoom: document.getElementById('display-zoom'),
     compactIcon: document.getElementById('compact-icon'),
-    btnModeEnergy: document.getElementById('btn-mode-energy'),
-    btnModeRoadModule1: document.getElementById('btn-mode-road-module1'),
-    energyAppMain: document.getElementById('energy-app-main'),
     roadModule1Main: document.getElementById('road-module1-main'),
     roadVersionSelect: document.getElementById('road-version-select'),
     roadEconomySelect: document.getElementById('road-economy-select'),
@@ -183,7 +179,7 @@ const DOM = {
     roadSortDirection: document.getElementById('road-sort-direction'),
     roadListView: document.getElementById('road-list-view'),
     roadTreeView: document.getElementById('road-tree-view'),
-    roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
+    roadDensityLess: document.getElementById('road-density-less'),
     roadSaveOutput: document.getElementById('road-save-output'),
     roadRunModel: document.getElementById('road-run-model'),
     roadClearDraft: document.getElementById('road-clear-draft'),
@@ -197,8 +193,7 @@ const DOM = {
     roadRunLogWorkbook: document.getElementById('road-run-log-workbook'),
     roadRunLogLifecycleProfiles: document.getElementById('road-run-log-lifecycle-profiles'),
     roadRunLogReimportCsv: document.getElementById('road-run-log-reimport-csv'),
-    roadDetailedMileageToggle: document.getElementById('road-detailed-mileage-toggle'),
-    roadDetailedFuelEconomyToggle: document.getElementById('road-detailed-fuel-economy-toggle'),
+    roadDensityMore: document.getElementById('road-density-more'),
     roadRowStats: document.getElementById('road-row-stats'),
     roadValidationSummary: document.getElementById('road-validation-summary'),
     roadInputContainer: document.getElementById('road-input-container'),
@@ -391,7 +386,6 @@ function showCustomToast(message, type = 'info', duration = 3500) {
 
 function initApp() {
     setupDropdowns();
-    setupModeSwitcher();
     setupRoadModule1();
     renderGlobalMacroDriversPanel(); // Initial execution pass to append default drivers
     renderUserVariablesPanel();       // Initial empty-state render for user variables
@@ -470,32 +464,6 @@ function setupDropdowns() {
     DOM.selectEconomy.value = "20USA"; // Default
 }
 
-function setupModeSwitcher() {
-    if (!DOM.btnModeEnergy || !DOM.btnModeRoadModule1) return;
-
-    DOM.btnModeEnergy.addEventListener('click', () => setActiveMode('energy'));
-    DOM.btnModeRoadModule1.addEventListener('click', () => setActiveMode('road-module1'));
-
-    if (window.location.hash === '#road-module1') {
-        setActiveMode('road-module1');
-    }
-}
-
-function setActiveMode(mode) {
-    const isRoadMode = mode === 'road-module1';
-    DOM.energyAppMain.classList.toggle('hidden', isRoadMode);
-    DOM.energyAppMain.classList.toggle('flex', !isRoadMode);
-    DOM.roadModule1Main.classList.toggle('hidden', !isRoadMode);
-    DOM.roadModule1Main.classList.toggle('flex', isRoadMode);
-
-    DOM.btnModeEnergy.className = isRoadMode
-        ? 'px-3 py-1.5 rounded text-xs font-bold text-blue-100 hover:bg-blue-800'
-        : 'px-3 py-1.5 rounded text-xs font-bold bg-white text-blue-900';
-    DOM.btnModeRoadModule1.className = isRoadMode
-        ? 'px-3 py-1.5 rounded text-xs font-bold bg-white text-blue-900'
-        : 'px-3 py-1.5 rounded text-xs font-bold text-blue-100 hover:bg-blue-800';
-}
-
 function setupInfoTipPopup() {
     const popup = document.createElement('div');
     popup.id = 'road-info-tip-popup';
@@ -562,11 +530,13 @@ function setupRoadModule1() {
         DOM.roadClearDraft.addEventListener('click', clearRoadModule1DraftForCurrentSelection);
     }
     setupRoadLeftPanelResizer();
-    DOM.roadFilterInput.addEventListener('input', (event) => {
-        State.roadModule1.activeFilter = event.target.value.trim().toLowerCase();
-        renderRoadModule1Inputs();
-        scheduleRoadModule1DraftSave();
-    });
+    if (DOM.roadFilterInput) {
+        DOM.roadFilterInput.addEventListener('input', (event) => {
+            State.roadModule1.activeFilter = event.target.value.trim().toLowerCase();
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
     setupRoadModule1FilterControls();
     setupRoadModule1ViewControls();
     if (DOM.roadVersionSelect) {
@@ -905,6 +875,7 @@ function setupRoadModule1FilterControls() {
     if (DOM.roadSortBy) {
         DOM.roadSortBy.addEventListener('change', (event) => {
             State.roadModule1.sortBy = event.target.value;
+            updateRoadSortDirectionLabels();
             renderRoadModule1Inputs();
             scheduleRoadModule1DraftSave();
         });
@@ -933,16 +904,18 @@ function setupRoadModule1ViewControls() {
             scheduleRoadModule1DraftSave();
         });
     }
-    if (DOM.roadDetailedMileageToggle) {
-        DOM.roadDetailedMileageToggle.addEventListener('change', (event) => {
-            State.roadModule1.detailedMileage = event.target.checked;
+    if (DOM.roadDensityLess) {
+        DOM.roadDensityLess.addEventListener('click', () => {
+            State.roadModule1.dataDensity = 'less';
+            updateRoadDensityToggle();
             renderRoadModule1Inputs();
             scheduleRoadModule1DraftSave();
         });
     }
-    if (DOM.roadDetailedFuelEconomyToggle) {
-        DOM.roadDetailedFuelEconomyToggle.addEventListener('change', (event) => {
-            State.roadModule1.detailedFuelEconomy = event.target.checked;
+    if (DOM.roadDensityMore) {
+        DOM.roadDensityMore.addEventListener('click', () => {
+            State.roadModule1.dataDensity = 'more';
+            updateRoadDensityToggle();
             renderRoadModule1Inputs();
             scheduleRoadModule1DraftSave();
         });
@@ -1056,8 +1029,7 @@ function serializeRoadModule1Draft() {
         sortBy: State.roadModule1.sortBy,
         sortDirection: State.roadModule1.sortDirection,
         viewMode: State.roadModule1.viewMode,
-        detailedMileage: State.roadModule1.detailedMileage,
-        detailedFuelEconomy: State.roadModule1.detailedFuelEconomy,
+        dataDensity: State.roadModule1.dataDensity,
         sharedMileageOverrides: Array.from(State.roadModule1.sharedMileageOverrides.values()),
         sharedFuelEconomyOverrides: Array.from(State.roadModule1.sharedFuelEconomyOverrides.values()),
         sharedUtilisationOverrides: Array.from(State.roadModule1.sharedUtilisationOverrides.values())
@@ -1158,8 +1130,7 @@ function applyRoadModule1Draft(draft) {
     if (State.roadModule1.viewMode === 'graph' || State.roadModule1.viewMode === 'canvas') {
         State.roadModule1.viewMode = 'tree';
     }
-    State.roadModule1.detailedMileage = Boolean(draft.detailedMileage);
-    State.roadModule1.detailedFuelEconomy = Boolean(draft.detailedFuelEconomy);
+    State.roadModule1.dataDensity = draft.dataDensity === 'more' ? 'more' : 'less';
     State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
     applyRoadModule1FilterControlValues();
 }
@@ -1181,9 +1152,14 @@ function applyRoadModule1FilterControlValues() {
     });
     if (DOM.roadSortBy) DOM.roadSortBy.value = State.roadModule1.sortBy;
     if (DOM.roadSortDirection) DOM.roadSortDirection.value = State.roadModule1.sortDirection;
-    if (DOM.roadDetailedMileageToggle) DOM.roadDetailedMileageToggle.checked = State.roadModule1.detailedMileage;
-    if (DOM.roadDetailedFuelEconomyToggle) DOM.roadDetailedFuelEconomyToggle.checked = State.roadModule1.detailedFuelEconomy;
+    updateRoadSortDirectionLabels();
+    updateRoadDensityToggle();
     updateRoadModule1ViewToggle();
+}
+
+function updateRoadDensityToggle() {
+    if (DOM.roadDensityLess) DOM.roadDensityLess.classList.toggle('is-active', State.roadModule1.dataDensity === 'less');
+    if (DOM.roadDensityMore) DOM.roadDensityMore.classList.toggle('is-active', State.roadModule1.dataDensity === 'more');
 }
 
 function updateRoadModule1ViewToggle() {
@@ -1198,7 +1174,11 @@ function getRoadModule1OverrideCount() {
 function getRoadModule1RowStats() {
     const rows = State.roadModule1.rows || [];
     if (rows.length === 0) return null;
-    const groups = groupRoadRowsForEditors(rows.filter(row => !isRoadVehicleEquivalentBoundsRow(row)));
+    const groups = groupRoadRowsForEditors(
+        rows
+            .filter(row => !isRoadVehicleEquivalentBoundsRow(row))
+            .filter(row => State.roadModule1.dataDensity === 'less' ? isRoadCoreDensityRow(row) : true)
+    );
     const total = groups.size;
     const yearSuffix = '||Year=';
     const customisedRowKeys = new Set();
@@ -1274,7 +1254,6 @@ async function loadRoadModule1Defaults() {
         }
         DOM.roadSaveOutput.disabled = false;
         if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
-        DOM.roadSaveStatus.innerText = `Road defaults loaded from ${loadSourceLabel}.`;
         renderRoadModule1Inputs();
         showCustomToast("Road defaults loaded.", "success");
     } catch (error) {
@@ -1460,6 +1439,11 @@ function isRoadAgeSeriesRow(row) {
 
 function isRoadMileageRow(row) {
     return String(row.Variable || '').trim().toLowerCase() === 'mileage';
+}
+
+function isRoadCoreDensityRow(row) {
+    const v = String(row.Variable || '').trim().toLowerCase();
+    return v === 'stock' || v === 'stock share' || v === 'sales share' || v === 'fuel economy' || v === 'mileage';
 }
 
 function getRoadMileageSharedBranchPath(row) {
@@ -1872,6 +1856,7 @@ function populateRoadModule1StructuredFilters(rows) {
     });
     if (DOM.roadSortBy) DOM.roadSortBy.value = State.roadModule1.sortBy;
     if (DOM.roadSortDirection) DOM.roadSortDirection.value = State.roadModule1.sortDirection;
+    updateRoadSortDirectionLabels();
     if (DOM.roadFilterInput) DOM.roadFilterInput.value = '';
 }
 
@@ -1892,8 +1877,125 @@ function getRoadSortValue(row) {
     return meta[State.roadModule1.sortBy] || '';
 }
 
+function buildRoadStockMap(rows) {
+    const map = new Map();
+    const baseYear = String(ROAD_MODULE1_BASE_YEAR);
+    (rows || []).forEach(row => {
+        if (row.Variable === 'Stock') {
+            const val = parseFloat(row[baseYear]);
+            if (!isNaN(val)) map.set(row['Branch Path'], val);
+        }
+    });
+    return map;
+}
+
+function buildRoadEnergyMap(rows) {
+    const baseYear = String(ROAD_MODULE1_BASE_YEAR);
+
+    const stockShareMap = new Map();
+    const mileageMap = new Map();
+    const fuelEconomyMap = new Map();
+
+    rows.forEach(row => {
+        const path = row['Branch Path'];
+        if (!path) return;
+        const val = parseFloat(row[baseYear]);
+        if (isNaN(val)) return;
+        if (row.Variable === 'Stock Share') stockShareMap.set(path, val);
+        else if (row.Variable === 'Mileage') mileageMap.set(path, val);
+        else if (row.Variable === 'Final On-Road Fuel Economy') fuelEconomyMap.set(path, val);
+    });
+
+    const stockMap = buildRoadStockMap(rows);
+    const energyMap = new Map();
+    const allPaths = [...new Set(rows.map(row => row['Branch Path']).filter(Boolean))];
+
+    allPaths.forEach(path => {
+        const parts = path.split('\\').filter(Boolean);
+        if (parts.length !== 5) return;
+
+        const vehiclePath = parts.slice(0, 3).join('\\');
+        const drivePath = parts.slice(0, 4).join('\\');
+
+        const vehicleStock = stockMap.get(vehiclePath);
+        if (vehicleStock === undefined || vehicleStock <= 0) return;
+
+        const stockShare = stockShareMap.get(drivePath);
+        if (stockShare === undefined) return;
+
+        const mileage = mileageMap.get(path) ?? mileageMap.get(drivePath);
+        if (!mileage) return;
+
+        const fuelEconomy = fuelEconomyMap.get(path) ?? fuelEconomyMap.get(drivePath);
+        if (!fuelEconomy) return;
+
+        const leafEnergy = vehicleStock * (stockShare / 100) * mileage * fuelEconomy;
+
+        energyMap.set(path, (energyMap.get(path) || 0) + leafEnergy);
+        for (let depth = 4; depth >= 1; depth--) {
+            const ancestorPath = parts.slice(0, depth).join('\\');
+            energyMap.set(ancestorPath, (energyMap.get(ancestorPath) || 0) + leafEnergy);
+        }
+    });
+
+    return energyMap;
+}
+
+function formatRoadEnergy(rawEnergy) {
+    // raw units: Millions veh × fraction × km/yr × MJ/100km → ×1e4 = MJ/yr, ×1e-5 = PJ/yr
+    const pj = rawEnergy * 1e-5;
+    if (pj >= 10) return `${pj.toFixed(0)} PJ`;
+    if (pj >= 1) return `${pj.toFixed(1)} PJ`;
+    if (pj >= 0.1) return `${(pj * 1000).toFixed(0)} TJ`;
+    if (pj >= 0.001) return `${(pj * 1000).toFixed(1)} TJ`;
+    return `<1 TJ`;
+}
+
+function updateRoadSortDirectionLabels() {
+    if (!DOM.roadSortDirection) return;
+    const isRanked = State.roadModule1.sortBy === 'stock-rank' || State.roadModule1.sortBy === 'energy-rank';
+    const opts = DOM.roadSortDirection.options;
+    if (opts[0]) opts[0].text = isRanked ? 'Least first' : 'A–Z';
+    if (opts[1]) opts[1].text = isRanked ? 'Most first' : 'Z–A';
+}
+
 function sortRoadRows(rows) {
     const directionMultiplier = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
+
+    if (State.roadModule1.sortBy === 'stock-rank') {
+        const stockMap = State.roadModule1.stockMap || new Map();
+        return [...rows].sort((a, b) => {
+            const aParts = String(a['Branch Path'] || '').split('\\').filter(Boolean);
+            const bParts = String(b['Branch Path'] || '').split('\\').filter(Boolean);
+            const aTransportStock = stockMap.get(aParts.slice(0, 2).join('\\')) ?? 0;
+            const bTransportStock = stockMap.get(bParts.slice(0, 2).join('\\')) ?? 0;
+            const transportCmp = (aTransportStock - bTransportStock) * directionMultiplier;
+            if (transportCmp !== 0) return transportCmp;
+            const aVehicleStock = stockMap.get(aParts.slice(0, 3).join('\\')) ?? 0;
+            const bVehicleStock = stockMap.get(bParts.slice(0, 3).join('\\')) ?? 0;
+            const vehicleCmp = (aVehicleStock - bVehicleStock) * directionMultiplier;
+            if (vehicleCmp !== 0) return vehicleCmp;
+            return String(a['Branch Path'] || '').localeCompare(String(b['Branch Path'] || ''), 'en-US', { numeric: true })
+                || String(a.Variable || '').localeCompare(String(b.Variable || ''), 'en-US', { numeric: true });
+        });
+    }
+
+    if (State.roadModule1.sortBy === 'energy-rank') {
+        const energyMap = State.roadModule1.energyMap || new Map();
+        return [...rows].sort((a, b) => {
+            const aParts = String(a['Branch Path'] || '').split('\\').filter(Boolean);
+            const bParts = String(b['Branch Path'] || '').split('\\').filter(Boolean);
+            for (let depth = 2; depth <= 4; depth++) {
+                const aEnergy = energyMap.get(aParts.slice(0, depth).join('\\')) ?? 0;
+                const bEnergy = energyMap.get(bParts.slice(0, depth).join('\\')) ?? 0;
+                const cmp = (aEnergy - bEnergy) * directionMultiplier;
+                if (cmp !== 0) return cmp;
+            }
+            return String(a['Branch Path'] || '').localeCompare(String(b['Branch Path'] || ''), 'en-US', { numeric: true })
+                || String(a.Variable || '').localeCompare(String(b.Variable || ''), 'en-US', { numeric: true });
+        });
+    }
+
     return [...rows].sort((a, b) => {
         const depthCompare = getRoadBranchDepth(a['Branch Path']) - getRoadBranchDepth(b['Branch Path']);
         if (depthCompare !== 0) return depthCompare;
@@ -2162,8 +2264,9 @@ function groupRoadRowsForEditors(filteredRows) {
     filteredRows
         .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
-            const useSharedMileage = isRoadMileageRow(row) && !State.roadModule1.detailedMileage;
-            const useSharedFuelEconomy = isRoadFuelEconomyRow(row) && !State.roadModule1.detailedFuelEconomy;
+            const detailed = State.roadModule1.dataDensity === 'more';
+            const useSharedMileage = isRoadMileageRow(row) && !detailed;
+            const useSharedFuelEconomy = isRoadFuelEconomyRow(row) && !detailed;
             const branchPath = useSharedMileage
                 ? getRoadMileageSharedBranchPath(row)
                 : useSharedFuelEconomy
@@ -2244,28 +2347,51 @@ function countRoadTreeRows(node) {
     return ownRows + [...node.children.values()].reduce((sum, child) => sum + countRoadTreeRows(child), 0);
 }
 
-function renderRoadModule1GraphChildren(node, depth = 0) {
-    const childEntries = [...node.children.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0], 'en-US', { numeric: true }));
+function renderRoadModule1GraphChildren(node, depth = 0, parentPath = '') {
+    let childEntries = [...node.children.entries()];
+
+    if (State.roadModule1.sortBy === 'stock-rank') {
+        const stockMap = State.roadModule1.stockMap || new Map();
+        const dir = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
+        childEntries.sort((a, b) => {
+            const aStock = stockMap.get(parentPath ? `${parentPath}\\${a[0]}` : a[0]) ?? 0;
+            const bStock = stockMap.get(parentPath ? `${parentPath}\\${b[0]}` : b[0]) ?? 0;
+            return (aStock - bStock) * dir;
+        });
+    } else if (State.roadModule1.sortBy === 'energy-rank') {
+        const energyMap = State.roadModule1.energyMap || new Map();
+        const dir = State.roadModule1.sortDirection === 'desc' ? -1 : 1;
+        childEntries.sort((a, b) => {
+            const aEnergy = energyMap.get(parentPath ? `${parentPath}\\${a[0]}` : a[0]) ?? 0;
+            const bEnergy = energyMap.get(parentPath ? `${parentPath}\\${b[0]}` : b[0]) ?? 0;
+            return (aEnergy - bEnergy) * dir;
+        });
+    } else {
+        childEntries.sort((a, b) => a[0].localeCompare(b[0], 'en-US', { numeric: true }));
+    }
 
     if (childEntries.length === 0) return '';
 
     return `
         <ul class="road-graph-list ${depth === 0 ? 'road-graph-root-list' : ''}">
-            ${childEntries.map(([childLabel, childNode]) => renderRoadModule1GraphNode(childLabel, childNode, depth + 1)).join('')}
+            ${childEntries.map(([childLabel, childNode]) => renderRoadModule1GraphNode(childLabel, childNode, depth + 1, parentPath)).join('')}
         </ul>
     `;
 }
 
-function renderRoadModule1GraphNode(label, node, depth) {
-    const childHtml = renderRoadModule1GraphChildren(node, depth);
+function renderRoadModule1GraphNode(label, node, depth, parentPath = '') {
+    const fullPath = parentPath ? `${parentPath}\\${label}` : label;
+    const childHtml = renderRoadModule1GraphChildren(node, depth, fullPath);
     const groupHtml = node.groups
         .map(group => buildRoadModule1GraphEditorHtml(group, depth))
         .join('');
     const rowCount = countRoadTreeRows(node);
     const measureCount = new Set(node.groups.map(group => group.rows[0]?.Variable).filter(Boolean)).size;
     const isLeaf = node.children.size === 0;
-
+    const stockVal = (State.roadModule1.stockMap || new Map()).get(fullPath);
+    const stockBadge = stockVal !== undefined
+        ? `<span class="road-stock-badge" title="${stockVal.toFixed(3)}M vehicles (base year stock)">${stockVal.toFixed(2)}M</span>`
+        : '';
     return `
         <li class="road-graph-node-group ${isLeaf ? 'is-leaf' : ''}">
             <div class="road-graph-node-wrapper">
@@ -2276,6 +2402,7 @@ function renderRoadModule1GraphNode(label, node, depth) {
                             <div class="road-graph-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
                         </div>
                         <div class="road-graph-card-meta">
+                            ${stockBadge}
                             <span>${rowCount} row${rowCount === 1 ? '' : 's'}</span>
                             ${measureCount ? `<span>${measureCount} measure${measureCount === 1 ? '' : 's'}</span>` : ''}
                         </div>
@@ -2334,7 +2461,6 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
                         ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
                     </div>
                 </div>
-                <div class="road-group-count">${groupCountLabel}</div>
             </div>
             <div class="road-group-rows">
                 ${buildRoadModule1EditorRowsHtml(group, depth)}
@@ -2931,17 +3057,20 @@ function buildRoadModule1ListGroupHtml(group) {
             : (group.groupType === 'transport-params'
                 ? getRoadTransportParamGroupTitle(group)
                 : first.Variable));
+    const stockVal = (State.roadModule1.stockMap || new Map()).get(group.branchPath);
+    const stockBadge = stockVal !== undefined
+        ? `<span class="road-stock-badge" title="${stockVal.toFixed(3)}M vehicles (base year stock)">${stockVal.toFixed(2)}M</span>`
+        : '';
     return `
         <section class="road-group-card ${isCompactGroup ? 'is-compact' : ''}">
             <div class="road-group-header">
                 <div class="min-w-0">
-                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}</div>
+                    <div class="road-breadcrumbs" title="${escapeHtml(group.branchPath)}">${formatRoadBranchPath(group.branchPath)}${stockBadge}</div>
                     <div class="road-group-title-row">
                         <div class="road-group-title">${escapeHtml(groupTitle)}</div>
                         ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
                     </div>
                 </div>
-                <div class="road-group-count">${groupCountLabel}</div>
             </div>
             <div class="road-group-rows">
                 ${buildRoadModule1EditorRowsHtml(group)}
@@ -2964,6 +3093,8 @@ function renderRoadModule1Inputs() {
     if (!DOM.roadInputContainer) return;
 
     const rows = State.roadModule1.rows || [];
+    State.roadModule1.stockMap = buildRoadStockMap(rows);
+    State.roadModule1.energyMap = buildRoadEnergyMap(rows);
     const filter = State.roadModule1.activeFilter;
     const textFilteredRows = filter
         ? rows.filter(row => {
@@ -2986,6 +3117,7 @@ function renderRoadModule1Inputs() {
         textFilteredRows
             .filter(roadRowMatchesStructuredFilters)
             .filter(row => !isRoadVehicleEquivalentBoundsRow(row))
+            .filter(row => State.roadModule1.dataDensity === 'less' ? isRoadCoreDensityRow(row) : true)
     );
 
     updateRoadModule1OverrideCount();

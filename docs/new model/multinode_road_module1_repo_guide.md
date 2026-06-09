@@ -44,8 +44,6 @@ Module 1 is not the road model calculation engine. It should stay simple: most
 numeric assumptions should live in CSV/XLSX source files, and code should mainly
 read, normalize, validate, and export those values.
 
-![Road Module 1-7 simplified interface workflow](Road%20Module%201-7%20simplified%20interface%20workflow.png)
-
 ## 2. System boundary
 
 ### Repo layout — both repos must be siblings
@@ -194,8 +192,6 @@ This script-by-script record is intentionally lightweight. The point is a clear
 audit trail without forcing a large reusable data-ingestion framework too early.
 
 ## 4. Canonical data flow
-
-![Road Module 1 workflow diagram](Road%20Module%201%20workflow%20diagram.png)
 
 The intended flow is (as well as the intended division of labor between stages of the process):
 

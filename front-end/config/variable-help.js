@@ -5,71 +5,117 @@ const ROAD_VARIABLE_HELP = {
     // Keyed by the exact Variable column value from the CSV / ROAD_MODULE1_VALUE_RULES.
     variables: {
         'Stock':
-            'Base-year vehicle count for this branch. Used as the starting stock for projections.',
+            'Number of vehicles on the road for this row. In the base year, this is one of the main values used to anchor the model before projections begin.',
+
         'Sales Share':
-            'Percentage of new vehicle sales in this branch with this drive or fuel (0–100).',
+            'Share of new vehicle sales going to this vehicle, drive, or fuel category. Enter as a percentage from 0 to 100. Higher values mean more new vehicles enter this category.',
+
         'Stock Share':
-            'Percentage of total vehicle stock attributed to this drive or fuel (0–100).',
+            'Share of the existing vehicle stock in this category. Enter as a percentage from 0 to 100. This is mainly used to set the base-year fleet split.',
+
+        'Device Share':
+            'Share of an engine type using this fuel. Enter as a percentage from 0 to 100. The fuel shares under the same engine type should add to 100%.',
+
         'Final On-Road Fuel Economy':
-            'Energy actually consumed per km driven, including all on-road losses (real-world efficiency).',
+            'The effective fuel economy used in the model after any correction factors. Check the unit shown in the row, usually MJ/100 km. Lower values mean the vehicle uses less energy per km.',
+
         'Fuel Economy':
-            'Modelled fuel economy for this vehicle/fuel combination, in energy per km.',
+            'Energy used to drive a given distance for this vehicle and fuel. Check the unit shown in the row, usually MJ/100 km. Lower values mean better efficiency.',
+
         'Mileage':
-            'Annual distance travelled per vehicle, in km per vehicle per year.',
+            'Average distance travelled by each vehicle each year, in km per vehicle per year. Higher mileage increases energy use if stock and fuel economy stay the same.',
+
         'Passenger Vehicle Saturation':
-            'Long-run saturation of passenger vehicles per capita. Shared across all passenger road transport types.',
+            'Long-run passenger vehicle ownership level for the economy. This helps set where passenger vehicle stock growth slows or levels off.',
+
         'Passenger Saturation Reached':
-            'Whether passenger vehicle ownership saturation has been reached. When true, the model switches to a plateau growth mode.',
+            'Marks whether passenger vehicle ownership is already near its long-run saturation level. When true, passenger stock growth is treated more like a plateau than rapid motorisation.',
+
         'Passenger Stock Growth Rate Adjustment':
-            'Multiplicative adjustment to the base passenger stock growth rate. 1.0 = no change; 0.9 = 10% slower growth.',
+            'Multiplier applied to the default passenger stock growth path. Use 1.0 for no change, 0.9 for 10% slower growth, or 1.1 for 10% faster growth.',
+
         'PHEV Electric Driving Share':
-            'Economy-wide fraction of PHEV driving done on electricity. One value applies across the whole economy and is used in Module 6.',
+            'Economy-wide share of PHEV driving done using electricity rather than liquid fuel. One value applies across the economy and is used later in the LEAP transport workflow.',
+
         'Freight GDP Elasticity Adjustment':
-            'Multiplicative adjustment to the freight–GDP elasticity. 1.0 = no change; 0.8 = 20% lower elasticity.',
+            'Multiplier applied to the default link between freight activity and GDP growth. Use 1.0 for no change, 0.8 for a weaker GDP link, or 1.2 for a stronger GDP link.',
+
         'Reconciliation Bound Lower':
-            'Minimum allowed adjustment factor during fuel reconciliation (e.g. 0.85 = −15% maximum downward correction).',
+            'Lowest adjustment factor allowed during base-year reconciliation. For example, 0.85 means this value can be adjusted down by up to 15%.',
+
         'Reconciliation Bound Upper':
-            'Maximum allowed adjustment factor during fuel reconciliation (e.g. 1.15 = +15% maximum upward correction).',
+            'Highest adjustment factor allowed during base-year reconciliation. For example, 1.15 means this value can be adjusted up by up to 15%.',
+
         'Reconciliation Weight':
-            'Relative weight controlling how much of the reconciliation correction is absorbed by this component (stock, mileage, or efficiency). Weights across all three should sum to 1.',
+            'Controls how much this item absorbs during base-year reconciliation. The stock, mileage, and efficiency weights should add to 1. Higher weight means more of the correction is applied here.',
+
         'Gasoline/Diesel Share Tolerance':
-            'Acceptable deviation (%) between the gasoline/diesel split entered and the reconciled fuel total before a warning is raised.',
+            'Allowed difference between the entered gasoline/diesel split and the reconciled fuel result before the tool warns you. Use this to avoid warnings for very small differences.',
+
         'Survival Rate':
-            'Age-dependent fraction of vehicles from a given vintage that remain on-road. Entered as a full age series (one value per age cohort).',
+            'Share of vehicles from each age group that remain on the road. This controls how quickly old vehicles retire and how many new sales are needed to replace them.',
+
         'Vehicle Equivalent Weight':
-            'Weighting factor used to convert vehicle types into comparable activity units for fleet-wide calculations.',
+            'Conversion factor used to compare different vehicle types in a common ownership unit. For example, buses count more than cars because one bus represents much more transport capacity.',
+
         'Vintage Profile Share':
-            'Age distribution of the current stock, used to disaggregate the fleet into individual vintage cohorts. Entered as an age series.'
+            'Age distribution of the base-year vehicle stock. This tells the model how much of the current fleet is new, middle-aged, or old.'
     },
 
     // Maps transport-param role keys → variable name in `variables` above.
     paramRoles: {
-        pvs:                        'Passenger Vehicle Saturation',
-        pvs_reached:                'Passenger Saturation Reached',
-        passenger_growth_adjustment:'Passenger Stock Growth Rate Adjustment',
+        pvs:                         'Passenger Vehicle Saturation',
+        pvs_reached:                 'Passenger Saturation Reached',
+        passenger_growth_adjustment: 'Passenger Stock Growth Rate Adjustment',
         freight_elasticity_adjustment:'Freight GDP Elasticity Adjustment',
-        vew:                        'Vehicle Equivalent Weight'
+        vew:                         'Vehicle Equivalent Weight'
     },
 
     // Reconciliation editor sub-field tooltips.
     reconciliation: {
-        rowTitle:         'These values constrain how reconciliation adjusts stock, mileage, and/or efficiency to match fuel totals.',
-        stockWeight:      'Share of the energy correction applied by adjusting vehicle stock.',
-        stockLower:       'Minimum allowed stock adjustment factor (e.g. 0.85 = −15%).',
-        stockUpper:       'Maximum allowed stock adjustment factor (e.g. 1.15 = +15%).',
-        mileageWeight:    'Share of the energy correction applied by adjusting annual km per vehicle.',
-        mileageLower:     'Minimum allowed mileage adjustment factor (e.g. 0.85 = −15%).',
-        mileageUpper:     'Maximum allowed mileage adjustment factor (e.g. 1.15 = +15%).',
-        efficiencyWeight: 'Share of the energy correction applied by adjusting fuel economy.',
-        efficiencyLower:  'Minimum allowed efficiency adjustment factor (e.g. 0.90 = −10%).',
-        efficiencyUpper:  'Maximum allowed efficiency adjustment factor (e.g. 1.10 = +10%).'
+        rowTitle:
+            'Base-year reconciliation adjusts stock, mileage, and/or efficiency so modelled fuel use matches the observed fuel totals. These settings control how much adjustment is allowed.',
+
+        stockWeight:
+            'Share of the reconciliation correction applied by adjusting vehicle stock. Higher weight means stock changes more than mileage or efficiency.',
+
+        stockLower:
+            'Lowest stock adjustment allowed. For example, 0.85 means stock can be reduced by up to 15%.',
+
+        stockUpper:
+            'Highest stock adjustment allowed. For example, 1.15 means stock can be increased by up to 15%.',
+
+        mileageWeight:
+            'Share of the reconciliation correction applied by adjusting annual km per vehicle. Higher weight means mileage changes more than stock or efficiency.',
+
+        mileageLower:
+            'Lowest mileage adjustment allowed. For example, 0.85 means mileage can be reduced by up to 15%.',
+
+        mileageUpper:
+            'Highest mileage adjustment allowed. For example, 1.15 means mileage can be increased by up to 15%.',
+
+        efficiencyWeight:
+            'Share of the reconciliation correction applied by adjusting fuel economy. Higher weight means efficiency changes more than stock or mileage.',
+
+        efficiencyLower:
+            'Lowest fuel-economy adjustment allowed. For example, 0.90 means energy use per km can be reduced by up to 10%.',
+
+        efficiencyUpper:
+            'Highest fuel-economy adjustment allowed. For example, 1.10 means energy use per km can be increased by up to 10%.'
     },
 
     // Paired gasoline/diesel share row.
     pairedFuelShare: {
-        rowTitle:  'Only the conventional gasoline/diesel split is shown here; alternative fuels such as biogasoline are excluded.',
-        gasoline:  'Gasoline share: enter a fraction between 0 and 1 for this transport type.',
-        diesel:    'Diesel share: enter a fraction between 0 and 1 for this transport type.',
-        tolerance: 'Tolerance: acceptable deviation between this split and the reconciled fuel total (fraction, 0–1).'
+        rowTitle:
+            'This row only controls the conventional gasoline/diesel split. Alternative fuels such as biogasoline, biodiesel, electricity, and hydrogen are handled separately.',
+
+        gasoline:
+            'Gasoline share for this transport type. Enter as a fraction from 0 to 1, not a percentage. For example, 0.65 means 65%.',
+
+        diesel:
+            'Diesel share for this transport type. Enter as a fraction from 0 to 1, not a percentage. For example, 0.35 means 35%.',
+
+        tolerance:
+            'Allowed difference between the entered gasoline/diesel split and the reconciled result. Enter as a fraction from 0 to 1. For example, 0.02 allows a 2 percentage-point difference.'
     }
 };

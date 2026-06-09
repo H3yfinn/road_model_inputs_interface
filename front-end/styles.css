@@ -907,6 +907,19 @@ body.road-panel-resizing * {
     text-transform: uppercase;
 }
 
+.road-stock-badge {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 0.25rem;
+    color: #1d4ed8;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    padding: 0.1rem 0.35rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 .road-tree-children {
     display: flex;
     flex-direction: column;
@@ -1103,19 +1116,29 @@ body.road-panel-resizing * {
 }
 
 .road-input-row.no-row-label {
-    grid-template-columns: minmax(260px, 1fr) minmax(180px, 250px);
-    gap: 0.36rem;
+    grid-template-columns: minmax(220px, 1fr) minmax(170px, 380px) minmax(190px, 240px);
+    gap: 0.65rem;
     padding-top: 0;
     padding-bottom: 0;
 }
 
+/* No-label rows still reserve the missing label column.
+   This keeps the input cells aligned with normal rows. */
 .road-input-row.no-row-label .road-year-grid {
     display: flex;
     align-items: center;
     gap: 0.45rem;
+    grid-column: 2;
     grid-template-columns: none;
-    justify-content: flex-start;
-    width: auto;
+    justify-content: flex-end;
+    justify-self: stretch;
+    width: 100%;
+}
+
+/* Keep the comment/reset/action area aligned with normal rows. */
+.road-input-row.no-row-label .road-row-actions {
+    grid-column: 3;
+    justify-content: flex-end;
 }
 
 .road-input-row.no-row-label .road-year-input {
@@ -1461,10 +1484,6 @@ body.road-panel-resizing * {
     max-width: 8rem;
 }
 
-.road-input-row.no-row-label .road-row-actions {
-    justify-content: flex-end;
-}
-
 .road-input-row.no-row-label .road-row-actions .road-comment-input {
     max-width: 8rem;
 }
@@ -1668,6 +1687,32 @@ body.road-panel-resizing * {
 @media (max-width: 1150px) {
     .road-input-row {
         grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
+    }
+
+    .road-series-row {
+        grid-template-columns: minmax(240px, 1fr);
+    }
+
+    .road-row-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1150px) {
+    .road-input-row {
+        grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
+    }
+
+    .road-input-row.no-row-label {
+        grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
+    }
+
+    .road-input-row.no-row-label .road-year-grid {
+        grid-column: 2;
+    }
+
+    .road-input-row.no-row-label .road-row-actions {
+        grid-column: 1 / -1;
     }
 
     .road-series-row {
