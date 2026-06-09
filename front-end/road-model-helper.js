@@ -315,4 +315,4 @@ function setupRoadModelHelper() {
     observer.observe(container, { childList: true, subtree: false });
 }
 
-document.addEventListener('DOMContentLoaded', setupRoadModelHelper);
+// setupRoadModelHelper() is called directly from setupRoadModule1() in app.js.

@@ -556,6 +556,7 @@ function setupRoadModule1() {
 
     updateRoadModule1OptionalBackendUiState();
     populateRoadModule1Selectors();
+    if (typeof setupRoadModelHelper === 'function') setupRoadModelHelper();
 }
 
 function updateRoadModule1OptionalBackendUiState() {
@@ -2426,7 +2427,7 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
 function buildRoadModule1TreeEditorHtml(group, depth) {
     const groupRows = group.rows;
     const first = groupRows[0];
-    const isCompactGroup = group.groupType !== 'age-series' && group.groupType !== 'shared-fuel-economy' && groupRows.length === 1;
+    const isCompactGroup = group.groupType !== 'age-series' && groupRows.length === 1;
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
@@ -2977,10 +2978,14 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const defaultValue = formatRoadDefaultValue(getRoadDisplayedPlaceholderValue(row, year));
             const inheritedValue = getRoadInheritedMileageValue(row, year);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
-            const isReadOnlyBaseStockShare = isRoadVehicleTypeStockShareRow(row) && Number(year) === ROAD_MODULE1_BASE_YEAR;
+            const isStockShareRow = isRoadVehicleTypeStockShareRow(row);
+            const isReadOnlyBaseStockShare = isStockShareRow && Number(year) === ROAD_MODULE1_BASE_YEAR;
+            const cellLabel = isReadOnlyBaseStockShare
+                ? `${year} (auto-calculated)`
+                : isStockShareRow ? '' : year;
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`)}
+                    ${cellLabel ? buildRoadCellLabelHtml(cellLabel, `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`) : ''}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} placeholder="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : (override ? escapeHtml(override.value) : '')}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>
@@ -3032,7 +3037,7 @@ function renderRoadModule1TreeInputs(filteredRows) {
 function buildRoadModule1ListGroupHtml(group) {
     const groupRows = group.rows;
     const first = groupRows[0];
-    const isCompactGroup = group.groupType !== 'age-series' && group.groupType !== 'shared-fuel-economy' && (groupRows.length === 1 || group.groupType === 'shared-utilisation');
+    const isCompactGroup = group.groupType !== 'age-series' && (groupRows.length === 1 || group.groupType === 'shared-utilisation');
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
