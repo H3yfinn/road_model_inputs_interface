@@ -1128,6 +1128,10 @@ body.road-panel-resizing * {
     width: 100%;
 }
 
+.road-input-row.no-row-label .road-year-grid.road-stock-share-grid {
+    justify-content: space-between;
+}
+
 /* Keep the comment/reset/action area aligned with normal rows. */
 .road-input-row.no-row-label .road-row-actions {
     grid-column: 3;

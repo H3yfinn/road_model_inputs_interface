@@ -53,8 +53,8 @@ const ROAD_HELPER_SIZE_CLASS_EXPLANATIONS = {
 const ROAD_HELPER_SKIP_PARTS_LC = new Set(['demand', 'passenger road', 'freight road']);
 
 // Module-level selection state
-let _roadHelperSelectedInput = null;
-let _roadHelperHoverInput = null;
+let _roadHelperSelectedInput = null;   // focused/clicked .road-value-input (persists after blur)
+let _roadHelperHoverRowEl = null;      // currently hovered .road-input-row card
 
 // ==========================================
 // Pure helper functions
@@ -207,7 +207,8 @@ function buildRoadHelperHtml(row, year) {
             + '<ul class="road-helper-branch-list">' + items + '</ul>';
     }
 
-    return '<div class="road-helper-section-label">Selected cell</div>'
+    const sectionLabel = year ? 'Selected cell' : 'Selected row';
+    return '<div class="road-helper-section-label">' + sectionLabel + '</div>'
         + '<div class="road-helper-selected-cell-path">' + selectedCellLine + '</div>'
         + '<div class="road-helper-section-label">What this means</div>'
         + whatHtml
@@ -218,36 +219,39 @@ function buildRoadHelperHtml(row, year) {
 // DOM update
 // ==========================================
 
+function roadHelperRowFromEl(keyPayloadEl) {
+    if (!keyPayloadEl || !keyPayloadEl.dataset.keyPayload) return null;
+    try {
+        const keyPayload = JSON.parse(decodeURIComponent(keyPayloadEl.dataset.keyPayload));
+        return roadHelperFindRowByKeyPayload(keyPayload);
+    } catch (_e) {
+        return null;
+    }
+}
+
 function updateRoadModelHelper() {
     const contentEl = document.getElementById('road-model-helper-content');
     if (!contentEl) return;
 
-    const activeInput = _roadHelperSelectedInput || _roadHelperHoverInput;
-    if (!activeInput) {
-        contentEl.innerHTML = buildRoadHelperHtml(null, null);
+    // Priority 1: a clicked/focused value input — show with year
+    if (_roadHelperSelectedInput) {
+        const keyPayloadEl = _roadHelperSelectedInput.closest('[data-key-payload]');
+        const row = roadHelperRowFromEl(keyPayloadEl);
+        const yearEl = _roadHelperSelectedInput.closest('.road-year-input');
+        const year = yearEl ? yearEl.dataset.year : null;
+        contentEl.innerHTML = buildRoadHelperHtml(row, year);
         return;
     }
 
-    // Find the nearest ancestor with a key-payload (regular rows only)
-    const rowEl = activeInput.closest('[data-key-payload]');
-    if (!rowEl) {
-        contentEl.innerHTML = buildRoadHelperHtml(null, null);
+    // Priority 2: a hovered row card — show without specific year
+    if (_roadHelperHoverRowEl) {
+        // data-key-payload is on the .road-input-row itself for regular rows
+        const row = roadHelperRowFromEl(_roadHelperHoverRowEl);
+        contentEl.innerHTML = buildRoadHelperHtml(row, null);
         return;
     }
 
-    let row = null;
-    try {
-        const keyPayload = JSON.parse(decodeURIComponent(rowEl.dataset.keyPayload || '%7B%7D'));
-        row = roadHelperFindRowByKeyPayload(keyPayload);
-    } catch (_e) {
-        // fall through to null row
-    }
-
-    // Year from nearest .road-year-input ancestor
-    const yearEl = activeInput.closest('.road-year-input');
-    const year = yearEl ? yearEl.dataset.year : null;
-
-    contentEl.innerHTML = buildRoadHelperHtml(row, year);
+    contentEl.innerHTML = buildRoadHelperHtml(null, null);
 }
 
 // ==========================================
@@ -255,7 +259,6 @@ function updateRoadModelHelper() {
 // ==========================================
 
 function roadHelperSelectInput(input) {
-    // Remove highlight from the previous cell
     if (_roadHelperSelectedInput && _roadHelperSelectedInput !== input) {
         _roadHelperSelectedInput.classList.remove('road-cell-selected');
     }
@@ -274,41 +277,43 @@ function setupRoadModelHelper() {
     const container = document.getElementById('road-input-container');
     if (!container) return;
 
-    // Focus/click: update helper and persist selection
+    // Focus/click on a value input: persist selection and show year
     container.addEventListener('focusin', (e) => {
         if (e.target.classList.contains('road-value-input')) {
             roadHelperSelectInput(e.target);
         }
     });
 
-    // Click reinforces selection (some inputs may not re-fire focusin)
     container.addEventListener('click', (e) => {
         if (e.target.classList.contains('road-value-input')) {
             roadHelperSelectInput(e.target);
         }
     });
 
-    // Hover: only update when no cell is focused
+    // Row-level hover: update when no input is focused/selected
     container.addEventListener('mouseover', (e) => {
-        if (!_roadHelperSelectedInput && e.target.classList.contains('road-value-input')) {
-            _roadHelperHoverInput = e.target;
+        if (_roadHelperSelectedInput) return;
+        const rowEl = e.target.closest('.road-input-row');
+        if (rowEl && rowEl !== _roadHelperHoverRowEl) {
+            _roadHelperHoverRowEl = rowEl;
             updateRoadModelHelper();
         }
     });
 
     container.addEventListener('mouseout', (e) => {
-        if (!_roadHelperSelectedInput && e.target === _roadHelperHoverInput) {
-            _roadHelperHoverInput = null;
+        if (_roadHelperSelectedInput) return;
+        // Only clear when the pointer has truly left the current row card
+        if (_roadHelperHoverRowEl && !_roadHelperHoverRowEl.contains(e.relatedTarget)) {
+            _roadHelperHoverRowEl = null;
             updateRoadModelHelper();
         }
     });
 
-    // When the table re-renders (new economy loaded, filter change, etc.), the selected
-    // input element is replaced. Clear stale references so the helper resets cleanly.
+    // Clear stale references after a table re-render
     const observer = new MutationObserver(() => {
         if (_roadHelperSelectedInput && !document.contains(_roadHelperSelectedInput)) {
             _roadHelperSelectedInput = null;
-            _roadHelperHoverInput = null;
+            _roadHelperHoverRowEl = null;
             updateRoadModelHelper();
         }
     });

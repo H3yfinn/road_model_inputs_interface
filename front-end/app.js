@@ -2972,13 +2972,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const rowKey = buildRoadModule1Key(row);
         const keyPayload = encodeURIComponent(JSON.stringify(roadModule1KeyPayload(row)));
         const yearColumns = getRoadYearColumns(row);
+        const isStockShareRow = isRoadVehicleTypeStockShareRow(row);
         const yearInputs = yearColumns.map(year => {
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
             const defaultValue = formatRoadDefaultValue(getRoadDisplayedPlaceholderValue(row, year));
             const inheritedValue = getRoadInheritedMileageValue(row, year);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
-            const isStockShareRow = isRoadVehicleTypeStockShareRow(row);
             const isReadOnlyBaseStockShare = isStockShareRow && Number(year) === ROAD_MODULE1_BASE_YEAR;
             const cellLabel = isReadOnlyBaseStockShare ? `${year} (auto-calculated)` : year;
             const cellHelpText = isReadOnlyBaseStockShare
@@ -3004,7 +3004,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     ${rowMeta ? `<div class="road-row-meta">${escapeHtml(rowMeta)}</div>` : ''}
                 </div>
                 `}
-                <div class="road-year-grid">${yearInputs}</div>
+                <div class="road-year-grid${isStockShareRow ? ' road-stock-share-grid' : ''}">${yearInputs}</div>
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="${isRoadMileageRow(row) ? 'Reset detailed row to inherited shared mileage' : 'Reset row to the original provided value'}" aria-label="Reset row">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
