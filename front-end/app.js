@@ -5436,7 +5436,7 @@ function handleGlobalCollapse(status) {
 }
 
 DOM.treeCanvas = document.getElementById('tree-canvas');
-DOM.treeCanvas.addEventListener('click', async (e) => {
+if (DOM.treeCanvas) DOM.treeCanvas.addEventListener('click', async (e) => {
     const target = e.target;
     
     // Active Card Focus & Smart Collapse Selection
@@ -5526,7 +5526,7 @@ DOM.treeCanvas.addEventListener('click', async (e) => {
     }
 });
 
-DOM.treeCanvas.addEventListener('keydown', (e) => {
+if (DOM.treeCanvas) DOM.treeCanvas.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur();
 });
 
@@ -5628,7 +5628,7 @@ window.addEventListener('keydown', async (e) => {
 });
 
 // Real-Time Math Update
-DOM.treeCanvas.addEventListener('input', (e) => {
+if (DOM.treeCanvas) DOM.treeCanvas.addEventListener('input', (e) => {
     const target = e.target;
     const path = target.dataset.path ? JSON.parse(target.dataset.path) : null;
     
@@ -5674,7 +5674,7 @@ DOM.treeCanvas.addEventListener('input', (e) => {
 });
 
 // Structural Update (Name Changes / Fuel Selection / Macro Driver Allocation)
-DOM.treeCanvas.addEventListener('change', (e) => {
+if (DOM.treeCanvas) DOM.treeCanvas.addEventListener('change', (e) => {
     const target = e.target;
     const path = target.dataset.path ? JSON.parse(target.dataset.path) : null;
 
@@ -5720,7 +5720,7 @@ DOM.treeCanvas.addEventListener('change', (e) => {
     }
 });
 
-DOM.btnAddRoot.addEventListener('click', () => {
+if (DOM.btnAddRoot) DOM.btnAddRoot.addEventListener('click', () => {
     const newName = getUniqueName(State.treeState, "New Root Branch");
     State.treeState[newName] = { weight: 1.0, children: {}, fuels: [] };
     refreshTree();
@@ -5877,13 +5877,17 @@ DOM.btnExport.addEventListener('click', async () => {
 });
 
 function showLoading(text) {
-    DOM.loadingText.innerText = text;
-    DOM.loadingOverlay.classList.remove('hidden');
-    DOM.loadingOverlay.classList.add('flex');
+    if (DOM.loadingText) DOM.loadingText.innerText = text;
+    if (DOM.loadingOverlay) {
+        DOM.loadingOverlay.classList.remove('hidden');
+        DOM.loadingOverlay.classList.add('flex');
+    }
 }
 function hideLoading() {
-    DOM.loadingOverlay.classList.add('hidden');
-    DOM.loadingOverlay.classList.remove('flex');
+    if (DOM.loadingOverlay) {
+        DOM.loadingOverlay.classList.add('hidden');
+        DOM.loadingOverlay.classList.remove('flex');
+    }
 }
 
 // ==========================================
