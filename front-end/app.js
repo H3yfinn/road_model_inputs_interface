@@ -2980,12 +2980,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
             const isStockShareRow = isRoadVehicleTypeStockShareRow(row);
             const isReadOnlyBaseStockShare = isStockShareRow && Number(year) === ROAD_MODULE1_BASE_YEAR;
-            const cellLabel = isReadOnlyBaseStockShare
-                ? `${year} (auto-calculated)`
-                : isStockShareRow ? '' : year;
+            const cellLabel = isReadOnlyBaseStockShare ? `${year} (auto-calculated)` : year;
+            const cellHelpText = isReadOnlyBaseStockShare
+                ? 'Auto-calculated from the stock numbers supplied to the branches in this category. This value cannot be manually changed.'
+                : `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`;
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${cellLabel ? buildRoadCellLabelHtml(cellLabel, `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`) : ''}
+                    ${buildRoadCellLabelHtml(cellLabel, cellHelpText)}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} placeholder="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : (override ? escapeHtml(override.value) : '')}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>

@@ -39,7 +39,6 @@ Demand\Freight road,Sales,Target,2057,232620.9012991278,Device
 Demand\Freight road,Sales,Target,2058,232200.6105443658,Device
 Demand\Freight road,Sales,Target,2059,231411.6395600987,Device
 Demand\Freight road,Sales,Target,2060,228208.3370346396,Device
-Demand\Freight road,Stock,Current Accounts,2022,3192483.871329019,Device
 Demand\Freight road\LCVs,Sales Share,Current Accounts,2022,30.0,Share
 Demand\Freight road\LCVs,Sales Share,Target,2022,30.0,Share
 Demand\Freight road\LCVs,Sales Share,Target,2023,72.31321267812218,Share
@@ -16178,7 +16177,6 @@ Demand\Passenger road,Sales,Target,2057,2688876.513151254,Device
 Demand\Passenger road,Sales,Target,2058,2636882.790515752,Device
 Demand\Passenger road,Sales,Target,2059,2579729.940482797,Device
 Demand\Passenger road,Sales,Target,2060,2492814.805332473,Device
-Demand\Passenger road,Stock,Current Accounts,2022,48860825.61628293,Device
 Demand\Passenger road\Buses,Sales Share,Current Accounts,2022,9.0,Share
 Demand\Passenger road\Buses,Sales Share,Target,2022,9.0,Share
 Demand\Passenger road\Buses,Sales Share,Target,2023,0.6056464982252449,Share
