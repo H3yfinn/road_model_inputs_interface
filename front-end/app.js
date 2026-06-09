@@ -5745,7 +5745,7 @@ function buildApiPayload() {
     };
 }
 
-DOM.btnValidate.addEventListener('click', async () => {
+if (DOM.btnValidate) DOM.btnValidate.addEventListener('click', async () => {
     showLoading("Validating Mass Balance...");
     try {
         const res = await EnergyModelAPI.validateTree(buildApiPayload());
@@ -5804,7 +5804,7 @@ function injectBalancingNode() {
     showCustomToast("Balancing node injected! Click 'Optimize Weights'.", "success");
 }
 
-DOM.btnOptimize.addEventListener('click', async () => {
+if (DOM.btnOptimize) DOM.btnOptimize.addEventListener('click', async () => {
     showLoading("Running SLSQP Optimizer...");
     try {
         const res = await EnergyModelAPI.optimizeTree(buildApiPayload());
@@ -5845,7 +5845,7 @@ function updateWeightsFromBackend(localTree, backendTree) {
 }
 
 // Refactored Export Method: Transmits the real-time customizable macro drivers dictionary context directly
-DOM.btnExport.addEventListener('click', async () => {
+if (DOM.btnExport) DOM.btnExport.addEventListener('click', async () => {
     showLoading("Generating LEAP Export...");
     try {
         const payload = {
