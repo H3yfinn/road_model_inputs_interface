@@ -387,29 +387,26 @@ function showCustomToast(message, type = 'info', duration = 3500) {
 function initApp() {
     setupDropdowns();
     setupRoadModule1();
-    renderGlobalMacroDriversPanel(); // Initial execution pass to append default drivers
-    renderUserVariablesPanel();       // Initial empty-state render for user variables
-    DOM.btnStart.addEventListener('click', handleStartModeling);
-    
-    // Setup global layout compaction events
-    DOM.btnCollapseAll.addEventListener('click', () => handleGlobalCollapse(true));
-    DOM.btnExpandAll.addEventListener('click', () => handleGlobalCollapse(false));
 
-    // Listeners for customizable macro driver additions
-    DOM.selectMacroDriverType.addEventListener('change', handleMacroDriverTemplateToggle);
-    DOM.btnAddMacroDriver.addEventListener('click', handleAddMacroDriverItem);
+    if (DOM.btnStart) {
+        renderGlobalMacroDriversPanel();
+        renderUserVariablesPanel();
+        DOM.btnStart.addEventListener('click', handleStartModeling);
+    }
 
-    // Listeners for user-defined variables panel
-    DOM.btnToggleUserVars.addEventListener('click', () => {
-        DOM.userVarsForm.classList.toggle('hidden');
-        DOM.btnToggleUserVars.textContent = DOM.userVarsForm.classList.contains('hidden') ? '+ Add' : '− Hide';
-    });
-    DOM.btnAddUserVar.addEventListener('click', handleAddUserVariable);
+    if (DOM.btnCollapseAll) DOM.btnCollapseAll.addEventListener('click', () => handleGlobalCollapse(true));
+    if (DOM.btnExpandAll) DOM.btnExpandAll.addEventListener('click', () => handleGlobalCollapse(false));
+    if (DOM.selectMacroDriverType) DOM.selectMacroDriverType.addEventListener('change', handleMacroDriverTemplateToggle);
+    if (DOM.btnAddMacroDriver) DOM.btnAddMacroDriver.addEventListener('click', handleAddMacroDriverItem);
+    if (DOM.btnToggleUserVars) {
+        DOM.btnToggleUserVars.addEventListener('click', () => {
+            DOM.userVarsForm.classList.toggle('hidden');
+            DOM.btnToggleUserVars.textContent = DOM.userVarsForm.classList.contains('hidden') ? '+ Add' : '− Hide';
+        });
+    }
+    if (DOM.btnAddUserVar) DOM.btnAddUserVar.addEventListener('click', handleAddUserVariable);
 
-    // Setup Panning, Zooming, and Float UI bindings
     setupInteractiveCanvas();
-
-    // Setup collapsible results panel events
     setupResultsPanelToggle();
     if (DOM.btnExportResultsCsv) {
         DOM.btnExportResultsCsv.addEventListener('click', handleCSVExport);
@@ -446,22 +443,28 @@ function setupDropdowns() {
         { code: "20USA", text: "20USA (United States)" },
         { code: "21VN", text: "21VN (Viet Nam)" }
     ];
-    economies.forEach(eco => DOM.selectEconomy.add(new Option(eco.text, eco.code)));
-
-    for (let y = 2022; y >= 2000; y--) {
-        DOM.selectYear.add(new Option(y.toString(), y));
+    if (DOM.selectEconomy) {
+        economies.forEach(eco => DOM.selectEconomy.add(new Option(eco.text, eco.code)));
+        DOM.selectEconomy.value = "20USA";
     }
 
-    const sectors = [
-        "14 Industry sector",
-        "15 Transport sector",
-        "16 Other sector",
-        "16.01 Commercial and public services",
-        "16.02 Residential"
-    ];
-    sectors.forEach(sec => DOM.selectSector.add(new Option(sec, sec))); 
-    DOM.selectSector.value = "16.02 Residential";
-    DOM.selectEconomy.value = "20USA"; // Default
+    if (DOM.selectYear) {
+        for (let y = 2022; y >= 2000; y--) {
+            DOM.selectYear.add(new Option(y.toString(), y));
+        }
+    }
+
+    if (DOM.selectSector) {
+        const sectors = [
+            "14 Industry sector",
+            "15 Transport sector",
+            "16 Other sector",
+            "16.01 Commercial and public services",
+            "16.02 Residential"
+        ];
+        sectors.forEach(sec => DOM.selectSector.add(new Option(sec, sec)));
+        DOM.selectSector.value = "16.02 Residential";
+    }
 }
 
 function setupInfoTipPopup() {
