@@ -207,3 +207,81 @@ For the broader Module 1 design, see:
 ```text
 docs/new model/multinode_road_module1_repo_guide.md
 ```
+
+
+
+const VARIABLE_EXPLANATIONS = {
+  "stock": "Number of vehicles in the fleet. Often economies have these values recorded as 'registered vehicles' or 'vehicles in use'.",
+
+  "mileage": "Average distance travelled per vehicle per year. Not often available from the economy directly.",
+
+  "sales": "Number of new vehicles added to the fleet in that year (i.e. vehicle registrations).",
+
+  "fuel economy": "Energy used per 100 km. Lower values mean better efficiency. Not often available from the economy directly.",
+
+  "sales share": "Share of new vehicle sales assigned to this drive or technology in that year. Related rows should sum to 100%, otherwise you will need to normalise them.",
+
+  "stock share": "Share of the vehicle stock assigned to this drive or technology. Related rows should sum to 100%, otherwise you will need to normalise them.",
+
+  "vehicle equivalent weight": "Conversion weight used to compare different vehicle types in a common vehicle-equivalent ownership measure. For example, buses count as more than one car-equivalent.",
+
+  "passenger vehicle saturation": "Long-run passenger vehicle ownership level used to shape future stock and sales growth.",
+
+  "phev electric driving share": "Share of PHEV driving assumed to be powered by electricity rather than liquid fuel. Be careful to assume the share of activity rather than share of energy, which is different due to the lower fuel economy of PHEV electric driving.",
+
+  "reconciliation weight": "Relative priority given to changing this measure during reconciliation. Higher weights mean the value is changed more aggressively.",
+
+  "reconciliation bound lower": "Lower limit used during reconciliation. The adjusted value should not normally fall below this bound. Good for ensuring mileage and fuel economy values do not get adjusted to unrealistically low levels during reconciliation, which can happen if the stock share (or energy value) is far off what it needs to be.",
+
+  "reconciliation bound upper": "Upper limit used during reconciliation. The adjusted value should not normally rise above this bound. Good for ensuring mileage and fuel economy values do not get adjusted to unrealistically high levels during reconciliation, which can happen if the stock share (or energy value) is far off what it needs to be.",
+
+  "survival rate": "Share of vehicles that remain in the fleet at each age. Used to calculate retirements and turnover.",
+
+  "vintage profile share": "Share of the base-year fleet assigned to each vehicle age. Used to represent the starting age structure of the fleet."
+};
+
+const BRANCH_ELEMENT_EXPLANATIONS = {
+  "demand": "the LEAP demand-side model area.",
+
+  "passenger road": "the passenger road transport segment.",
+  "freight road": "the freight road transport segment.",
+
+  "lpvs": "light passenger vehicles, including cars, SUVs and similar passenger vehicles.",
+  "motorcycles": "two- and three-wheelers in the passenger road fleet.",
+  "buses": "passenger buses.",
+  "trucks": "freight trucks. Broken into Heavy and Medium within the drive categories for this vehicle type.",
+  "lcvs": "light commercial vehicles used for freight road transport.",
+
+  "ice": "internal-combustion engine vehicles.",
+  "ice small": "small internal-combustion engine vehicles. Generally assumed for regular cars if the economy doesnt have a more specific segment of smaller cars, such as Kei cars in Japan.",
+  "ice medium": "medium internal-combustion engine vehicles. Generally assumed for SUVs cars if the economy doesnt have a specific segment of ICE small cars, in which case this segment is used for regular cars. For trucks this is generally assumed for trucks > 3.5t and < 16t if the economy doesnt have more specific segments of medium freight trucks.",
+  "ice large": "large internal-combustion engine vehicles. Generally assumed for pickup trucks if the economy doesnt have a specific segment of ICE small cars, in which case this segment is used for SUVs and pickup trucks.",
+  "ice heavy": "heavy internal-combustion engine vehicles. Generally assumed for trucks > 16t if the economy doesnt have more specific segments of heavy freight trucks.",
+
+  "hev": "hybrid electric vehicles without plug-in charging.",
+  "hev small": "small hybrid electric vehicles.",
+  "hev medium": "medium hybrid electric vehicles.",
+  "hev large": "large hybrid electric vehicles.",
+
+  "phev": "plug-in hybrid electric vehicles.",
+  "phev small": "small plug-in hybrid electric vehicles.",
+  "phev medium": "medium plug-in hybrid electric vehicles.",
+  "phev large": "large plug-in hybrid electric vehicles.",
+
+  "erev": "extended-range electric vehicles.",
+  "erev small": "small extended-range electric vehicles.",
+  "erev medium": "medium extended-range electric vehicles.",
+  "erev large": "large extended-range electric vehicles.",
+
+  "bev": "battery electric vehicles.",
+  "bev small": "small battery electric vehicles.",
+  "bev medium": "medium battery electric vehicles.",
+  "bev large": "large battery electric vehicles.",
+  "bev heavy": "heavy battery electric vehicles.",
+
+  "fcev": "fuel-cell electric vehicles.",
+  "fcev small": "small fuel-cell electric vehicles.",
+  "fcev medium": "medium fuel-cell electric vehicles.",
+  "fcev large": "large fuel-cell electric vehicles.",
+  "fcev heavy": "heavy fuel-cell electric vehicles."
+};

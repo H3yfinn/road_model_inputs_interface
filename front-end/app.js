@@ -1917,7 +1917,7 @@ function buildRoadEnergyMap(rows) {
         if (isNaN(val)) return;
         if (row.Variable === 'Stock Share') stockShareMap.set(path, val);
         else if (row.Variable === 'Mileage') mileageMap.set(path, val);
-        else if (row.Variable === 'Final On-Road Fuel Economy') fuelEconomyMap.set(path, val);
+        else if (row.Variable === 'Fuel Economy') fuelEconomyMap.set(path, val);
     });
 
     const stockMap = buildRoadStockMap(rows);
@@ -1956,8 +1956,8 @@ function buildRoadEnergyMap(rows) {
 }
 
 function formatRoadEnergy(rawEnergy) {
-    // raw units: Millions veh × fraction × km/yr × MJ/100km → ×1e4 = MJ/yr, ×1e-5 = PJ/yr
-    const pj = rawEnergy * 1e-5;
+    // raw units: Millions veh × fraction × 1000 km/yr × MJ/100km → ×1e7 MJ/yr → ÷1e9 = PJ/yr → ×1e-2
+    const pj = rawEnergy * 1e-2;
     if (pj >= 10) return `${pj.toFixed(0)} PJ`;
     if (pj >= 1) return `${pj.toFixed(1)} PJ`;
     if (pj >= 0.1) return `${(pj * 1000).toFixed(0)} TJ`;
@@ -2861,8 +2861,8 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
               ]
             : [{ subGroup: 'all', label: '', rows: groupRows }];
 
-        const subInputs = groups.map(sg => {
-            if (!sg.rows.length) return '';
+        const subInputs = groups.flatMap(sg => {
+            if (!sg.rows.length) return [];
             const refRow = sg.rows[0];
             const sharedKey = getRoadSharedFuelEconomyKey(refRow);
             const childCount = sg.rows.length;
@@ -2885,18 +2885,20 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 }
                 return '';
             })();
-            return `<div class="road-shared-fe-subgroup" data-shared-fe-key="${encodeURIComponent(sharedKey)}">
-                ${isPhevOrErev ? `<div class="road-shared-fe-sublabel">${escapeHtml(sg.label)}</div>` : ''}
-                <div class="road-year-grid">${inputs}</div>
-                <div class="road-row-actions">
-                    <button type="button" class="road-reset-button" title="Reset to provided value" aria-label="Reset">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
-                </div>
-            </div>`;
+            return [
+                isPhevOrErev ? `<div class="road-shared-fe-sublabel">${escapeHtml(sg.label)}</div>` : '',
+                `<div class="road-shared-fe-subgroup" data-shared-fe-key="${encodeURIComponent(sharedKey)}">
+                    <div class="road-year-grid">${inputs}</div>
+                    <div class="road-row-actions">
+                        <button type="button" class="road-reset-button" title="Reset to provided value" aria-label="Reset">&#8634;</button>
+                        <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                    </div>
+                </div>`
+            ];
         }).join('');
 
         return `
-            <div class="road-input-row road-shared-fe-row no-row-label" style="--road-indent:${Math.max(0, getRoadBranchDepth(drivePath) - 2 + depth * 0.25) * 0.75}rem">
+            <div class="road-input-row road-shared-fe-row no-row-label${isPhevOrErev ? ' road-shared-fe-phev' : ''}" style="--road-indent:${Math.max(0, getRoadBranchDepth(drivePath) - 2 + depth * 0.25) * 0.75}rem">
                 ${subInputs}
             </div>
         `;
@@ -3908,11 +3910,13 @@ async function runRoadModel() {
             if (data.return_code === 0) {
                 _setRoadRunStatus('success');
                 _appendRoadRunLog(`\nCompleted successfully.`);
-                if (data.dashboard_url && DOM.roadRunLogDashboard) {
-                    const dashUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${data.dashboard_url}`;
+                const _econ = (State.roadModule1.economy || '').replace(/^(\d+)([A-Za-z].*)$/, '$1_$2');
+                const _rawDashPath = data.dashboard_url || (_econ ? `/road-results/${_econ}/diagnostics/dashboard/index.html` : null);
+                if (_rawDashPath && DOM.roadRunLogDashboard) {
+                    const dashUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${_rawDashPath}`;
                     DOM.roadRunLogDashboard.classList.remove('hidden');
                     DOM.roadRunLogDashboard.onclick = () => window.open(dashUrl, '_blank');
-                    _appendRoadRunLog(`Dashboard: ${dashUrl || data.dashboard_url}`);
+                    _appendRoadRunLog(`Dashboard: ${dashUrl}`);
                 }
                 if (data.workbook_url && DOM.roadRunLogWorkbook) {
                     const wbUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${data.workbook_url}`;

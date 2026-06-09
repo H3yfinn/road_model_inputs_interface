@@ -1483,23 +1483,28 @@ body.road-panel-resizing * {
 
 /* Shared fuel economy sub-groups (PHEV/EREV split) */
 .road-shared-fe-row {
-    display: block;
     padding: 0;
 }
 .road-shared-fe-subgroup {
     display: flex;
     align-items: center;
     gap: 0.36rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0;
+    grid-column: 2 / 4;
+}
+.road-shared-fe-row .road-shared-fe-subgroup .road-year-grid {
+    width: auto;
+    flex: 1;
 }
 .road-shared-fe-sublabel {
     font-size: 0.65rem;
     color: var(--slate-500, #64748b);
     white-space: nowrap;
-    width: 8rem;
-    flex-shrink: 0;
     text-align: right;
     padding-right: 0.5rem;
+    grid-column: 1;
+    align-self: center;
+    padding-left: var(--road-indent, 0);
 }
 
 .road-group-card.is-compact .road-breadcrumbs {
@@ -1715,4 +1720,96 @@ body.road-panel-resizing * {
     .road-row-actions {
         grid-column: 1 / -1;
     }
+}
+
+/* ==========================================
+   ROAD MODEL HELPER
+   ========================================== */
+
+.road-model-helper-card {
+    border: 1px solid #d8dee4;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    line-height: 1.35;
+    max-height: 230px;
+    overflow-y: auto;
+    color: #334155;
+}
+
+.road-helper-title {
+    font-size: 0.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.road-helper-section-label {
+    font-size: 0.58rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.road-helper-section-label:first-child {
+    margin-top: 0;
+}
+
+.road-helper-selected-cell-path {
+    font-size: 0.67rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.road-helper-explanation {
+    font-size: 0.67rem;
+    color: #475569;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.road-helper-explanation--body {
+    margin-top: 3px;
+}
+
+.road-helper-explanation--unknown {
+    font-style: italic;
+    color: #94a3b8;
+}
+
+.road-helper-branch-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.road-helper-branch-list li {
+    font-size: 0.67rem;
+    color: #475569;
+    line-height: 1.35;
+}
+
+.road-helper-default-text {
+    font-size: 0.67rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    font-style: italic;
+    margin: 0;
+}
+
+.road-cell-selected {
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: -1px;
+    background: rgba(59, 130, 246, 0.07) !important;
 }
