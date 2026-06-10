@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     except FileNotFoundError as e:
         # Data file not present (e.g. on HF Spaces before data is committed).
         # The energy-model tab will be unavailable, but Road Module 1 still works.
-        logger.warning(f"APEC database not found — energy-model tab will be unavailable. ({e})")
+        logger.debug(f"APEC database not found — energy-model tab will be unavailable. ({e})")
     except Exception as e:
         logger.critical(f"Critical failure during API boot sequence: Database failed to load. Details: {str(e)}", exc_info=True)
         raise e
@@ -72,6 +72,31 @@ _road_model_repo = Path(
 _results_dir = _road_model_repo / "results"
 _results_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/road-results", StaticFiles(directory=str(_results_dir)), name="road-results")
+
+
+@app.get("/api/v1/road-results-info/{economy}", include_in_schema=False)
+async def road_results_info(economy: str) -> JSONResponse:
+    """Return existence and modification times for key result files in an economy."""
+    import time
+    economy_dir = _results_dir / economy
+    files_to_check = [
+        f"diagnostics/dashboard/module6.html",
+        f"module6/T8_fuel_allocation.csv",
+        f"module6/T11_leap_ready.csv",
+    ]
+    info = {"economy": economy, "results_dir": str(_results_dir), "files": {}}
+    for rel in files_to_check:
+        p = economy_dir / rel
+        if p.exists():
+            mtime = p.stat().st_mtime
+            info["files"][rel] = {
+                "exists": True,
+                "modified": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(mtime)),
+                "size_kb": round(p.stat().st_size / 1024, 1),
+            }
+        else:
+            info["files"][rel] = {"exists": False}
+    return JSONResponse(info)
 
 _road_model_docs_dir = _road_model_repo / "docs" / "new model"
 
