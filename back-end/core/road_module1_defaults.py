@@ -414,12 +414,12 @@ MODULE1_VALUE_VALIDATION_RULES = {
         "description": "Gasoline/Diesel Share Tolerance must be between 0 and 100.",
     },
     "Fuel Economy": {
-        "min": 0,
-        "description": "Fuel economy cannot be negative.",
+        "min_exclusive": 0,
+        "description": "Fuel economy must be greater than 0.",
     },
     "Mileage": {
-        "min": 0,
-        "description": "Mileage cannot be negative.",
+        "min_exclusive": 0,
+        "description": "Mileage must be greater than 0.",
     },
     "Passenger Vehicle Saturation": {
         "min": 0,
@@ -2913,6 +2913,14 @@ def load_processed_source_inputs(
     source_df["Year"] = pd.to_numeric(source_df["Year"], errors="coerce")
     source_df["Value"] = pd.to_numeric(source_df["Value"], errors="coerce")
     source_df = source_df.dropna(subset=["Year", "Value"])
+    # Zero is not a valid mileage or fuel-economy value — treat as absent so Module 2 can fill via fallback.
+    _STRICTLY_POSITIVE_VARIABLES = {
+        "Fuel Economy", "Final On-Road Fuel Economy",
+        "Mileage", "Average Mileage", "Final On-Road Mileage",
+    }
+    source_df = source_df[
+        ~(source_df["Variable"].isin(_STRICTLY_POSITIVE_VARIABLES) & source_df["Value"].eq(0))
+    ]
     if source_df.empty:
         return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
     source_df["Year"] = source_df["Year"].astype(int)
@@ -4274,9 +4282,12 @@ def validate_module1_value_for_variable(variable: str, value: float) -> str:
         return ""
 
     minimum = rule.get("min")
+    minimum_exclusive = rule.get("min_exclusive")
     maximum = rule.get("max")
     if minimum is not None and value < minimum:
         return f"{variable} must be greater than or equal to {minimum}."
+    if minimum_exclusive is not None and value <= minimum_exclusive:
+        return f"{variable} must be greater than {minimum_exclusive}."
     if maximum is not None and value > maximum:
         return f"{variable} must be less than or equal to {maximum}."
     return ""
