@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road data preparation model</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css?v=road-module1-tree-wide-cells">
+    <link rel="stylesheet" href="styles.css?v=20260610f">
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans overflow-hidden">
     
@@ -18,7 +18,8 @@
     <main id="road-module1-main" class="flex flex-1 overflow-hidden bg-slate-100">
         <aside id="road-left-panel" class="w-[360px] bg-white border-r border-slate-200 flex flex-col shadow-sm flex-shrink-0 relative">
             <div id="road-left-resizer" class="road-left-resizer" role="separator" aria-orientation="vertical" aria-label="Resize settings panel"></div>
-            <div class="p-5 border-b border-slate-200 bg-slate-50 space-y-4">
+            <div id="road-left-top" class="flex-1 min-h-0 overflow-y-auto flex flex-col">
+            <div class="p-5 border-b border-slate-200 bg-slate-50 shrink-0 space-y-4">
                 <div>
                     <div class="flex items-center gap-1.5 mb-1">
                         <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Road Input Data</h2>
@@ -139,14 +140,15 @@
             </div>
 
             <!-- Road Model Helper Panel -->
-            <div class="px-4 pt-3 pb-2 border-b border-slate-200 bg-white">
+            <div id="road-helper-wrapper" class="px-4 pt-3 pb-2 bg-white">
                 <div class="road-model-helper-card">
                     <div class="road-helper-title">Road model helper</div>
                     <div id="road-model-helper-content"><p class="road-helper-default-text">Click or hover over a cell in the table to the right to learn about it. The helper will explain the variable, vehicle and drive type for that cell.</p></div>
                 </div>
             </div>
+            </div>
 
-            <div class="p-5 mt-auto border-t border-slate-200 bg-white space-y-3">
+            <div class="p-5 border-t border-slate-200 bg-white shrink-0 space-y-3">
                 <div class="road-action-with-help">
                     <button id="road-upload-provided-values" type="button" class="w-full bg-white hover:bg-slate-50 text-slate-700 py-2.5 rounded-md font-semibold text-sm border border-slate-200 shadow-sm">
                         Upload Filled CSV
@@ -285,7 +287,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api.js"></script>
 <script src="config/variable-help.js"></script>
-<script src="app.js?v=20260606b"></script>
-<script src="road-model-helper.js?v=20260609a"></script>
+<script src="app.js?v=20260610f"></script>
+<script src="road-model-helper.js?v=20260610f"></script>
 </body>
 </html>

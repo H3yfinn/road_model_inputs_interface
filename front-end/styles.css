@@ -534,14 +534,17 @@
     height: 100%;
     max-width: 560px;
     min-width: 60px;
-    overflow-x: visible;
-    overflow-y: auto;
+    overflow: hidden;
     transition: width 120ms ease;
     will-change: width;
 }
 
-#road-left-panel > div {
+#road-left-panel > div:not(#road-left-top) {
     overflow: visible;
+}
+
+#road-left-top {
+    overflow-y: auto;
 }
 
 .road-left-resizer {
@@ -1128,8 +1131,48 @@ body.road-panel-resizing * {
     width: 100%;
 }
 
+/* Stock share rows (labeled): force 3 equal columns in the year grid */
+.road-stock-share-row .road-year-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+/* Stock share rows (no-row-label): col1 has no label so give all space to col2 */
+.road-input-row.no-row-label.road-stock-share-row {
+    grid-template-columns: 0 1fr minmax(190px, 240px);
+}
+
 .road-input-row.no-row-label .road-year-grid.road-stock-share-grid {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    justify-content: unset;
+}
+
+/* In no-row-label context, stock share cells use column layout (label above input) */
+.road-input-row.no-row-label .road-stock-share-grid .road-year-input {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.road-input-row.no-row-label .road-stock-share-grid .road-year-input label {
+    margin-bottom: 0.1rem;
+    white-space: normal;
+}
+
+.road-input-row.no-row-label .road-stock-share-grid .road-year-input .road-value-input {
+    width: 100%;
+    min-height: 1.52rem;
+    padding: 0.2rem 0.36rem;
+}
+
+/* Read-only auto-calculated 2022 cell */
+.road-stock-share-auto .road-value-input {
+    background: #f1f5f9;
+    color: #475569;
+    cursor: not-allowed;
 }
 
 /* Keep the comment/reset/action area aligned with normal rows. */
@@ -1730,6 +1773,14 @@ body.road-panel-resizing * {
    ROAD MODEL HELPER
    ========================================== */
 
+#road-helper-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 160px;
+}
+
 .road-model-helper-card {
     border: 1px solid #d8dee4;
     background: #f8fafc;
@@ -1737,9 +1788,18 @@ body.road-panel-resizing * {
     padding: 8px 10px;
     font-size: 11.5px;
     line-height: 1.35;
-    max-height: 230px;
-    overflow-y: auto;
     color: #334155;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#road-model-helper-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .road-helper-title {

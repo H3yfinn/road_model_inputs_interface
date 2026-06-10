@@ -18,6 +18,18 @@ const ROAD_HELPER_VARIABLE_EXPLANATIONS = {
     'Reconciliation Bound Upper': "Upper limit used during reconciliation. The adjusted value should not normally rise above this bound. Good for ensuring mileage and fuel economy values do not get adjusted to unrealistically high levels during reconciliation, which can happen if the stock share (or energy value) is far off what it needs to be.",
     'Survival Rate': "Share of vehicles that remain in the fleet at each age. Used to calculate retirements and turnover.",
     'Vintage Profile Share': "Share of the base-year fleet assigned to each vehicle age. Used to represent the starting age structure of the fleet.",
+    'Vehicle Equivalent Weight Lower Bound': "Lower bound on the vehicle equivalent weight. The value will not be adjusted below this level during reconciliation.",
+    'Vehicle Equivalent Weight Upper Bound': "Upper bound on the vehicle equivalent weight. The value will not be adjusted above this level during reconciliation.",
+    'Passenger Saturation Reached': "Indicates whether long-run passenger vehicle ownership saturation has been reached for this economy. Once reached, stock growth slows to reflect a mature market.",
+    'Passenger Stock Growth Rate Adjustment': "Adjustment factor applied to the annual growth rate of the passenger vehicle stock before saturation is reached. Values above 1 accelerate convergence to the saturation level; values below 1 slow it.",
+    'Freight GDP Elasticity Adjustment': "Multiplier applied to the GDP elasticity of freight vehicle activity. Values above 1 increase the sensitivity of freight demand to GDP growth; values below 1 reduce it.",
+    'Reconciliation Weight Efficiency': "Relative priority given to adjusting fuel economy during reconciliation. Higher weights mean fuel economy is changed more aggressively when resolving energy imbalances.",
+    'Reconciliation Weight Mileage': "Relative priority given to adjusting mileage during reconciliation. Higher weights mean mileage is changed more aggressively when resolving energy imbalances.",
+    'Reconciliation Weight Stock': "Relative priority given to adjusting vehicle stock during reconciliation. Higher weights mean stock is changed more aggressively when resolving energy imbalances.",
+    'Reconciliation Bound Lower Efficiency': "Lower limit applied to fuel economy during reconciliation. Fuel economy will not be adjusted below this value, preventing unrealistically low efficiency outcomes.",
+    'Reconciliation Bound Lower Mileage': "Lower limit applied to mileage during reconciliation. Mileage will not be adjusted below this value, preventing unrealistically low travel distances.",
+    'Reconciliation Bound Upper Efficiency': "Upper limit applied to fuel economy during reconciliation. Fuel economy will not be adjusted above this value, preventing unrealistically high efficiency outcomes.",
+    'Reconciliation Bound Upper Mileage': "Upper limit applied to mileage during reconciliation. Mileage will not be adjusted above this value, preventing unrealistically high travel distances.",
 };
 
 const ROAD_HELPER_VEHICLE_GROUP_EXPLANATIONS = {
@@ -229,23 +241,78 @@ function roadHelperRowFromEl(keyPayloadEl) {
     }
 }
 
+// Build an overview for rows that group multiple sub-variables (e.g. reconciliation controls).
+// Reads label + data-tip text directly from the DOM so there is no duplication of help copy.
+function buildRoadHelperGroupOverviewHtml(rowEl) {
+    const e = roadHelperEscape;
+    const components = rowEl.querySelectorAll('.road-reconciliation-component');
+    if (!components.length) return null;
+
+    const keyPayloadEl = rowEl.closest('[data-key-payload]') || rowEl;
+    const row = roadHelperRowFromEl(keyPayloadEl);
+    const branchParts = row ? roadHelperParseBranchPath(row) : [];
+    const displayParts = branchParts.filter(p => p.toLowerCase() !== 'demand');
+    const displayPath = displayParts.join(' → ');
+
+    let html = '<div class="road-helper-section-label">Reconciliation controls</div>';
+    if (displayPath) {
+        html += '<div class="road-helper-selected-cell-path">' + e(displayPath) + '</div>';
+    }
+    html += '<div class="road-helper-section-label">What this means</div>'
+        + '<p class="road-helper-explanation road-helper-explanation--body">'
+        + 'These controls shape how the road model balances energy demand across the fleet. '
+        + 'Each component has a weight (how aggressively it is adjusted) and optional bounds (the allowed adjustment range). '
+        + 'Click a specific input to see its individual guide.'
+        + '</p>';
+
+    components.forEach(comp => {
+        const compLabel = comp.querySelector('.road-reconciliation-component-label')?.textContent?.trim() || '';
+        if (!compLabel) return;
+        const items = [];
+        comp.querySelectorAll('.road-year-input').forEach(yearInput => {
+            const labelEl = yearInput.querySelector('label');
+            if (!labelEl) return;
+            // First text node = the label text (e.g. "Weight"), button = the ? tip
+            const inputLabel = (labelEl.firstChild?.textContent || '').trim();
+            const tipText = (yearInput.querySelector('.road-info-tip')?.dataset?.tip || '').trim();
+            if (inputLabel && tipText) items.push({ inputLabel, tipText });
+        });
+        if (!items.length) return;
+        html += '<div class="road-helper-section-label">' + e(compLabel) + '</div>'
+            + '<ul class="road-helper-branch-list">';
+        items.forEach(({ inputLabel, tipText }) => {
+            html += '<li><strong>' + e(inputLabel) + ':</strong> ' + e(tipText) + '</li>';
+        });
+        html += '</ul>';
+    });
+
+    return html;
+}
+
 function updateRoadModelHelper() {
     const contentEl = document.getElementById('road-model-helper-content');
     if (!contentEl) return;
 
-    // Priority 1: a clicked/focused value input — show with year
+    // Priority 1: locked to a specific cell or row
     if (_roadHelperSelectedInput) {
+        const yearEl = _roadHelperSelectedInput.closest('.road-year-input');
+        // When locked to a whole row (no specific year cell), check for grouped rows
+        if (!yearEl) {
+            const rowEl = _roadHelperSelectedInput.closest('.road-input-row') || _roadHelperSelectedInput;
+            const groupHtml = buildRoadHelperGroupOverviewHtml(rowEl);
+            if (groupHtml) { contentEl.innerHTML = groupHtml; return; }
+        }
         const keyPayloadEl = _roadHelperSelectedInput.closest('[data-key-payload]');
         const row = roadHelperRowFromEl(keyPayloadEl);
-        const yearEl = _roadHelperSelectedInput.closest('.road-year-input');
         const year = yearEl ? yearEl.dataset.year : null;
         contentEl.innerHTML = buildRoadHelperHtml(row, year);
         return;
     }
 
-    // Priority 2: a hovered row card — show without specific year
+    // Priority 2: hovered row — same group detection for hover
     if (_roadHelperHoverRowEl) {
-        // data-key-payload is on the .road-input-row itself for regular rows
+        const groupHtml = buildRoadHelperGroupOverviewHtml(_roadHelperHoverRowEl);
+        if (groupHtml) { contentEl.innerHTML = groupHtml; return; }
         const row = roadHelperRowFromEl(_roadHelperHoverRowEl);
         contentEl.innerHTML = buildRoadHelperHtml(row, null);
         return;
@@ -277,23 +344,50 @@ function setupRoadModelHelper() {
     const container = document.getElementById('road-input-container');
     if (!container) return;
 
-    // Focus/click on a value input: persist selection and show year
-    container.addEventListener('focusin', (e) => {
-        if (e.target.classList.contains('road-value-input')) {
-            roadHelperSelectInput(e.target);
+    // Pressing anywhere in a row locks the helper immediately (before focus/label events).
+    // Priority: specific year cell > row > group card header.
+    container.addEventListener('pointerdown', (e) => {
+        const cell = e.target.closest('.road-year-input');
+        if (cell) {
+            const input = cell.querySelector('.road-value-input') || cell;
+            roadHelperSelectInput(input);
+            return;
+        }
+        const rowEl = e.target.closest('.road-input-row');
+        if (rowEl) {
+            roadHelperSelectInput(rowEl);
+            return;
+        }
+        const card = e.target.closest('.road-group-card');
+        if (card) {
+            const rowInCard = card.querySelector('.road-input-row[data-key-payload]');
+            if (rowInCard) roadHelperSelectInput(rowInCard);
         }
     });
 
-    container.addEventListener('click', (e) => {
-        if (e.target.classList.contains('road-value-input')) {
-            roadHelperSelectInput(e.target);
+    // Pressing outside any row (and outside the left panel) clears the lock.
+    document.addEventListener('pointerdown', (e) => {
+        if (_roadHelperSelectedInput
+            && !e.target.closest('.road-input-row')
+            && !e.target.closest('.road-group-card')
+            && !e.target.closest('#road-left-panel')) {
+            roadHelperSelectInput(null);
         }
     });
 
-    // Row-level hover: update when no input is focused/selected
+    // Row-level hover: update when no input is focused/selected.
+    // Also handles the group-card header area (breadcrumb + title) which sits above
+    // the .road-group-rows container and therefore outside any .road-input-row.
     container.addEventListener('mouseover', (e) => {
         if (_roadHelperSelectedInput) return;
-        const rowEl = e.target.closest('.road-input-row');
+        // Prefer the direct .road-input-row ancestor
+        let rowEl = e.target.closest('.road-input-row');
+        // Fall back: if inside a group card header (no .road-input-row ancestor),
+        // use the first .road-input-row inside the same card.
+        if (!rowEl) {
+            const card = e.target.closest('.road-group-card');
+            if (card) rowEl = card.querySelector('.road-input-row[data-key-payload]') || null;
+        }
         if (rowEl && rowEl !== _roadHelperHoverRowEl) {
             _roadHelperHoverRowEl = rowEl;
             updateRoadModelHelper();
@@ -302,8 +396,10 @@ function setupRoadModelHelper() {
 
     container.addEventListener('mouseout', (e) => {
         if (_roadHelperSelectedInput) return;
-        // Only clear when the pointer has truly left the current row card
-        if (_roadHelperHoverRowEl && !_roadHelperHoverRowEl.contains(e.relatedTarget)) {
+        // Clear when the pointer leaves the current row OR its parent group card
+        const card = _roadHelperHoverRowEl && _roadHelperHoverRowEl.closest('.road-group-card');
+        const boundary = card || _roadHelperHoverRowEl;
+        if (boundary && !boundary.contains(e.relatedTarget)) {
             _roadHelperHoverRowEl = null;
             updateRoadModelHelper();
         }
