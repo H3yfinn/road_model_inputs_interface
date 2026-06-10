@@ -14,16 +14,26 @@ jobs:
           fetch-depth: 1
           lfs: false
 
+      - name: Fetch latest leap_road_model SHA
+        id: lrm_sha
+        run: |
+          SHA=$(git ls-remote https://github.com/asia-pacific-energy-research-centre/leap_road_model.git HEAD | cut -f1)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
       - name: Push snapshot to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          LRM_SHA: ${{ steps.lrm_sha.outputs.sha }}
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          # Write the current leap_road_model SHA so the Dockerfile COPY busts the clone cache
+          echo "$LRM_SHA" > leap_road_model_sha.txt
+          git add leap_road_model_sha.txt
           git remote add hf https://finbarmaunsell:$HF_TOKEN@huggingface.co/spaces/finbarmaunsell/leap_road_model
           # Orphan commit — no history, avoids HF rejecting old commits that had large files
           git checkout --orphan hf-deploy
           # Remove docs/ — contains PNGs which HF rejects as binary files
           git rm -rf --cached docs/ 2>/dev/null || true
-          git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) lrm@${LRM_SHA:0:7}"
           git push hf hf-deploy:main --force

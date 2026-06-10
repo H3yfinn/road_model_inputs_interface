@@ -21,6 +21,11 @@ ARG LEAP_ROAD_MODEL_REPO=https://github.com/asia-pacific-energy-research-centre/
 # a commit SHA or another branch/tag only when a reproducible deployment is needed.
 ARG LEAP_ROAD_MODEL_REF=main
 
+# Cache-bust: this file is rewritten by sync_to_hf.yml with the latest
+# leap_road_model SHA every time a deploy is triggered, so Docker never
+# serves a stale clone of that repo from its layer cache.
+COPY leap_road_model_sha.txt ./
+
 RUN if [ "${LEAP_ROAD_MODEL_REF}" = "main" ]; then \
         git clone --depth 1 --branch main ${LEAP_ROAD_MODEL_REPO} /app/leap_road_model; \
     else \
