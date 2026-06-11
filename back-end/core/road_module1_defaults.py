@@ -956,6 +956,48 @@ def overlay_lifecycle_profile_factors(
     report_rows = []
     overlaid_df = default_filled_df.copy()
 
+    def ensure_turnover_row(variable: str, road_branch: str, source_row: pd.Series) -> int:
+        branch_path = f"Demand\\{road_branch}\\Turnover calibration"
+        mask = (
+            overlaid_df["Branch Path"].eq(branch_path)
+            & overlaid_df["Variable"].eq(variable)
+            & overlaid_df["Scenario"].eq("Current Accounts")
+            & overlaid_df["Region"].eq(economy.name)
+        )
+        if mask.any():
+            return int(overlaid_df[mask].index[0])
+
+        scale, units, per_unit = PARAMETER_TO_LEAP_METADATA[
+            "turnover_rate_bound_lower"
+            if variable == "Turnover Rate Bound Lower"
+            else "turnover_rate_bound_upper"
+        ]
+        data_year = source_row.get("data_year")
+        new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+        new_row.update(
+            {
+                "Branch Path": branch_path,
+                "Variable": variable,
+                "Scenario": "Current Accounts",
+                "Region": economy.name,
+                "Scale": scale,
+                "Units": units,
+                "Per...": per_unit,
+                "input_source": "provided",
+                "standardized_label_status": "standardized",
+                "notes": "",
+                "source_type": "apec_lifecycle_profile_factors",
+                "source_name": resolved_path.name,
+                "source_scope": economy.code,
+                "source_date": str(int(data_year)) if not pd.isna(data_year) else "",
+                "default_version": DEFAULT_VERSION,
+                "researcher_review_recommended": False,
+                "review_reason": "",
+            }
+        )
+        overlaid_df.loc[len(overlaid_df)] = new_row
+        return int(overlaid_df.index[-1])
+
     for transport_type in ["passenger", "freight"]:
         # Economy-specific overrides APEC default for this transport type
         econ_tt = economy_rows[economy_rows["transport_type"] == transport_type]
@@ -994,11 +1036,26 @@ def overlay_lifecycle_profile_factors(
         ]:
             if pd.isna(value):
                 continue
+            idx = ensure_turnover_row(variable, road_branch, source_row)
+            overlaid_df.at[idx, str(BASE_YEAR)] = float(value)
+            _stamp_row_source(overlaid_df, idx, source_type="apec_lifecycle_profile_factors", source_name=resolved_path.name, source_scope=economy.code, source_date=str(int(data_year)) if not pd.isna(data_year) else "", note=note)
+            report_rows.append(
+                {
+                    "status": "applied",
+                    "Variable": variable,
+                    "Region": economy.name,
+                    "transport_type": transport_type,
+                    "details": f"{BASE_YEAR}={float(value)}",
+                }
+            )
             target_mask = (
                 overlaid_df["Variable"].eq(variable)
                 & overlaid_df["Branch Path"].astype(str).str.startswith(f"Demand\\{road_branch}")
             )
-            for idx in overlaid_df[target_mask].index:
+            for idx in overlaid_df[
+                target_mask
+                & ~overlaid_df["Branch Path"].eq(f"Demand\\{road_branch}\\Turnover calibration")
+            ].index:
                 overlaid_df.at[idx, str(BASE_YEAR)] = float(value)
                 _stamp_row_source(overlaid_df, idx, source_type="apec_lifecycle_profile_factors", source_name=resolved_path.name, source_scope=economy.code, source_date=str(int(data_year)) if not pd.isna(data_year) else "", note=note)
                 report_rows.append(
@@ -4512,6 +4569,10 @@ def write_economy_package(
         economy=economy,
     )
     default_filled, model_factor_overlay_report = overlay_model_factor_sources(
+        default_filled_df=default_filled,
+        economy=economy,
+    )
+    default_filled, _lifecycle_factor_overlay_report = overlay_lifecycle_profile_factors(
         default_filled_df=default_filled,
         economy=economy,
     )

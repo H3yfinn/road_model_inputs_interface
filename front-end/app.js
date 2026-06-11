@@ -101,6 +101,8 @@ const ROAD_MODULE1_VALUE_RULES = {
     'Reconciliation Weight': { min: 0 },
     'Gasoline/Diesel Share Tolerance': { min: 0, max: 100 },
     'Survival Rate': { min: 0, max: 100 },
+    'Turnover Rate Bound Lower': { min: 0, max: 1 },
+    'Turnover Rate Bound Upper': { min: 0, max: 1 },
     'Vehicle Equivalent Weight': { min: 0 },
     'Vintage Profile Share': { min: 0, max: 100 }
 };
@@ -1653,6 +1655,46 @@ function getRoadReconciliationRowRefs(rows) {
         .filter(ref => ref.role);
 }
 
+function isRoadTurnoverCalibrationControlRow(row) {
+    const variable = normalizeRoadTextToken(row?.Variable || '');
+    return [
+        normalizeRoadTextToken('Turnover Rate Bound Lower'),
+        normalizeRoadTextToken('Turnover Rate Bound Upper')
+    ].includes(variable);
+}
+
+function getRoadTurnoverCalibrationRole(row) {
+    const variable = normalizeRoadTextToken(row?.Variable || '');
+    if (variable === normalizeRoadTextToken('Turnover Rate Bound Lower')) return 'lower';
+    if (variable === normalizeRoadTextToken('Turnover Rate Bound Upper')) return 'upper';
+    return '';
+}
+
+function getRoadTurnoverCalibrationBranchPath(row) {
+    const parts = getRoadPathParts(row);
+    return parts.slice(0, Math.min(3, parts.length)).join('\\') || row['Branch Path'] || '';
+}
+
+function getRoadTurnoverCalibrationGroupKey(row) {
+    return [
+        getRoadTurnoverCalibrationBranchPath(row),
+        row.Scenario || '',
+        row.Region || ''
+    ].join('||');
+}
+
+function getRoadTurnoverCalibrationRowRefs(rows) {
+    return rows
+        .map(row => ({
+            role: getRoadTurnoverCalibrationRole(row),
+            rowKey: buildRoadModule1Key(row),
+            year: getRoadBaseYearColumn(row),
+            keyPayload: roadModule1KeyPayload(row),
+            row: row
+        }))
+        .filter(ref => ref.role);
+}
+
 function buildRoadInfoTooltip(text) {
     return `<button type="button" class="road-info-tip" data-tip="${escapeHtml(text)}" aria-label="More information" tabindex="0">?</button>`;
 }
@@ -2276,6 +2318,22 @@ function groupRoadRowsForEditors(filteredRows) {
         });
 
     filteredRows
+        .filter(isRoadTurnoverCalibrationControlRow)
+        .forEach(row => {
+            const branchPath = getRoadTurnoverCalibrationBranchPath(row);
+            const groupKey = `turnover-calibration|${getRoadTurnoverCalibrationGroupKey(row)}`;
+            if (!groupedRows.has(groupKey)) {
+                groupedRows.set(groupKey, {
+                    groupType: 'turnover-calibration',
+                    branchPath: branchPath,
+                    sharedKey: '',
+                    rows: []
+                });
+            }
+            groupedRows.get(groupKey).rows.push(row);
+        });
+
+    filteredRows
         .filter(isRoadTransportParamRow)
         .filter(row => isRoadTransportParamRoleEnabled(getRoadTransportParamRole(row)))
         .forEach(row => {
@@ -2293,7 +2351,7 @@ function groupRoadRowsForEditors(filteredRows) {
         });
 
     filteredRows
-        .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTransportParamRow(row))
+        .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
             const detailed = State.roadModule1.dataDensity === 'more';
             const useSharedMileage = isRoadMileageRow(row) && !detailed;
@@ -2448,9 +2506,11 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
             ? 'Reconciliation controls'
-            : (group.groupType === 'transport-params'
-                ? getRoadTransportParamGroupTitle(group)
-                : (first.Variable || 'Measure')));
+            : (group.groupType === 'turnover-calibration'
+                ? 'Turnover calibration'
+                : (group.groupType === 'transport-params'
+                    ? getRoadTransportParamGroupTitle(group)
+                    : (first.Variable || 'Measure'))));
     return `
         <section class="road-graph-editor">
             <div class="road-graph-editor-header">
@@ -2474,9 +2534,11 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
-            : (group.groupType === 'transport-params'
-                ? getRoadTransportParamGroupTitle(group)
-                : first.Variable));
+            : (group.groupType === 'turnover-calibration'
+                ? 'Turnover calibration'
+                : (group.groupType === 'transport-params'
+                    ? getRoadTransportParamGroupTitle(group)
+                    : first.Variable)));
     return `
         <section class="road-group-card road-tree-editor ${isCompactGroup ? 'is-compact' : ''}" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
             <div class="road-group-header">
@@ -2814,21 +2876,94 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Turnover calibration panel (detailed mode only — not tied to data rows)
+// Turnover calibration controls (detailed mode, backed by Module 1 rows)
 // ---------------------------------------------------------------------------
 
-function buildRoadTurnoverConfigPayload() {
+function buildRoadTurnoverConfigPayload(rows = null) {
+    const sourceRows = Array.isArray(rows) ? rows : buildRoadModule1CompletedRowsForCheckpoint();
+    const result = {};
+    sourceRows
+        .filter(isRoadTurnoverCalibrationControlRow)
+        .forEach(row => {
+            const parts = getRoadPathParts(row);
+            const transportRaw = normalizeRoadTextToken(parts[1] || '');
+            const transportType = transportRaw.includes('passenger') ? 'passenger'
+                : transportRaw.includes('freight') ? 'freight'
+                : '';
+            const role = getRoadTurnoverCalibrationRole(row);
+            if (!transportType || !role) return;
+            const rawValue = getRoadDefaultValue(row, getRoadBaseYearColumn(row));
+            const numeric = Number(rawValue);
+            if (!Number.isFinite(numeric)) return;
+            if (!result[transportType]) result[transportType] = { fit_mode: 'auto' };
+            result[transportType][role] = numeric * 100.0;
+        });
+    if (Object.keys(result).length) return result;
+
     const cfg = State.roadModule1.turnoverConfig || {};
     const defaults = { passenger: { lower: 5, upper: 8 }, freight: { lower: 6, upper: 10 } };
-    const result = {};
+    const fallback = {};
     ['passenger', 'freight'].forEach(tt => {
         const ttCfg = cfg[tt] || {};
         const d = defaults[tt];
         const lower = ttCfg.lower !== '' && ttCfg.lower != null ? parseFloat(ttCfg.lower) : d.lower;
         const upper = ttCfg.upper !== '' && ttCfg.upper != null ? parseFloat(ttCfg.upper) : d.upper;
-        result[tt] = { lower, upper, fit_mode: ttCfg.fitMode || 'auto' };
+        fallback[tt] = { lower, upper, fit_mode: ttCfg.fitMode || 'auto' };
     });
-    return result;
+    return fallback;
+}
+
+function buildRoadModule1TurnoverCalibrationEditorHtml(group, depth = 0) {
+    const rowsByRole = new Map();
+    group.rows.forEach(row => {
+        const role = getRoadTurnoverCalibrationRole(row);
+        if (role) rowsByRole.set(role, row);
+    });
+
+    const referenceRow = group.rows[0];
+    const rowRefs = getRoadTurnoverCalibrationRowRefs(group.rows);
+    const serializableRowRefs = rowRefs.map(({ role, rowKey, year, keyPayload }) => ({ role, rowKey, year, keyPayload }));
+    const comment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
+
+    const valueInput = (bindRole, label, helpText) => {
+        const row = rowsByRole.get(bindRole) || null;
+        if (!row) return '';
+        const ref = rowRefs.find(r => r.role === bindRole);
+        if (!ref) return '';
+        const defaultValue = getRoadDefaultValue(row, ref.year);
+        const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
+        const inputValue = override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
+            ? override.value : '';
+        const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
+        return `
+            <div class="road-year-input road-turnover-calibration-input" data-turnover-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
+                ${buildRoadCellLabelHtml(label, helpText)}
+                <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
+            </div>
+        `;
+    };
+
+    return `
+        <div class="road-input-row road-turnover-calibration-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-row-refs="${encodeURIComponent(JSON.stringify(serializableRowRefs))}" data-key-payload="${encodeURIComponent(JSON.stringify(roadModule1KeyPayload(referenceRow)))}">
+            <div class="road-row-label">
+                <div class="road-row-title">Turnover calibration ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.turnoverCalibration.rowTitle)}</div>
+                <div class="road-row-meta">Reshapes survival curves so fleet replacement rate stays within range. Defaults: passenger 0.05-0.08/yr, freight 0.06-0.10/yr.</div>
+            </div>
+            <div class="road-reconciliation-components">
+                <div class="road-reconciliation-component">
+                    <div class="road-reconciliation-component-label">Bounds</div>
+                    <div class="road-year-grid">
+                        ${valueInput('lower', 'Lower rate', ROAD_VARIABLE_HELP.turnoverCalibration.lowerRate)}
+                        ${valueInput('upper', 'Upper rate', ROAD_VARIABLE_HELP.turnoverCalibration.upperRate)}
+                    </div>
+                </div>
+            </div>
+            <div class="road-row-actions">
+                <button type="button" class="road-reset-button" title="Reset turnover calibration" aria-label="Reset turnover calibration">&#8634;</button>
+                <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+            </div>
+        </div>
+    `;
 }
 
 function buildRoadModule1TurnoverConfigHtml() {
@@ -2927,6 +3062,10 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
 
     if (group.groupType === 'reconciliation-controls') {
         return buildRoadModule1ReconciliationEditorHtml(group, depth);
+    }
+
+    if (group.groupType === 'turnover-calibration') {
+        return buildRoadModule1TurnoverCalibrationEditorHtml(group, depth);
     }
 
     if (group.groupType === 'transport-params') {
@@ -3193,9 +3332,11 @@ function buildRoadModule1ListGroupHtml(group) {
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
             ? 'Fuel reconciliation'
-            : (group.groupType === 'transport-params'
-                ? getRoadTransportParamGroupTitle(group)
-                : first.Variable));
+            : (group.groupType === 'turnover-calibration'
+                ? 'Turnover calibration'
+                : (group.groupType === 'transport-params'
+                    ? getRoadTransportParamGroupTitle(group)
+                    : first.Variable)));
     const isFlagged = groupRows.some(isRoadRowFlagged);
     const flagIcon = isFlagged
         ? `<svg class="road-flag-icon" viewBox="0 0 10 13" width="10" height="13" aria-label="Key input"><path d="M1.5 1v11M1.5 1.5h7L5.5 5.5l3 4H1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -3220,10 +3361,8 @@ function buildRoadModule1ListGroupHtml(group) {
 
 function renderRoadModule1ListInputs(filteredRows) {
     const groupedRows = groupRoadRowsForEditors(filteredRows);
-    const detailed = State.roadModule1.dataDensity === 'more';
     DOM.roadInputContainer.innerHTML = `
         <div class="road-list-view">
-            ${detailed ? buildRoadModule1TurnoverConfigHtml() : ''}
             ${[...groupedRows.values()].map(buildRoadModule1ListGroupHtml).join('')}
         </div>
     `;
@@ -3289,6 +3428,11 @@ function handleRoadModule1InputChange(event) {
 
     if (rowEl.classList.contains('road-reconciliation-row')) {
         handleRoadModule1ReconciliationInputChange(rowEl, event.target);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-turnover-calibration-row')) {
+        handleRoadModule1TurnoverCalibrationInputChange(rowEl, event.target);
         return;
     }
 
@@ -3462,6 +3606,11 @@ function handleRoadModule1ResetClick(event) {
 
     if (rowEl.classList.contains('road-reconciliation-row')) {
         handleRoadModule1ReconciliationResetClick(rowEl);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-turnover-calibration-row')) {
+        handleRoadModule1TurnoverCalibrationResetClick(rowEl);
         return;
     }
 
@@ -3783,6 +3932,87 @@ function handleRoadModule1ReconciliationResetClick(rowEl) {
     scheduleRoadModule1DraftSave();
 }
 
+function handleRoadModule1TurnoverCalibrationInputChange(rowEl, target) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput ? commentInput.value.trim() : '';
+    const role = target.dataset.turnoverRole || '';
+    const isCommentInput = target.classList.contains('road-comment-input');
+
+    const refByRole = (wantedRole) => rowRefs.find(ref => ref.role === wantedRole) || null;
+    const setOverride = (ref, nextValue) => {
+        if (!ref) return;
+        const key = `${ref.rowKey}||Year=${ref.year}`;
+        if (nextValue === null || nextValue === undefined || nextValue === '') {
+            State.roadModule1.overrides.delete(key);
+            return;
+        }
+        State.roadModule1.overrides.set(key, {
+            key: ref.keyPayload,
+            year: ref.year,
+            value: nextValue,
+            comment: comment
+        });
+    };
+
+    if (isCommentInput) {
+        rowEl.classList.toggle('is-edited', Boolean(comment) || rowRefs.some(ref => {
+            const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
+            return existing && existing.value !== null && existing.value !== '';
+        }));
+        if (comment) {
+            rowRefs.forEach(ref => {
+                const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
+                if (existing) existing.comment = comment;
+            });
+        }
+        updateRoadModule1OverrideCount();
+        scheduleRoadModule1DraftSave();
+        return;
+    }
+
+    const rawValue = target.value.trim();
+    const parsedValue = rawValue === '' ? null : Number(rawValue);
+    if (rawValue !== '' && !Number.isFinite(parsedValue)) return;
+
+    if (role) {
+        setOverride(refByRole(role), parsedValue === null ? '' : parsedValue);
+    }
+
+    if (comment) {
+        rowRefs.forEach(ref => {
+            const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
+            if (existing) existing.comment = comment;
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', Boolean(comment) || rowRefs.some(ref => {
+        const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
+        return existing && existing.value !== null && existing.value !== '';
+    }));
+    updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1TurnoverCalibrationResetClick(rowEl) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    rowRefs.forEach(ref => {
+        State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${ref.year}`);
+    });
+
+    rowEl.querySelectorAll('.road-year-input .road-value-input').forEach(input => {
+        input.value = '';
+    });
+
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    if (commentInput) commentInput.value = '';
+
+    rowEl.classList.remove('is-edited');
+    updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
+    scheduleRoadModule1DraftSave();
+}
+
 function handleRoadModule1SeriesInputChange(rowEl) {
     const commentInput = rowEl.querySelector('.road-comment-input');
     const comment = commentInput.value.trim();
@@ -4037,7 +4267,7 @@ async function runRoadModel() {
                 version: State.roadModule1.version,
                 rows: completedLongRows,
                 enable_visualisations: true,
-                turnover_config: buildRoadTurnoverConfigPayload()
+                turnover_config: buildRoadTurnoverConfigPayload(completedRows)
             })
         });
 
