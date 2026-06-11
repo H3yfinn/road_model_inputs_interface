@@ -25,6 +25,12 @@ const ROAD_VARIABLE_HELP = {
         'Mileage':
             'Average distance travelled by each vehicle each year, in km per vehicle per year. Higher mileage increases energy use if stock and fuel economy stay the same.',
 
+        'Mileage Correction Factor':
+            'Scenario multiplier exported to LEAP and applied there to the post-reconciliation mileage value. Use 1.0 for no change.',
+
+        'Fuel Economy Correction Factor':
+            'Scenario multiplier exported to LEAP and applied there to the post-reconciliation fuel economy value. Use 1.0 for no change.',
+
         'Passenger Vehicle Saturation':
             'Long-run passenger vehicle ownership level for the economy. This helps set where passenger vehicle stock growth slows or levels off.',
 
@@ -137,7 +143,7 @@ const ROAD_VARIABLE_HELP = {
     // Ultra density sales-share editor.
     salesShareMix: {
         rowTitle:
-            'Ultra detail editor for future sales shares by drive type within one vehicle type. Values are entered as percentages and are normalised within each vehicle type and year before the model runs.',
+            'Ultra detail editor for sales shares by drive type within one vehicle type. It shows one 2022-2060 series by combining the base-year row with projected rows. Values are entered as percentages and are normalised within each vehicle type and year before the model runs.',
 
         warning:
             'These drive-type sales shares should add to 100 within each vehicle type for every year. If they do not, the CSV sent to the model is normalised. If you enter shares for one drive type, review the other drive types in the same vehicle type. Use REMAINDER(100) on one drive type to fill the remaining share; this token is resolved here and is not sent to LEAP.'

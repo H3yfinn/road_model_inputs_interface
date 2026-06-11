@@ -69,6 +69,7 @@ const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario'
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
 const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
 const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
+const ROAD_SERIES_RECOMMENDATION = 'For a full path to 2060, it is often easiest to prepare the values in Excel or ask an AI tool to draft a year-by-year series, then paste it here.';
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
     passenger: [
         'Demand\\Passenger road\\Motorcycles',
@@ -91,6 +92,8 @@ const ROAD_MODULE1_VALUE_RULES = {
     'Stock Share': { min: 0, max: 100 },
     'Final On-Road Fuel Economy': { min: 0 },
     'Fuel Economy': { min: 0 },
+    'Mileage Correction Factor': { min: 0 },
+    'Fuel Economy Correction Factor': { min: 0 },
     'Mileage': { min: 0 },
     'Passenger Vehicle Saturation': { min: 0 },
     'Passenger Stock Growth Rate Adjustment': { min: 0, max: 2 },
@@ -1482,6 +1485,7 @@ function isRoadDriveLevelSalesShareRow(row) {
 
 function isRoadRowVisibleAtCurrentDensity(row) {
     const density = State.roadModule1.dataDensity || 'less';
+    if (isRoadCorrectionFactorRow(row)) return density === 'ultra';
     if (density === 'less') return isRoadCoreDensityRow(row);
     if (density === 'more') return !isRoadDriveLevelSalesShareRow(row) || isRoadPairedFuelShareRow(row);
     return true;
@@ -1495,9 +1499,24 @@ function getRoadSalesShareVehicleBranchPath(row) {
 function getRoadSalesShareMixGroupKey(row) {
     return [
         getRoadSalesShareVehicleBranchPath(row),
+        row.Region || ''
+    ].join('||');
+}
+
+function getRoadSalesShareNormaliseGroupKey(row) {
+    return [
+        getRoadSalesShareVehicleBranchPath(row),
         row.Scenario || '',
         row.Region || ''
     ].join('||');
+}
+
+function getRoadSalesShareScenarioRank(row, year) {
+    const scenario = normalizeRoadTextToken(row?.Scenario || '');
+    if (Number(year) === ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken('Current Accounts')) return 0;
+    if (Number(year) > ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken('Target')) return 0;
+    if (scenario === normalizeRoadTextToken('Target')) return 1;
+    return 2;
 }
 
 function getRoadMileageSharedBranchPath(row) {
@@ -1533,6 +1552,12 @@ function getRoadSharedMileageDriveKey(row) {
 
 function isRoadFuelEconomyRow(row) {
     return String(row.Variable || '').trim().toLowerCase() === 'fuel economy';
+}
+
+function isRoadCorrectionFactorRow(row) {
+    const variable = normalizeRoadTextToken(row?.Variable || '');
+    return variable === normalizeRoadTextToken('Mileage Correction Factor')
+        || variable === normalizeRoadTextToken('Fuel Economy Correction Factor');
 }
 
 function isRoadPhevOrErevDrive(branchPath) {
@@ -2422,7 +2447,7 @@ function groupRoadRowsForEditors(filteredRows) {
     filteredRows
         .filter(row => !isRoadDriveLevelSalesShareRow(row) && !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
-            const detailed = State.roadModule1.dataDensity === 'more';
+            const detailed = State.roadModule1.dataDensity !== 'less';
             const useSharedMileage = isRoadMileageRow(row) && !detailed;
             const useDetailedMileage = isRoadMileageRow(row) && detailed;
             const useSharedFuelEconomy = isRoadFuelEconomyRow(row) && !detailed;
@@ -3262,42 +3287,63 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
     }
 
     if (group.groupType === 'sales-share-mix') {
-        const sortedRows = [...groupRows].sort((a, b) => getRoadBranchLeafLabel(a['Branch Path']).localeCompare(getRoadBranchLeafLabel(b['Branch Path']), 'en-US', { numeric: true }));
-        const yearColumns = Array.from(new Set(sortedRows.flatMap(getRoadYearColumns))).sort();
-        const rowRefs = sortedRows.map(row => {
-            const rowKey = buildRoadModule1Key(row);
-            return {
-                rowKey: rowKey,
-                keyPayload: roadModule1KeyPayload(row),
-                label: getRoadBranchLeafLabel(row['Branch Path']) || getRoadRowTitle(row),
-                years: yearColumns.map(year => ({
-                    year: year,
-                    value: getRoadDefaultValue(row, year)
-                }))
-            };
+        const rowsByDrivePath = new Map();
+        groupRows.forEach(row => {
+            const drivePath = row['Branch Path'] || '';
+            if (!rowsByDrivePath.has(drivePath)) rowsByDrivePath.set(drivePath, []);
+            rowsByDrivePath.get(drivePath).push(row);
         });
+        const yearColumns = Array.from(new Set(groupRows.flatMap(getRoadYearColumns))).sort();
+        const rowRefs = [...rowsByDrivePath.entries()]
+            .sort((a, b) => getRoadBranchLeafLabel(a[0]).localeCompare(getRoadBranchLeafLabel(b[0]), 'en-US', { numeric: true }))
+            .map(([drivePath, driveRows]) => {
+                const yearRefs = yearColumns.map(year => {
+                    const matchingRows = driveRows
+                        .filter(row => getRoadYearColumns(row).includes(String(year)))
+                        .sort((a, b) => getRoadSalesShareScenarioRank(a, year) - getRoadSalesShareScenarioRank(b, year));
+                    const preferredRow = matchingRows[0] || null;
+                    return {
+                        year: year,
+                        value: preferredRow ? getRoadDefaultValue(preferredRow, year) : '',
+                        refs: matchingRows.map(row => ({
+                            rowKey: buildRoadModule1Key(row),
+                            keyPayload: roadModule1KeyPayload(row)
+                        }))
+                    };
+                }).filter(item => item.refs.length > 0);
+                return {
+                    label: getRoadBranchLeafLabel(drivePath) || drivePath,
+                    yearRefs: yearRefs
+                };
+            });
+        const allKeyYears = rowRefs.flatMap(ref => ref.yearRefs.flatMap(yearRef => (
+            yearRef.refs.map(rowRef => ({ rowKey: rowRef.rowKey, year: yearRef.year }))
+        )));
         const comment = getRoadCommentForKeys(
-            rowRefs.map(ref => ref.rowKey),
-            yearColumns
+            allKeyYears.map(item => item.rowKey),
+            allKeyYears.map(item => item.year)
         );
         const editorRowsHtml = rowRefs.map(ref => {
-            const defaultSeriesText = ref.years.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
-            const providedSeriesText = ref.years
+            const defaultSeriesText = ref.yearRefs.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
+            const providedSeriesText = ref.yearRefs
                 .map(point => {
-                    const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${point.year}`);
-                    return override && override.value !== null && override.value !== ''
-                        ? String(override.value)
-                        : '';
+                    for (const rowRef of point.refs) {
+                        const override = State.roadModule1.overrides.get(`${rowRef.rowKey}||Year=${point.year}`);
+                        if (override && override.value !== null && override.value !== '') return String(override.value);
+                    }
+                    return '';
                 })
                 .join(', ')
                 .replace(/(, )+$/g, '');
-            return `
-                <div class="road-sales-share-series" data-row-key="${encodeURIComponent(ref.rowKey)}" data-key-payload="${encodeURIComponent(JSON.stringify(ref.keyPayload))}">
-                    <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
-                    <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
-                </div>
-            `;
-        }).join('');
+            return {
+                html: `
+                    <div class="road-sales-share-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}">
+                        <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
+                        <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
+                    </div>
+                `
+            };
+        }).map(item => item.html).join('');
 
         return `
             <div class="road-input-row road-sales-share-mix-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-years="${encodeURIComponent(JSON.stringify(yearColumns))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
@@ -3310,7 +3356,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 <div class="road-sales-share-series-grid">
                     ${editorRowsHtml}
-                    <div class="road-series-hint road-sales-share-warning">${escapeHtml(ROAD_VARIABLE_HELP.salesShareMix.warning)}</div>
+                    <div class="road-series-hint road-sales-share-warning">${escapeHtml(ROAD_VARIABLE_HELP.salesShareMix.warning)} ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                 </div>
                 <div class="road-row-actions road-series-actions">
                     <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
@@ -3373,7 +3419,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 <div class="road-series-entry">
                     <label>Provided series (${rowRefs.length} values, age order)</label>
                     <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
-                    <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines.</div>
+                    <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                 </div>
                 <div class="road-row-actions road-series-actions">
                     <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
@@ -3410,6 +3456,9 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const rowComment = getRoadCommentForKeys([rowKey], yearColumns);
         const rowTitle = getRoadRowTitle(row);
         const rowMeta = getRoadRowMeta(row, yearColumns);
+        const longSeriesHint = yearColumns.length > 6 && Number(yearColumns[yearColumns.length - 1]) >= 2060
+            ? `<div class="road-series-hint">${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>`
+            : '';
         const hideRowLabel = isSinglePlainRowGroup && !row.review_reason;
         return `
             <div class="road-input-row ${hideRowLabel ? 'no-row-label' : ''}${isStockShareRow ? ' road-stock-share-row' : ''}" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
@@ -3420,6 +3469,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 `}
                 <div class="road-year-grid${isStockShareRow ? ' road-stock-share-grid' : ''}">${yearInputs}</div>
+                ${longSeriesHint}
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="${isRoadMileageRow(row) ? 'Reset detailed row to inherited shared mileage' : 'Reset row to the original provided value'}" aria-label="Reset row">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
@@ -3905,40 +3955,44 @@ function handleRoadModule1PairedFuelShareInputChange(rowEl, target) {
 
 function handleRoadModule1SalesShareMixInputChange(rowEl) {
     const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
-    const yearColumns = JSON.parse(decodeURIComponent(rowEl.dataset.years || '%5B%5D'));
     const commentInput = rowEl.querySelector('.road-comment-input');
     const comment = commentInput ? commentInput.value.trim() : '';
     let rowOverrideCount = 0;
 
     rowRefs.forEach(ref => {
-        yearColumns.forEach(year => {
-            State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${year}`);
+        (ref.yearRefs || []).forEach(yearRef => {
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.delete(`${rowRef.rowKey}||Year=${yearRef.year}`);
+            });
         });
     });
 
     rowEl.querySelectorAll('.road-sales-share-series').forEach(seriesEl => {
-        const rowKey = decodeURIComponent(seriesEl.dataset.rowKey || '');
-        const keyPayload = JSON.parse(decodeURIComponent(seriesEl.dataset.keyPayload || '%7B%7D'));
+        const yearRefs = JSON.parse(decodeURIComponent(seriesEl.dataset.yearRefs || '%5B%5D'));
         const seriesInput = seriesEl.querySelector('.road-sales-share-series-input');
         const values = parseRoadSalesShareSeriesValues(seriesInput ? seriesInput.value : '');
-        values.slice(0, yearColumns.length).forEach((value, index) => {
+        values.slice(0, yearRefs.length).forEach((value, index) => {
             if (!value) return;
-            const year = yearColumns[index];
-            State.roadModule1.overrides.set(`${rowKey}||Year=${year}`, {
-                key: keyPayload,
-                year: year,
-                value: value,
-                comment: comment
+            const yearRef = yearRefs[index];
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.set(`${rowRef.rowKey}||Year=${yearRef.year}`, {
+                    key: rowRef.keyPayload,
+                    year: yearRef.year,
+                    value: value,
+                    comment: comment
+                });
+                rowOverrideCount += 1;
             });
-            rowOverrideCount += 1;
         });
     });
 
     if (comment) {
         rowRefs.forEach(ref => {
-            yearColumns.forEach(year => {
-                const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${year}`);
-                if (existing) existing.comment = comment;
+            (ref.yearRefs || []).forEach(yearRef => {
+                (yearRef.refs || []).forEach(rowRef => {
+                    const existing = State.roadModule1.overrides.get(`${rowRef.rowKey}||Year=${yearRef.year}`);
+                    if (existing) existing.comment = comment;
+                });
             });
         });
     }
@@ -3950,10 +4004,11 @@ function handleRoadModule1SalesShareMixInputChange(rowEl) {
 
 function handleRoadModule1SalesShareMixResetClick(rowEl) {
     const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
-    const yearColumns = JSON.parse(decodeURIComponent(rowEl.dataset.years || '%5B%5D'));
     rowRefs.forEach(ref => {
-        yearColumns.forEach(year => {
-            State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${year}`);
+        (ref.yearRefs || []).forEach(yearRef => {
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.delete(`${rowRef.rowKey}||Year=${yearRef.year}`);
+            });
         });
     });
     rowEl.querySelectorAll('.road-sales-share-series-input').forEach(input => { input.value = ''; });
@@ -5136,7 +5191,7 @@ function normaliseRoadSalesShareMixRows(rows) {
         .filter(row => isRoadDriveLevelSalesShareRow(row) && !isRoadPairedFuelShareRow(row))
         .forEach(row => {
             getRoadYearColumns(row).forEach(year => {
-                const key = `${getRoadSalesShareMixGroupKey(row)}||Year=${year}`;
+                const key = `${getRoadSalesShareNormaliseGroupKey(row)}||Year=${year}`;
                 if (!groups.has(key)) groups.set(key, []);
                 groups.get(key).push({ row, year });
             });

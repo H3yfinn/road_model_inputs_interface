@@ -166,6 +166,44 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
+def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, economy_code: str) -> pd.DataFrame:
+    """Build default 1.0 LEAP correction-factor rows from fuel-level Module 1 rows."""
+    source_rows = long_defaults_df[
+        long_defaults_df["Variable"].isin(["Mileage", "Fuel Economy"])
+        & long_defaults_df["Branch Path"].astype(str).str.startswith("Demand\\")
+    ].copy()
+    if source_rows.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    factor_variable_by_source = {
+        "Mileage": "Mileage Correction Factor",
+        "Fuel Economy": "Fuel Economy Correction Factor",
+    }
+    rows: list[dict[str, object]] = []
+    for _, source_row in source_rows[["Branch Path", "Variable"]].drop_duplicates().iterrows():
+        factor_variable = factor_variable_by_source.get(source_row["Variable"])
+        if not factor_variable:
+            continue
+        for year in range(BASE_YEAR, 2061):
+            rows.append({
+                "Economy": economy_code,
+                "Scenario": "Target",
+                "Branch Path": source_row["Branch Path"],
+                "Variable": factor_variable,
+                "Year": int(year),
+                "Value": 1.0,
+                "Scale": "",
+                "Units": "Multiplier",
+                "Source": "generated_default_correction_factor",
+                "Comment": "Default LEAP correction factor. Set to 1.0 unless a scenario adjustment is needed.",
+                "Input Status": "default",
+                "Shown In Interface": "True",
+            })
+    if not rows:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
+
+
 ROAD_MODEL_CONFIG_DIR = Path(__file__).resolve().parent / "data" / "road_model" / "config"
 STATIC_CONTRACT_CSV_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_static_contract.csv"
 STATIC_CONTRACT_KEY_COLUMNS = ["Branch Path", "Variable"]
@@ -221,6 +259,25 @@ def _load_static_contract() -> pd.DataFrame:
             "\nERROR - duplicate row keys in static contract CSV:\n"
             + duplicates.to_string(index=False)
         )
+    factor_contract_rows = []
+    for source_variable, factor_variable in {
+        "Mileage": "Mileage Correction Factor",
+        "Fuel Economy": "Fuel Economy Correction Factor",
+    }.items():
+        for _, row in contract[contract["Variable"].eq(source_variable)].iterrows():
+            factor_row = row.copy()
+            factor_row["Variable"] = factor_variable
+            factor_row["Current Accounts"] = False
+            factor_row["Projected Scenario"] = True
+            factor_row["Shown In Interface"] = False
+            factor_row["Shown In Interface Projected"] = True
+            factor_row["Units"] = "Multiplier"
+            if "Notes" in factor_row.index:
+                factor_row["Notes"] = "Generated default LEAP correction-factor row."
+            factor_contract_rows.append(factor_row)
+    if factor_contract_rows:
+        contract = pd.concat([contract, pd.DataFrame(factor_contract_rows)], ignore_index=True)
+        contract = contract.drop_duplicates(subset=STATIC_CONTRACT_KEY_COLUMNS, keep="first")
     return contract
 
 
@@ -344,6 +401,9 @@ def write_frontend_static_bundle(
         projected_sales_df = _load_projected_sales_share_long_rows(economy_code)
         if not projected_sales_df.empty:
             long_defaults_df = pd.concat([long_defaults_df, projected_sales_df], ignore_index=True)
+        correction_factor_df = _build_projected_correction_factor_rows(long_defaults_df, economy_code)
+        if not correction_factor_df.empty:
+            long_defaults_df = pd.concat([long_defaults_df, correction_factor_df], ignore_index=True)
 
         long_defaults_df = _filter_to_static_contract(
             long_df=long_defaults_df,
