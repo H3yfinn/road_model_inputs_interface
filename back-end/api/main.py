@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import os
+import re
 from pathlib import Path
 import json
 from fastapi import FastAPI, HTTPException, Request
@@ -74,18 +75,49 @@ _results_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/road-results", StaticFiles(directory=str(_results_dir)), name="road-results")
 
 
+_DASHBOARD_DIR_RE = re.compile(r"^dashboard_\d{8}_\d{6}$")
+
+
+def _latest_dashboard_file(economy_dir: Path, filename: str) -> tuple[Path | None, str | None]:
+    """Find filename in the most recent timestamped dashboard dir.
+
+    Returns (absolute path, relative path from economy_dir) or (None, None).
+    """
+    diag_dir = economy_dir / "diagnostics"
+    if not diag_dir.is_dir():
+        return None, None
+    candidates = sorted(
+        (d for d in diag_dir.iterdir() if d.is_dir() and _DASHBOARD_DIR_RE.match(d.name)),
+        key=lambda d: d.name,
+        reverse=True,
+    )
+    for d in candidates:
+        p = d / filename
+        if p.exists():
+            return p, f"diagnostics/{d.name}/{filename}"
+    return None, None
+
+
 @app.get("/api/v1/road-results-info/{economy}", include_in_schema=False)
 async def road_results_info(economy: str) -> JSONResponse:
     """Return existence and modification times for key result files in an economy."""
     import time
     economy_dir = _results_dir / economy
-    files_to_check = [
-        f"diagnostics/dashboard/module6.html",
-        f"module6/T8_fuel_allocation.csv",
-        f"module6/T11_leap_ready.csv",
-    ]
     info = {"economy": economy, "results_dir": str(_results_dir), "files": {}}
-    for rel in files_to_check:
+
+    # Dashboard — resolve to the latest timestamped dashboard dir
+    dash_path, dash_rel = _latest_dashboard_file(economy_dir, "module6.html")
+    if dash_path and dash_rel:
+        mtime = dash_path.stat().st_mtime
+        info["files"][dash_rel] = {
+            "exists": True,
+            "modified": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(mtime)),
+            "size_kb": round(dash_path.stat().st_size / 1024, 1),
+        }
+    else:
+        info["files"]["diagnostics/dashboard/module6.html"] = {"exists": False}
+
+    for rel in [f"module6/T8_fuel_allocation.csv", f"module6/T11_leap_ready.csv"]:
         p = economy_dir / rel
         if p.exists():
             mtime = p.stat().st_mtime

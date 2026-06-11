@@ -2197,6 +2197,16 @@ function bindRoadModule1InputEvents() {
     DOM.roadInputContainer.querySelectorAll('.road-reset-button').forEach(button => {
         button.addEventListener('click', handleRoadModule1ResetClick);
     });
+    DOM.roadInputContainer.querySelectorAll('.road-boolean-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const toggle = e.currentTarget.closest('.road-boolean-toggle');
+            if (!toggle) return;
+            toggle.querySelectorAll('.road-boolean-btn').forEach(b => b.classList.remove('is-active'));
+            e.currentTarget.classList.add('is-active');
+            const rowEl = e.currentTarget.closest('.road-input-row');
+            if (rowEl) handleRoadModule1TransportParamsInputChange(rowEl);
+        });
+    });
 }
 
 function groupRoadRowsForEditors(filteredRows) {
@@ -2690,11 +2700,10 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
                     <label>${escapeHtml(year)}</label>
                     ${isBooleanToggle
                         ? `
-                        <label class="road-boolean-switch" aria-label="Toggle ${escapeHtml(labelText)} for ${escapeHtml(year)}">
-                            <input type="checkbox" class="road-boolean-switch-input" data-default-bool="${defaultChecked ? '1' : '0'}" ${currentChecked ? 'checked' : ''}>
-                            <span class="road-boolean-switch-track"></span>
-                            <span class="road-boolean-switch-label">${currentChecked ? 'True' : 'False'}</span>
-                        </label>
+                        <div class="road-view-toggle road-boolean-toggle" data-default-bool="${defaultChecked ? '1' : '0'}">
+                            <button type="button" class="road-boolean-btn${!currentChecked ? ' is-active' : ''}" data-value="0">False</button>
+                            <button type="button" class="road-boolean-btn${currentChecked ? ' is-active' : ''}" data-value="1">True</button>
+                        </div>
                         `
                         : `<input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">`
                     }
@@ -3505,18 +3514,17 @@ function handleRoadModule1TransportParamsInputChange(rowEl) {
         const year = yearEl.dataset.year;
         const key = `${rowKey}||Year=${year}`;
         const valueInput = yearEl.querySelector('.road-value-input');
-        const boolInput = yearEl.querySelector('.road-boolean-switch-input');
+        const boolToggle = yearEl.querySelector('.road-boolean-toggle');
 
         let value = '';
         let shouldPersist = false;
 
-        if (boolInput) {
-            const currentBool = Boolean(boolInput.checked);
-            const defaultBool = boolInput.dataset.defaultBool === '1';
+        if (boolToggle) {
+            const activeBtn = boolToggle.querySelector('.road-boolean-btn.is-active');
+            const currentBool = activeBtn ? activeBtn.dataset.value === '1' : false;
+            const defaultBool = boolToggle.dataset.defaultBool === '1';
             value = currentBool ? '1' : '0';
             shouldPersist = currentBool !== defaultBool || comment.length > 0;
-            const labelEl = yearEl.querySelector('.road-boolean-switch-label');
-            if (labelEl) labelEl.innerText = currentBool ? 'True' : 'False';
         } else {
             value = valueInput ? valueInput.value.trim() : '';
             shouldPersist = Boolean(value);
@@ -3548,12 +3556,12 @@ function handleRoadModule1TransportParamsResetClick(rowEl) {
         State.roadModule1.overrides.delete(`${rowKey}||Year=${year}`);
         const input = yearEl.querySelector('.road-value-input');
         if (input) input.value = '';
-        const boolInput = yearEl.querySelector('.road-boolean-switch-input');
-        if (boolInput) {
-            const defaultChecked = boolInput.dataset.defaultBool === '1';
-            boolInput.checked = defaultChecked;
-            const labelEl = yearEl.querySelector('.road-boolean-switch-label');
-            if (labelEl) labelEl.innerText = defaultChecked ? 'True' : 'False';
+        const boolToggle = yearEl.querySelector('.road-boolean-toggle');
+        if (boolToggle) {
+            const defaultBool = boolToggle.dataset.defaultBool === '1';
+            boolToggle.querySelectorAll('.road-boolean-btn').forEach(b => {
+                b.classList.toggle('is-active', b.dataset.value === (defaultBool ? '1' : '0'));
+            });
         }
     });
     const commentInput = rowEl.querySelector('.road-comment-input');
@@ -3863,6 +3871,12 @@ async function runRoadModel() {
         return;
     }
 
+    const domEconomy = DOM.roadEconomySelect?.value;
+    if (domEconomy && domEconomy !== State.roadModule1.economy) {
+        showCustomToast(`Economy selection changed to ${domEconomy} — wait for data to finish loading before running.`, "warning");
+        return;
+    }
+
     if (_roadRunEventSource) {
         _roadRunEventSource.close();
         _roadRunEventSource = null;
@@ -3935,7 +3949,7 @@ async function runRoadModel() {
                 _setRoadRunStatus('success');
                 _appendRoadRunLog(`\nCompleted successfully.`);
                 const _econ = (State.roadModule1.economy || '').replace(/^(\d+)([A-Za-z].*)$/, '$1_$2');
-                const _rawDashPath = data.dashboard_url || (_econ ? `/road-results/${_econ}/diagnostics/dashboard/index.html` : null);
+                const _rawDashPath = data.dashboard_url || null;
                 if (_rawDashPath && DOM.roadRunLogDashboard) {
                     const dashUrl = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN : ''}${_rawDashPath}`;
                     DOM.roadRunLogDashboard.classList.remove('hidden');

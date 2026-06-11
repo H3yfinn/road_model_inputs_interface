@@ -52,6 +52,27 @@ _active_runs: dict[str, tuple[asyncio.subprocess.Process, str, bool]] = {}
 # Helpers                                                                      #
 # --------------------------------------------------------------------------- #
 
+_DASHBOARD_DIR_RE = re.compile(r"^dashboard_\d{8}_\d{6}$")
+
+
+def _find_latest_dashboard_index(economy_canonical: str) -> tuple[Path | None, str | None]:
+    """Return (filesystem path, URL path) for the most recent dashboard index.html."""
+    diag_dir = _ROAD_MODEL_REPO / "results" / economy_canonical / "diagnostics"
+    if not diag_dir.is_dir():
+        return None, None
+    candidates = sorted(
+        (d for d in diag_dir.iterdir() if d.is_dir() and _DASHBOARD_DIR_RE.match(d.name)),
+        key=lambda d: d.name,
+        reverse=True,
+    )
+    for d in candidates:
+        idx = d / "index.html"
+        if idx.exists():
+            url = f"/road-results/{economy_canonical}/diagnostics/{d.name}/index.html"
+            return idx, url
+    return None, None
+
+
 def _to_canonical_economy(economy: str) -> str:
     """Convert no-underscore economy code to canonical form: '20USA' → '20_USA'."""
     if "_" in economy:
@@ -122,14 +143,7 @@ async def _sse_generator(run_id: str):
 
         dashboard_url: str | None = None
         if return_code == 0 and enable_vis:
-            candidate = (
-                _ROAD_MODEL_REPO / "results" / economy_canonical
-                / "diagnostics" / "dashboard" / "index.html"
-            )
-            if candidate.exists():
-                dashboard_url = (
-                    f"/road-results/{economy_canonical}/diagnostics/dashboard/index.html"
-                )
+            _, dashboard_url = _find_latest_dashboard_index(economy_canonical)
 
         workbook_url: str | None = None
         if return_code == 0:
