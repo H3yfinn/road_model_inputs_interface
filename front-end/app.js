@@ -200,6 +200,7 @@ const DOM = {
     roadRunLogLifecycleProfiles: document.getElementById('road-run-log-lifecycle-profiles'),
     roadRunLogReimportCsv: document.getElementById('road-run-log-reimport-csv'),
     roadDensityMore: document.getElementById('road-density-more'),
+    roadDensityUltra: document.getElementById('road-density-ultra'),
     roadRowStats: document.getElementById('road-row-stats'),
     roadValidationSummary: document.getElementById('road-validation-summary'),
     roadInputContainer: document.getElementById('road-input-container'),
@@ -742,7 +743,7 @@ function splitRoadModule1RowsByVisibility(rows) {
     const visibleRows = [];
     const hiddenRows = [];
     (Array.isArray(rows) ? rows : []).forEach(row => {
-        if (isRoadModule1ShownInInterface(row)) {
+        if (isRoadModule1ShownInInterface(row) || isRoadDriveLevelSalesShareRow(row)) {
             visibleRows.push(row);
         } else {
             hiddenRows.push(row);
@@ -925,6 +926,14 @@ function setupRoadModule1ViewControls() {
     if (DOM.roadDensityMore) {
         DOM.roadDensityMore.addEventListener('click', () => {
             State.roadModule1.dataDensity = 'more';
+            updateRoadDensityToggle();
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
+    if (DOM.roadDensityUltra) {
+        DOM.roadDensityUltra.addEventListener('click', () => {
+            State.roadModule1.dataDensity = 'ultra';
             updateRoadDensityToggle();
             renderRoadModule1Inputs();
             scheduleRoadModule1DraftSave();
@@ -1138,7 +1147,7 @@ function applyRoadModule1Draft(draft) {
     if (State.roadModule1.viewMode === 'graph' || State.roadModule1.viewMode === 'canvas') {
         State.roadModule1.viewMode = 'tree';
     }
-    State.roadModule1.dataDensity = draft.dataDensity === 'more' ? 'more' : 'less';
+    State.roadModule1.dataDensity = ['less', 'more', 'ultra'].includes(draft.dataDensity) ? draft.dataDensity : 'less';
     if (draft.turnoverConfig) {
         State.roadModule1.turnoverConfig = {
             passenger: { lower: '', upper: '', fitMode: 'auto', ...(draft.turnoverConfig.passenger || {}) },
@@ -1174,6 +1183,7 @@ function applyRoadModule1FilterControlValues() {
 function updateRoadDensityToggle() {
     if (DOM.roadDensityLess) DOM.roadDensityLess.classList.toggle('is-active', State.roadModule1.dataDensity === 'less');
     if (DOM.roadDensityMore) DOM.roadDensityMore.classList.toggle('is-active', State.roadModule1.dataDensity === 'more');
+    if (DOM.roadDensityUltra) DOM.roadDensityUltra.classList.toggle('is-active', State.roadModule1.dataDensity === 'ultra');
 }
 
 function updateRoadModule1ViewToggle() {
@@ -1191,7 +1201,7 @@ function getRoadModule1RowStats() {
     const groups = groupRoadRowsForEditors(
         rows
             .filter(row => !isRoadVehicleEquivalentBoundsRow(row))
-            .filter(row => State.roadModule1.dataDensity === 'less' ? isRoadCoreDensityRow(row) : true)
+            .filter(row => isRoadRowVisibleAtCurrentDensity(row))
     );
     const total = groups.size;
     const yearSuffix = '||Year=';
@@ -1457,7 +1467,37 @@ function isRoadMileageRow(row) {
 
 function isRoadCoreDensityRow(row) {
     const v = String(row.Variable || '').trim().toLowerCase();
+    if (isRoadDriveLevelSalesShareRow(row)) return false;
     return v === 'stock' || v === 'stock share' || v === 'sales share' || v === 'fuel economy' || v === 'mileage';
+}
+
+function isRoadSalesShareRow(row) {
+    return normalizeRoadTextToken(row?.Variable || '') === normalizeRoadTextToken('Sales Share');
+}
+
+function isRoadDriveLevelSalesShareRow(row) {
+    if (!isRoadSalesShareRow(row)) return false;
+    return getRoadPathParts(row).length >= 4;
+}
+
+function isRoadRowVisibleAtCurrentDensity(row) {
+    const density = State.roadModule1.dataDensity || 'less';
+    if (density === 'less') return isRoadCoreDensityRow(row);
+    if (density === 'more') return !isRoadDriveLevelSalesShareRow(row) || isRoadPairedFuelShareRow(row);
+    return true;
+}
+
+function getRoadSalesShareVehicleBranchPath(row) {
+    const parts = getRoadPathParts(row);
+    return parts.slice(0, Math.min(3, parts.length)).join('\\') || row['Branch Path'] || '';
+}
+
+function getRoadSalesShareMixGroupKey(row) {
+    return [
+        getRoadSalesShareVehicleBranchPath(row),
+        row.Scenario || '',
+        row.Region || ''
+    ].join('||');
 }
 
 function getRoadMileageSharedBranchPath(row) {
@@ -2223,6 +2263,19 @@ function parseRoadSeriesValues(rawText) {
         .filter(value => Number.isFinite(Number(value)));
 }
 
+function parseRoadSalesShareSeriesValues(rawText) {
+    return String(rawText || '')
+        .trim()
+        .split(/[,\t\r\n ;]+/)
+        .map(value => value.trim())
+        .filter(Boolean)
+        .filter(value => Number.isFinite(Number(value)) || isRoadRemainderToken(value));
+}
+
+function isRoadRemainderToken(value) {
+    return /^REMAINDER\s*\(\s*100\s*\)$/i.test(String(value || '').trim());
+}
+
 function getRoadSeriesRowRefs(seriesEl) {
     return JSON.parse(decodeURIComponent(seriesEl.dataset.rowRefs || '%5B%5D'));
 }
@@ -2279,6 +2332,22 @@ function groupRoadRowsForEditors(filteredRows) {
                     groupType: 'shared-utilisation',
                     branchPath: branchPath,
                     sharedKey: sharedKey,
+                    rows: []
+                });
+            }
+            groupedRows.get(groupKey).rows.push(row);
+        });
+
+    filteredRows
+        .filter(row => isRoadDriveLevelSalesShareRow(row) && !isRoadPairedFuelShareRow(row))
+        .forEach(row => {
+            const branchPath = getRoadSalesShareVehicleBranchPath(row);
+            const groupKey = `sales-share-mix|${getRoadSalesShareMixGroupKey(row)}`;
+            if (!groupedRows.has(groupKey)) {
+                groupedRows.set(groupKey, {
+                    groupType: 'sales-share-mix',
+                    branchPath: branchPath,
+                    sharedKey: '',
                     rows: []
                 });
             }
@@ -2351,7 +2420,7 @@ function groupRoadRowsForEditors(filteredRows) {
         });
 
     filteredRows
-        .filter(row => !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
+        .filter(row => !isRoadDriveLevelSalesShareRow(row) && !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
             const detailed = State.roadModule1.dataDensity === 'more';
             const useSharedMileage = isRoadMileageRow(row) && !detailed;
@@ -2510,7 +2579,9 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
                 ? 'Turnover calibration'
                 : (group.groupType === 'transport-params'
                     ? getRoadTransportParamGroupTitle(group)
-                    : (first.Variable || 'Measure'))));
+                    : (group.groupType === 'sales-share-mix'
+                        ? 'Sales share by drive type'
+                        : (first.Variable || 'Measure')))));
     return `
         <section class="road-graph-editor">
             <div class="road-graph-editor-header">
@@ -2538,7 +2609,9 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
                 ? 'Turnover calibration'
                 : (group.groupType === 'transport-params'
                     ? getRoadTransportParamGroupTitle(group)
-                    : first.Variable)));
+                    : (group.groupType === 'sales-share-mix'
+                        ? 'Sales share by drive type'
+                        : first.Variable))));
     return `
         <section class="road-group-card road-tree-editor ${isCompactGroup ? 'is-compact' : ''}" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
             <div class="road-group-header">
@@ -3188,6 +3261,65 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         `;
     }
 
+    if (group.groupType === 'sales-share-mix') {
+        const sortedRows = [...groupRows].sort((a, b) => getRoadBranchLeafLabel(a['Branch Path']).localeCompare(getRoadBranchLeafLabel(b['Branch Path']), 'en-US', { numeric: true }));
+        const yearColumns = Array.from(new Set(sortedRows.flatMap(getRoadYearColumns))).sort();
+        const rowRefs = sortedRows.map(row => {
+            const rowKey = buildRoadModule1Key(row);
+            return {
+                rowKey: rowKey,
+                keyPayload: roadModule1KeyPayload(row),
+                label: getRoadBranchLeafLabel(row['Branch Path']) || getRoadRowTitle(row),
+                years: yearColumns.map(year => ({
+                    year: year,
+                    value: getRoadDefaultValue(row, year)
+                }))
+            };
+        });
+        const comment = getRoadCommentForKeys(
+            rowRefs.map(ref => ref.rowKey),
+            yearColumns
+        );
+        const editorRowsHtml = rowRefs.map(ref => {
+            const defaultSeriesText = ref.years.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
+            const providedSeriesText = ref.years
+                .map(point => {
+                    const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${point.year}`);
+                    return override && override.value !== null && override.value !== ''
+                        ? String(override.value)
+                        : '';
+                })
+                .join(', ')
+                .replace(/(, )+$/g, '');
+            return `
+                <div class="road-sales-share-series" data-row-key="${encodeURIComponent(ref.rowKey)}" data-key-payload="${encodeURIComponent(JSON.stringify(ref.keyPayload))}">
+                    <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
+                    <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="road-input-row road-sales-share-mix-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-years="${encodeURIComponent(JSON.stringify(yearColumns))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
+                <div class="road-row-label">
+                    <div class="road-row-title">Sales share by drive type ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.salesShareMix.rowTitle)}</div>
+                    <div class="road-row-meta">${escapeHtml(yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : '')} | values are percentages</div>
+                    <div class="road-series-legend">
+                        <span><i class="default"></i>Loaded defaults in placeholder</span>
+                    </div>
+                </div>
+                <div class="road-sales-share-series-grid">
+                    ${editorRowsHtml}
+                    <div class="road-series-hint road-sales-share-warning">${escapeHtml(ROAD_VARIABLE_HELP.salesShareMix.warning)}</div>
+                </div>
+                <div class="road-row-actions road-series-actions">
+                    <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
+                </div>
+            </div>
+        `;
+    }
+
     if (group.groupType === 'age-series') {
         const sortedRows = [...groupRows].sort((a, b) => getRoadAgeFromBranchPath(a['Branch Path']) - getRoadAgeFromBranchPath(b['Branch Path']));
         const defaultPoints = sortedRows.map(row => {
@@ -3336,7 +3468,9 @@ function buildRoadModule1ListGroupHtml(group) {
                 ? 'Turnover calibration'
                 : (group.groupType === 'transport-params'
                     ? getRoadTransportParamGroupTitle(group)
-                    : first.Variable)));
+                    : (group.groupType === 'sales-share-mix'
+                        ? 'Sales share by drive type'
+                        : first.Variable))));
     const isFlagged = groupRows.some(isRoadRowFlagged);
     const flagIcon = isFlagged
         ? `<svg class="road-flag-icon" viewBox="0 0 10 13" width="10" height="13" aria-label="Key input"><path d="M1.5 1v11M1.5 1.5h7L5.5 5.5l3 4H1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -3397,7 +3531,7 @@ function renderRoadModule1Inputs() {
         textFilteredRows
             .filter(roadRowMatchesStructuredFilters)
             .filter(row => !isRoadVehicleEquivalentBoundsRow(row))
-            .filter(row => State.roadModule1.dataDensity === 'less' ? isRoadCoreDensityRow(row) : true)
+            .filter(row => isRoadRowVisibleAtCurrentDensity(row))
     );
 
     updateRoadModule1OverrideCount();
@@ -3443,6 +3577,11 @@ function handleRoadModule1InputChange(event) {
 
     if (rowEl.classList.contains('road-paired-share-row')) {
         handleRoadModule1PairedFuelShareInputChange(rowEl, event.target);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-sales-share-mix-row')) {
+        handleRoadModule1SalesShareMixInputChange(rowEl);
         return;
     }
 
@@ -3624,6 +3763,11 @@ function handleRoadModule1ResetClick(event) {
         return;
     }
 
+    if (rowEl.classList.contains('road-sales-share-mix-row')) {
+        handleRoadModule1SalesShareMixResetClick(rowEl);
+        return;
+    }
+
     if (rowEl.classList.contains('road-shared-utilisation-row')) {
         resetRoadSimpleSharedOverrideRow(rowEl, State.roadModule1.sharedUtilisationOverrides, 'sharedUtilisationKey');
         return;
@@ -3756,6 +3900,68 @@ function handleRoadModule1PairedFuelShareInputChange(rowEl, target) {
         return existing && existing.value !== null && existing.value !== '';
     }));
     updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1SalesShareMixInputChange(rowEl) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    const yearColumns = JSON.parse(decodeURIComponent(rowEl.dataset.years || '%5B%5D'));
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput ? commentInput.value.trim() : '';
+    let rowOverrideCount = 0;
+
+    rowRefs.forEach(ref => {
+        yearColumns.forEach(year => {
+            State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${year}`);
+        });
+    });
+
+    rowEl.querySelectorAll('.road-sales-share-series').forEach(seriesEl => {
+        const rowKey = decodeURIComponent(seriesEl.dataset.rowKey || '');
+        const keyPayload = JSON.parse(decodeURIComponent(seriesEl.dataset.keyPayload || '%7B%7D'));
+        const seriesInput = seriesEl.querySelector('.road-sales-share-series-input');
+        const values = parseRoadSalesShareSeriesValues(seriesInput ? seriesInput.value : '');
+        values.slice(0, yearColumns.length).forEach((value, index) => {
+            if (!value) return;
+            const year = yearColumns[index];
+            State.roadModule1.overrides.set(`${rowKey}||Year=${year}`, {
+                key: keyPayload,
+                year: year,
+                value: value,
+                comment: comment
+            });
+            rowOverrideCount += 1;
+        });
+    });
+
+    if (comment) {
+        rowRefs.forEach(ref => {
+            yearColumns.forEach(year => {
+                const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${year}`);
+                if (existing) existing.comment = comment;
+            });
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
+    updateRoadModule1OverrideCount();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1SalesShareMixResetClick(rowEl) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    const yearColumns = JSON.parse(decodeURIComponent(rowEl.dataset.years || '%5B%5D'));
+    rowRefs.forEach(ref => {
+        yearColumns.forEach(year => {
+            State.roadModule1.overrides.delete(`${ref.rowKey}||Year=${year}`);
+        });
+    });
+    rowEl.querySelectorAll('.road-sales-share-series-input').forEach(input => { input.value = ''; });
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    if (commentInput) commentInput.value = '';
+    rowEl.classList.remove('is-edited');
+    updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
     scheduleRoadModule1DraftSave();
 }
 
@@ -4070,12 +4276,12 @@ async function saveRoadModule1ResearcherOutput() {
     DOM.roadSaveStatus.innerText = "Preparing download from current values...";
     showLoading("Preparing Download...");
     try {
-        const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
-        exportRoadModule1RowsCsvClientSide(completedRows, State.roadModule1.economy);
+        const completedLongRows = buildRoadModule1CompletedLongRowsForHandoff();
+        exportRoadModule1LongRowsCsvClientSide(completedLongRows, State.roadModule1.economy);
 
         DOM.roadSaveStatus.innerText = [
             'CSV download started.',
-            `Rows: ${completedRows.length.toLocaleString('en-US')}`,
+            `Rows: ${completedLongRows.length.toLocaleString('en-US')}`,
             `Changed values: ${overrides.length.toLocaleString('en-US')}`
         ].join('\n');
 
@@ -4250,10 +4456,7 @@ async function runRoadModel() {
     showRoadRunLogModal();
 
     const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
-    const completedLongRows = [
-        ...convertRoadWideUiRowsToLongRows(completedRows, State.roadModule1.economy),
-        ...(Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [])
-    ];
+    const completedLongRows = buildRoadModule1CompletedLongRowsForHandoff();
     _appendRoadRunLog(`Sending ${completedLongRows.length.toLocaleString('en-US')} long rows to backend...`);
 
     let runId, economyCanonical;
@@ -4724,7 +4927,10 @@ function previewRoadModule1UploadedRows(uploadRows) {
         seenUploadKeys.add(key);
     });
 
-    const targetLongRows = convertRoadWideUiRowsToLongRows(State.roadModule1.rows, State.roadModule1.economy, true);
+    const targetLongRows = [
+        ...convertRoadWideUiRowsToLongRows(State.roadModule1.rows, State.roadModule1.economy, true),
+        ...(Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [])
+    ];
     const targetLongKeys = new Set(targetLongRows.map(row => getRoadModule1ComparableKeyFromRow(row)));
     const unmatchedRows = uploadRows.filter(uploadRow => !targetLongKeys.has(getRoadModule1ComparableKeyFromRow(uploadRow)));
     if (unmatchedRows.length > 0) {
@@ -4752,6 +4958,22 @@ function previewRoadModule1UploadedRows(uploadRows) {
         const yearColumn = String(uploadRow.Year || '').trim();
         const rawValue = uploadRow.Value;
         if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') return;
+
+        if (isRoadSalesShareRow(targetRow) && isRoadRemainderToken(rawValue)) {
+            const oldValue = targetRow[yearColumn];
+            if (String(oldValue ?? '').trim() === String(rawValue).trim()) return;
+            targetRow[yearColumn] = String(rawValue).trim().toUpperCase();
+            targetRow._inputStatus = 'researcher';
+            if (Object.prototype.hasOwnProperty.call(uploadRow, 'Comment')) targetRow.notes = uploadRow.Comment || targetRow.notes || '';
+            if (Object.prototype.hasOwnProperty.call(uploadRow, 'Source')) targetRow.source_name = uploadRow.Source || targetRow.source_name || '';
+            appliedCount += 1;
+            changedCells.push({
+                key: getRoadModule1ComparableKeyFromRow(uploadRow),
+                oldValue: oldValue ?? '',
+                newValue: String(rawValue).trim().toUpperCase()
+            });
+            return;
+        }
 
         const numericValue = Number(String(rawValue).replace(/,/g, '').trim());
         if (!Number.isFinite(numericValue)) {
@@ -4896,17 +5118,85 @@ function buildRoadModule1CompletedRowsForCheckpoint() {
                 .join('||');
             const targetRow = rowsByKey.get(rowKey);
             if (targetRow) {
-                targetRow[String(override.year)] = Number(override.value);
+                const numericValue = Number(override.value);
+                targetRow[String(override.year)] = Number.isFinite(numericValue) ? numericValue : String(override.value);
                 targetRow._inputStatus = 'researcher';
                 appendRoadCommentToRowNotes(targetRow, override.comment);
             }
         });
 
-    return Array.from(rowsByKey.values());
+    return normaliseRoadSalesShareMixRows(Array.from(rowsByKey.values()));
+}
+
+function normaliseRoadSalesShareMixRows(rows) {
+    const outputRows = (rows || []).map(row => ({ ...row }));
+    const groups = new Map();
+
+    outputRows
+        .filter(row => isRoadDriveLevelSalesShareRow(row) && !isRoadPairedFuelShareRow(row))
+        .forEach(row => {
+            getRoadYearColumns(row).forEach(year => {
+                const key = `${getRoadSalesShareMixGroupKey(row)}||Year=${year}`;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push({ row, year });
+            });
+        });
+
+    groups.forEach(items => {
+        const numericItems = [];
+        const remainderItems = [];
+
+        items.forEach(item => {
+            const rawValue = getRoadDefaultValue(item.row, item.year);
+            if (isRoadRemainderToken(rawValue)) {
+                remainderItems.push(item);
+                return;
+            }
+            const numeric = Number(rawValue);
+            if (Number.isFinite(numeric)) {
+                numericItems.push({ ...item, value: numeric });
+            }
+        });
+
+        const numericTotal = numericItems.reduce((sum, item) => sum + item.value, 0);
+        if (remainderItems.length > 0) {
+            const remainderValue = Math.max(0, 100 - numericTotal) / remainderItems.length;
+            remainderItems.forEach(item => {
+                item.row[String(item.year)] = remainderValue;
+                item.row._inputStatus = item.row._inputStatus === 'researcher' ? item.row._inputStatus : 'normalised';
+            });
+        }
+
+        const resolvedItems = items
+            .map(item => ({ ...item, value: Number(getRoadDefaultValue(item.row, item.year)) }))
+            .filter(item => Number.isFinite(item.value));
+        const resolvedTotal = resolvedItems.reduce((sum, item) => sum + item.value, 0);
+        if (resolvedTotal <= 0 || Math.abs(resolvedTotal - 100) <= 0.001) return;
+
+        resolvedItems.forEach(item => {
+            item.row[String(item.year)] = (item.value / resolvedTotal) * 100;
+            item.row._inputStatus = item.row._inputStatus === 'researcher' ? item.row._inputStatus : 'normalised';
+        });
+    });
+
+    return outputRows;
+}
+
+function buildRoadModule1CompletedLongRowsForHandoff() {
+    const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
+    return [
+        ...convertRoadWideUiRowsToLongRows(completedRows, State.roadModule1.economy),
+        ...(Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [])
+    ];
 }
 
 function exportRoadModule1RowsCsvClientSide(rows, economyCode, fileNameOverride = '') {
     const safeRows = convertRoadWideUiRowsToLongRows(Array.isArray(rows) ? rows : [], economyCode);
+    exportRoadModule1LongRowsCsvClientSide(safeRows, economyCode, fileNameOverride);
+}
+
+function exportRoadModule1LongRowsCsvClientSide(rows, economyCode, fileNameOverride = '') {
+    const safeRows = Array.isArray(rows) ? rows : [];
     const headers = ROAD_MODULE1_LONG_COLUMNS;
     const escapeCsv = (value) => {
         const text = value === null || value === undefined ? '' : String(value);

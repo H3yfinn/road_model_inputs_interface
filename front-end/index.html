@@ -85,6 +85,7 @@
                         <div class="road-view-toggle">
                             <button id="road-density-less" class="is-active" type="button">Less</button>
                             <button id="road-density-more" type="button">More</button>
+                            <button id="road-density-ultra" type="button">Ultra</button>
                         </div>
                         <div id="road-row-stats" class="text-xs text-slate-400 ml-auto"></div>
                         <div id="road-validation-summary" class="text-xs font-bold text-slate-500"></div>
@@ -95,6 +96,7 @@
                                 <p>This is a display filter only — modelling results are identical regardless of which setting you choose.</p>
                                 <p class="mt-2"><strong>Less</strong> shows only the core variables: stock, stock share, sales share, efficiency and mileage. Efficiency and mileage are grouped at the drive level (one shared value per drive).</p>
                                 <p class="mt-2"><strong>More</strong> adds: per-fuel efficiency, per-drive mileage, PHEV electric driving share, gasoline/diesel sales share split, reconciliation bounds and weights, age survival profiles, and transport parameters.</p>
+                                <p class="mt-2"><strong>Ultra</strong> adds editable sales-share trajectories by drive type within each vehicle type. If they do not add to 100 within a vehicle type and year, the model input CSV normalises them. Use REMAINDER(100) on one drive type to fill the remainder.</p>
                             </div>
                         </div>
                     </div>
