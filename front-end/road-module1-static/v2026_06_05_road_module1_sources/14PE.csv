@@ -7,7 +7,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Freight road,Reconciliation Weight Efficiency,2022,0.25,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (freight).,default,True
 14PE,Current Accounts,Demand\Freight road,Reconciliation Weight Mileage,2022,0.25,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (freight).,default,True
 14PE,Current Accounts,Demand\Freight road,Reconciliation Weight Stock,2022,0.5,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (freight).,default,True
-14PE,Current Accounts,Demand\Freight road,Stock,2022,0.7327679587417197,Millions,Device,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Age 0,Survival Rate,2022,100.0,%,Share,vehicle_survival_modified_00_APEC.xlsx,"Survival Rate imported from vehicle_survival_modified_00_APEC.xlsx; transport=freight, age=0.",default,True
 14PE,Current Accounts,Demand\Freight road\Age 0,Vintage Profile Share,2022,0.0,%,Share,vintage_modelled_from_survival_00_APEC.xlsx,"Vintage Profile Share imported from vintage_modelled_from_survival_00_APEC.xlsx; transport=freight, age=0.",default,True
 14PE,Current Accounts,Demand\Freight road\Age 1,Survival Rate,2022,98.35050884439848,%,Share,vehicle_survival_modified_00_APEC.xlsx,"Survival Rate imported from vehicle_survival_modified_00_APEC.xlsx; transport=freight, age=1.",default,True
@@ -90,7 +89,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Freight road\LCVs\BEV,Sales Share,2022,5.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\BEV,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\BEV\Electricity,Fuel Economy,2022,206.446117,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Freight road\LCVs\BEV\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\BEV\Electricity,Mileage,2022,0.018664954,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\ICE,Sales Share,2022,88.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\ICE,Stock Share,2022,100.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -119,7 +117,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Efuel,Fuel Economy,2022,323.5272088196731,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Efuel,Mileage,2022,20.1926463574474,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Electricity,Fuel Economy,2022,247.392226,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Electricity,Mileage,2022,0.020160302,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Gas and diesel oil,Fuel Economy,2022,323.008982229391,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\LCVs\PHEV\Gas and diesel oil,Mileage,2022,20.16030173237314,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -131,12 +128,10 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV heavy,Sales Share,2022,2.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV heavy,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV heavy\Electricity,Fuel Economy,2022,690.214671,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Freight road\Trucks\BEV heavy\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV heavy\Electricity,Mileage,2022,0.033048855,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV medium,Sales Share,2022,6.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV medium,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV medium\Electricity,Fuel Economy,2022,574.331505,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Freight road\Trucks\BEV medium\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\BEV medium\Electricity,Mileage,2022,0.028150392,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\FCEV heavy,Sales Share,2022,1.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Freight road\Trucks\FCEV heavy,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -197,7 +192,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road,Reconciliation Weight Efficiency,2022,0.25,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (passenger).,default,True
 14PE,Current Accounts,Demand\Passenger road,Reconciliation Weight Mileage,2022,0.25,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (passenger).,default,True
 14PE,Current Accounts,Demand\Passenger road,Reconciliation Weight Stock,2022,0.5,,Weight,apec_reconciliation_factors.csv,Reconciliation factor from apec_reconciliation_factors.csv (passenger).,default,True
-14PE,Current Accounts,Demand\Passenger road,Stock,2022,2.172554974129412,Millions,Device,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Age 0,Survival Rate,2022,100.0,%,Share,vehicle_survival_modified_00_APEC.xlsx,"Survival Rate imported from vehicle_survival_modified_00_APEC.xlsx; transport=passenger, age=0.",default,True
 14PE,Current Accounts,Demand\Passenger road\Age 0,Vintage Profile Share,2022,0.0,%,Share,vintage_modelled_from_survival_00_APEC.xlsx,"Vintage Profile Share imported from vintage_modelled_from_survival_00_APEC.xlsx; transport=passenger, age=0.",default,True
 14PE,Current Accounts,Demand\Passenger road\Age 1,Survival Rate,2022,98.35050884439848,%,Share,vehicle_survival_modified_00_APEC.xlsx,"Survival Rate imported from vehicle_survival_modified_00_APEC.xlsx; transport=passenger, age=1.",default,True
@@ -283,7 +277,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\Buses\BEV,Sales Share,2022,10.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Buses\BEV,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Buses\BEV\Electricity,Fuel Economy,2022,489.442152,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\Buses\BEV\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Buses\BEV\Electricity,Mileage,2022,0.034706624,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Buses\FCEV,Sales Share,2022,5.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Buses\FCEV,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -314,17 +307,14 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV large,Sales Share,2022,4.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV large,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV large\Electricity,Fuel Economy,2022,192.170678,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\BEV large\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV large\Electricity,Mileage,2022,0.012206611,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV medium,Sales Share,2022,7.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV medium,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV medium\Electricity,Fuel Economy,2022,139.507364,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\BEV medium\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV medium\Electricity,Mileage,2022,0.0122156249999999,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV small,Sales Share,2022,9.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV small,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV small\Electricity,Fuel Economy,2022,111.162748,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\BEV small\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\BEV small\Electricity,Mileage,2022,0.012418634,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large,Sales Share,2022,1.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -335,7 +325,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Efuel,Fuel Economy,2022,249.6848024770172,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Electricity,Fuel Economy,2022,268.0610866,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Gas and diesel oil,Fuel Economy,2022,220.625853610895,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV large\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -350,7 +339,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Efuel,Fuel Economy,2022,178.0033862684045,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Electricity,Fuel Economy,2022,200.9146208,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Gas and diesel oil,Fuel Economy,2022,159.5434891814326,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV medium\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -365,7 +353,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Efuel,Fuel Economy,2022,104.326509560801,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Electricity,Fuel Economy,2022,156.4928566,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Gas and diesel oil,Fuel Economy,2022,85.84551879994395,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\EREV small\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -464,7 +451,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Efuel,Fuel Economy,2022,220.9798195689181,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Electricity,Fuel Economy,2022,316.813811,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Gas and diesel oil,Fuel Economy,2022,220.6258536108951,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV large\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -479,7 +465,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Efuel,Fuel Economy,2022,159.7994562998376,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Electricity,Fuel Economy,2022,230.384176,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Gas and diesel oil,Fuel Economy,2022,159.5434891814325,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV medium\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -494,7 +479,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Efuel,Fuel Economy,2022,85.98324695286293,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Efuel,Mileage,2022,15.0,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Electricity,Fuel Economy,2022,183.3896932,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Electricity,Mileage,2022,0.014975973,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Gas and diesel oil,Fuel Economy,2022,85.84551879994395,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\LPVs\PHEV small\Gas and diesel oil,Mileage,2022,14.97597296721166,Thousands,Kilometer,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
@@ -509,7 +493,6 @@ Economy,Scenario,Branch Path,Variable,Year,Value,Scale,Units,Source,Comment,Inpu
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\BEV,Sales Share,2022,20.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\BEV,Stock Share,2022,0.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\BEV\Electricity,Fuel Economy,2022,61.121997,,MJ/100 km,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
-14PE,Current Accounts,Demand\Passenger road\Motorcycles\BEV\Electricity,Fuel Economy,2022,0.0,,MJ/100 km,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\BEV\Electricity,Mileage,2022,0.006127664,Thousands,Kilometer,manually_entered_missing_rows.csv,Loaded from manually filled missing-row source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\ICE,Sales Share,2022,80.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True
 14PE,Current Accounts,Demand\Passenger road\Motorcycles\ICE,Stock Share,2022,100.0,%,Share,road_module1_source_14PE.csv,Loaded from preprocessed Road Module 1 source.,default,True

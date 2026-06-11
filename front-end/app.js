@@ -26,6 +26,10 @@ const State = {
         sharedMileageOverrides: new Map(),
         sharedFuelEconomyOverrides: new Map(),
         sharedUtilisationOverrides: new Map(),
+        turnoverConfig: {
+            passenger: { lower: '', upper: '', fitMode: 'auto' },
+            freight:   { lower: '', upper: '', fitMode: 'auto' }
+        },
         activeFilter: '',
         structuredFilters: {
             transport: '',
@@ -1033,7 +1037,8 @@ function serializeRoadModule1Draft() {
         dataDensity: State.roadModule1.dataDensity,
         sharedMileageOverrides: Array.from(State.roadModule1.sharedMileageOverrides.values()),
         sharedFuelEconomyOverrides: Array.from(State.roadModule1.sharedFuelEconomyOverrides.values()),
-        sharedUtilisationOverrides: Array.from(State.roadModule1.sharedUtilisationOverrides.values())
+        sharedUtilisationOverrides: Array.from(State.roadModule1.sharedUtilisationOverrides.values()),
+        turnoverConfig: State.roadModule1.turnoverConfig
     };
 }
 
@@ -1132,6 +1137,12 @@ function applyRoadModule1Draft(draft) {
         State.roadModule1.viewMode = 'tree';
     }
     State.roadModule1.dataDensity = draft.dataDensity === 'more' ? 'more' : 'less';
+    if (draft.turnoverConfig) {
+        State.roadModule1.turnoverConfig = {
+            passenger: { lower: '', upper: '', fitMode: 'auto', ...(draft.turnoverConfig.passenger || {}) },
+            freight:   { lower: '', upper: '', fitMode: 'auto', ...(draft.turnoverConfig.freight   || {}) }
+        };
+    }
     State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
     applyRoadModule1FilterControlValues();
 }
@@ -2194,6 +2205,9 @@ function bindRoadModule1InputEvents() {
     DOM.roadInputContainer.querySelectorAll('.road-value-input, .road-series-input, .road-comment-input').forEach(input => {
         input.addEventListener('input', handleRoadModule1InputChange);
     });
+    DOM.roadInputContainer.querySelectorAll('.road-turnover-fitmode-select').forEach(sel => {
+        sel.addEventListener('change', handleRoadModule1InputChange);
+    });
     DOM.roadInputContainer.querySelectorAll('.road-reset-button').forEach(button => {
         button.addEventListener('click', handleRoadModule1ResetClick);
     });
@@ -2799,6 +2813,109 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
     `;
 }
 
+// ---------------------------------------------------------------------------
+// Turnover calibration panel (detailed mode only — not tied to data rows)
+// ---------------------------------------------------------------------------
+
+function buildRoadTurnoverConfigPayload() {
+    const cfg = State.roadModule1.turnoverConfig || {};
+    const defaults = { passenger: { lower: 5, upper: 8 }, freight: { lower: 6, upper: 10 } };
+    const result = {};
+    ['passenger', 'freight'].forEach(tt => {
+        const ttCfg = cfg[tt] || {};
+        const d = defaults[tt];
+        const lower = ttCfg.lower !== '' && ttCfg.lower != null ? parseFloat(ttCfg.lower) : d.lower;
+        const upper = ttCfg.upper !== '' && ttCfg.upper != null ? parseFloat(ttCfg.upper) : d.upper;
+        result[tt] = { lower, upper, fit_mode: ttCfg.fitMode || 'auto' };
+    });
+    return result;
+}
+
+function buildRoadModule1TurnoverConfigHtml() {
+    const cfg = State.roadModule1.turnoverConfig || {};
+    const DEFAULTS = { passenger: { lower: '5', upper: '8' }, freight: { lower: '6', upper: '10' } };
+
+    const componentSection = (transportType, label) => {
+        const ttCfg = cfg[transportType] || {};
+        const d = DEFAULTS[transportType];
+        const lowerVal  = (ttCfg.lower  !== '' && ttCfg.lower  != null) ? ttCfg.lower  : '';
+        const upperVal  = (ttCfg.upper  !== '' && ttCfg.upper  != null) ? ttCfg.upper  : '';
+        const fitMode   = ttCfg.fitMode || 'auto';
+        const fitOptions = [
+            ['auto',        'Auto (recommended)'],
+            ['manual',      'Manual'],
+            ['passthrough', 'Pass-through'],
+        ].map(([val, text]) =>
+            `<option value="${val}"${fitMode === val ? ' selected' : ''}>${text}</option>`
+        ).join('');
+        return `
+            <div class="road-reconciliation-component">
+                <div class="road-reconciliation-component-label">${escapeHtml(label)}</div>
+                <div class="road-year-grid">
+                    <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="lower">
+                        ${buildRoadCellLabelHtml('Lower rate %', ROAD_VARIABLE_HELP.turnoverCalibration.lowerRate)}
+                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" placeholder="${escapeHtml(d.lower)}" value="${escapeHtml(String(lowerVal))}">
+                    </div>
+                    <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="upper">
+                        ${buildRoadCellLabelHtml('Upper rate %', ROAD_VARIABLE_HELP.turnoverCalibration.upperRate)}
+                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" placeholder="${escapeHtml(d.upper)}" value="${escapeHtml(String(upperVal))}">
+                    </div>
+                    <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="fitMode">
+                        ${buildRoadCellLabelHtml('Fit mode', ROAD_VARIABLE_HELP.turnoverCalibration.fitMode)}
+                        <select class="road-value-input road-turnover-fitmode-select">${fitOptions}</select>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    return `
+        <div class="road-list-group">
+            <div class="road-input-row road-turnover-config-row">
+                <div class="road-row-label">
+                    <div class="road-row-title">Turnover calibration ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.turnoverCalibration.rowTitle)}</div>
+                    <div class="road-row-meta">Reshapes survival curves so fleet replacement rate stays within range. Defaults: passenger 5–8 %/yr, freight 6–10 %/yr.</div>
+                </div>
+                <div class="road-reconciliation-components">
+                    ${componentSection('passenger', 'Passenger')}
+                    ${componentSection('freight',   'Freight')}
+                </div>
+                <div class="road-row-actions">
+                    <button type="button" class="road-reset-button" title="Reset turnover calibration to defaults" aria-label="Reset turnover calibration">&#8634;</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function handleRoadModule1TurnoverConfigInputChange(rowEl, target) {
+    const inputEl = target.closest('.road-turnover-config-input');
+    if (!inputEl) return;
+    const transportType = inputEl.dataset.transportType;
+    const field = inputEl.dataset.field;
+    if (!transportType || !field) return;
+    if (!State.roadModule1.turnoverConfig[transportType]) {
+        State.roadModule1.turnoverConfig[transportType] = { lower: '', upper: '', fitMode: 'auto' };
+    }
+    const raw = target.value.trim();
+    if (field === 'fitMode') {
+        State.roadModule1.turnoverConfig[transportType].fitMode = raw || 'auto';
+    } else {
+        State.roadModule1.turnoverConfig[transportType][field] = raw;
+    }
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1TurnoverConfigResetClick(rowEl) {
+    State.roadModule1.turnoverConfig = {
+        passenger: { lower: '', upper: '', fitMode: 'auto' },
+        freight:   { lower: '', upper: '', fitMode: 'auto' }
+    };
+    rowEl.querySelectorAll('.road-turnover-config-input input').forEach(el => { el.value = ''; });
+    rowEl.querySelectorAll('.road-turnover-fitmode-select').forEach(el => { el.value = 'auto'; });
+    scheduleRoadModule1DraftSave();
+}
+
 function buildRoadModule1EditorRowsHtml(group, depth = 0) {
     const groupRows = group.rows;
     const first = groupRows[0];
@@ -3103,8 +3220,10 @@ function buildRoadModule1ListGroupHtml(group) {
 
 function renderRoadModule1ListInputs(filteredRows) {
     const groupedRows = groupRoadRowsForEditors(filteredRows);
+    const detailed = State.roadModule1.dataDensity === 'more';
     DOM.roadInputContainer.innerHTML = `
         <div class="road-list-view">
+            ${detailed ? buildRoadModule1TurnoverConfigHtml() : ''}
             ${[...groupedRows.values()].map(buildRoadModule1ListGroupHtml).join('')}
         </div>
     `;
@@ -3162,6 +3281,11 @@ function renderRoadModule1Inputs() {
 function handleRoadModule1InputChange(event) {
     const rowEl = event.target.closest('.road-input-row');
     if (!rowEl) return;
+
+    if (rowEl.classList.contains('road-turnover-config-row')) {
+        handleRoadModule1TurnoverConfigInputChange(rowEl, event.target);
+        return;
+    }
 
     if (rowEl.classList.contains('road-reconciliation-row')) {
         handleRoadModule1ReconciliationInputChange(rowEl, event.target);
@@ -3330,6 +3454,11 @@ function resetRoadSimpleSharedOverrideRow(rowEl, overrides, datasetKey) {
 function handleRoadModule1ResetClick(event) {
     const rowEl = event.target.closest('.road-input-row');
     if (!rowEl) return;
+
+    if (rowEl.classList.contains('road-turnover-config-row')) {
+        handleRoadModule1TurnoverConfigResetClick(rowEl);
+        return;
+    }
 
     if (rowEl.classList.contains('road-reconciliation-row')) {
         handleRoadModule1ReconciliationResetClick(rowEl);
@@ -3907,7 +4036,8 @@ async function runRoadModel() {
                 economy: State.roadModule1.economy,
                 version: State.roadModule1.version,
                 rows: completedLongRows,
-                enable_visualisations: true
+                enable_visualisations: true,
+                turnover_config: buildRoadTurnoverConfigPayload()
             })
         });
 

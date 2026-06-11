@@ -31,16 +31,32 @@ processed_source/ + manually_filled_rows/ + supplemental_source_files/
   -> front-end/road-module1-static/
 ```
 
-The supported build entry point is:
+The recommended operator entry point is the notebook-friendly workflow:
+
+```powershell
+cd C:\Users\Work\github\road_model_inputs_interface
+python back-end\workflow.py
+```
+
+The same file is designed to be opened in VS Code/Jupyter interactive mode and
+run cell-by-cell or all at once. For routine edits in `manually_filled_rows/`,
+`supplemental_source_files/`, `final_value_overrides/`, or `config/`, leave
+`RUN_PREPARE_SOURCE_FROM_LEAP_EXPORT = False`. That skips source prep and runs
+the regular build/static sync.
+
+Set `RUN_PREPARE_SOURCE_FROM_LEAP_EXPORT = True` only when the upstream workbook
+in `leap_import_workbooks/` has changed and `processed_source/` must be
+regenerated first.
+
+The lower-level build entry point is still available:
 
 ```powershell
 cd C:\Users\Work\github\road_model_inputs_interface
 python back-end\build_road_model_static_defaults.py
 ```
 
-Use only this build entry point for regular regeneration. Static CSVs are
-generated outputs and should be recreated from the source package, not edited as
-source data.
+Static CSVs are generated outputs and should be recreated from the source
+package, not edited as source data.
 
 ## Source Files
 
@@ -82,7 +98,8 @@ The current upstream source is the combined all-economies workbook in
 part of the active source package.
 
 After source prep, run the regular build so generated outputs and frontend
-static CSVs use the refreshed processed sources.
+static CSVs use the refreshed processed sources. `back-end/workflow.py` does
+both steps in order when `RUN_PREPARE_SOURCE_FROM_LEAP_EXPORT = True`.
 
 ## Source Merge
 
@@ -266,7 +283,7 @@ at it unless that is the intended test.
 
 After changing source data or the static contract:
 
-1. Run `python back-end\build_road_model_static_defaults.py`.
+1. Run `python back-end\workflow.py`.
 2. Confirm the generated package exists under
    `back-end/outputs/road_module1_defaults/<VERSION>/`.
 3. Confirm `front-end/road-module1-static/index.json` points to the intended

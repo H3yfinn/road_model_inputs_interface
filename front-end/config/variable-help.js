@@ -104,6 +104,21 @@ const ROAD_VARIABLE_HELP = {
             'Highest fuel-economy adjustment allowed. For example, 1.10 means energy use per km can be increased by up to 10%.'
     },
 
+    // Turnover calibration panel (detailed mode).
+    turnoverCalibration: {
+        rowTitle:
+            'Turnover calibration reshapes the survival curve so the implied annual fleet replacement rate stays within the specified range. A higher rate means vehicles retire faster and more new sales are needed each year. Leave blank to use APEC-wide defaults (passenger 5–8 %/yr, freight 6–10 %/yr).',
+
+        lowerRate:
+            'Minimum acceptable fleet turnover rate, entered as a percentage. For example, 5 means at least 5 % of the fleet is replaced each year (average vehicle life ≤ 20 years). The model will stretch the survival curve if the implied rate falls below this.',
+
+        upperRate:
+            'Maximum acceptable fleet turnover rate, entered as a percentage. For example, 8 means no more than 8 % of the fleet is replaced each year (average vehicle life ≥ 12.5 years). The model will compress the survival curve if the implied rate exceeds this.',
+
+        fitMode:
+            'How the survival curve is adjusted to meet the turnover bounds. Auto: binary-searches for the best scale factor automatically (recommended). Manual: applies the fixed scale factor below. Pass-through: uses the curve as-is and only warns if it is out of bounds.'
+    },
+
     // Paired gasoline/diesel share row.
     pairedFuelShare: {
         rowTitle:

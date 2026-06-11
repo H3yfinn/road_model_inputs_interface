@@ -81,6 +81,52 @@ def _to_canonical_economy(economy: str) -> str:
     return f"{match.group(1)}_{match.group(2)}" if match else economy
 
 
+def _write_lifecycle_factors_csv(turnover_config: dict[str, Any], dest_dir: Path) -> Path | None:
+    """Write a lifecycle calibration factors CSV from frontend turnover_config.
+
+    The frontend sends rates as percentages (e.g. 5 for 5 %/yr); this converts
+    them to fractions (0.05) for the road model.
+    """
+    _TRANSPORT_DEFAULTS = {
+        "passenger": {"lower": 0.05, "upper": 0.08},
+        "freight":   {"lower": 0.06, "upper": 0.10},
+    }
+    rows = []
+    for transport_type, cfg in turnover_config.items():
+        d = _TRANSPORT_DEFAULTS.get(transport_type, {"lower": 0.05, "upper": 0.08})
+        lower_pct = cfg.get("lower")
+        upper_pct = cfg.get("upper")
+        lower = float(lower_pct) / 100.0 if lower_pct is not None else d["lower"]
+        upper = float(upper_pct) / 100.0 if upper_pct is not None else d["upper"]
+        rows.append({
+            "project_code": "",
+            "economy": "",
+            "transport_type": transport_type,
+            "data_year": "",
+            "turnover_rate_lower": lower,
+            "turnover_rate_upper": upper,
+            "fit_mode": cfg.get("fit_mode", "auto"),
+            "scale_age_band_age_min": 4,
+            "scale_age_band_age_max": 15,
+            "scale_age_band_factor": 1.0,
+            "smoothing_window": 1,
+            "evidence_grade": "user",
+            "estimation_status": "user-configured",
+            "source_note": "Configured via road model interface",
+        })
+    if not rows:
+        return None
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = dest_dir / "lifecycle_factors_override.csv"
+    headers = list(rows[0].keys())
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(rows)
+    logger.info(f"Lifecycle factors CSV written: {csv_path}")
+    return csv_path
+
+
 def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -> Path:
     """Write completed Module 1 rows as CSV into leap_road_model's input_data directory."""
     economy_canonical = _to_canonical_economy(economy)
@@ -160,11 +206,11 @@ async def _sse_generator(run_id: str):
         if return_code == 0:
             lifecycle_candidate = (
                 _ROAD_MODEL_REPO / "results" / economy_canonical
-                / "lifecycle_profiles" / f"{economy_canonical}_lifecycle_profiles.zip"
+                / "lifecycle_profiles" / f"{economy_canonical}_lifecycle_profiles.xlsx"
             )
             if lifecycle_candidate.exists():
                 lifecycle_profiles_url = (
-                    f"/road-results/{economy_canonical}/lifecycle_profiles/{economy_canonical}_lifecycle_profiles.zip"
+                    f"/road-results/{economy_canonical}/lifecycle_profiles/{economy_canonical}_lifecycle_profiles.xlsx"
                 )
 
         reimport_csv_url: str | None = None
@@ -192,6 +238,7 @@ class RunModelRequest(BaseModel):
     version: str
     rows: list[dict[str, Any]]
     enable_visualisations: bool = True
+    turnover_config: dict[str, Any] | None = None
 
 
 class RunModelResponse(BaseModel):
@@ -229,6 +276,14 @@ async def start_road_model_run(payload: RunModelRequest):
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
+    lifecycle_factors_path: Path | None = None
+    if payload.turnover_config:
+        try:
+            dest_dir = _MODULE1_INPUT_DIR / payload.version / economy_canonical
+            lifecycle_factors_path = _write_lifecycle_factors_csv(payload.turnover_config, dest_dir)
+        except Exception as exc:
+            logger.warning(f"Failed to write lifecycle factors override: {exc}")
+
     cmd = [
         sys.executable,
         str(_ROAD_WORKFLOW),
@@ -240,6 +295,8 @@ async def start_road_model_run(payload: RunModelRequest):
     ]
     if payload.enable_visualisations:
         cmd.append("--vis")
+    if lifecycle_factors_path and lifecycle_factors_path.exists():
+        cmd.extend(["--lifecycle-factors-path", str(lifecycle_factors_path)])
 
     run_id = str(uuid.uuid4())
     try:

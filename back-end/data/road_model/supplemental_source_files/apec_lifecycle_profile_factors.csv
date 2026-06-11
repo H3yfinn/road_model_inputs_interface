@@ -1,3 +1,3 @@
 project_code,economy,transport_type,data_year,turnover_rate_lower,turnover_rate_upper,fit_mode,scale_age_band_age_min,scale_age_band_age_max,scale_age_band_factor,smoothing_window,evidence_grade,estimation_status,source_note
-,,passenger,2026,0.035,0.075,auto,4,15,,1,D,synthetic_estimate,APERC initial lifecycle calibration defaults for passenger road fleet
-,,freight,2026,0.050,0.090,auto,4,15,,1,D,synthetic_estimate,APERC initial lifecycle calibration defaults for freight road fleet
+,,passenger,,0.05,0.08,auto,4,15,1.0,1,default,apec-default,APEC-wide default: passenger fleet ~5-8% annual turnover (avg vehicle life 12-20 yrs)
+,,freight,,0.06,0.10,auto,4,15,1.0,1,default,apec-default,APEC-wide default: freight fleet ~6-10% annual turnover (higher utilisation and shorter life than passenger)

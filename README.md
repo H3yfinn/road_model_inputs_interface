@@ -155,9 +155,13 @@ Before committing Road Module 1 default updates:
 
 1. Update or add source files under `back-end/data/road_model/`.
 2. Record the method in `back-end/data/road_model/UPDATE_METHOD.md`.
-3. Regenerate Module 1 packages and the static CSV bundle.
+3. Regenerate Module 1 packages and the static CSV bundle with `python back-end/workflow.py`.
 4. Review changed static files under `front-end/road-module1-static/`.
 5. Commit source/method/docs/static-bundle changes together when intentional.
+
+For normal edits in `manually_filled_rows/`, run `back-end/workflow.py` as-is.
+Only set `RUN_PREPARE_SOURCE_FROM_LEAP_EXPORT = True` when the upstream workbook
+in `back-end/data/road_model/leap_import_workbooks/` has changed.
 
 ## Current focus and boundaries
 
