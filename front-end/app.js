@@ -1406,6 +1406,32 @@ function formatRoadDefaultValue(value) {
     return numeric.toLocaleString('en-US', { maximumFractionDigits: 6 });
 }
 
+function formatRoadEditableInputValue(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return '';
+    const numeric = Number(text.replace(/,/g, ''));
+    if (!Number.isFinite(numeric)) return text;
+    return String(Number(numeric.toPrecision(15)));
+}
+
+function getRoadInputValueWithDefault(override, defaultValue) {
+    return override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
+        ? formatRoadEditableInputValue(override.value)
+        : formatRoadEditableInputValue(defaultValue);
+}
+
+function roadInputValueDiffersFromDefault(value, defaultValue) {
+    const rawText = String(value ?? '').trim();
+    const defaultText = String(defaultValue ?? '').trim();
+    if (!rawText) return false;
+    const rawNumber = Number(rawText.replace(/,/g, ''));
+    const defaultNumber = Number(defaultText.replace(/,/g, ''));
+    if (Number.isFinite(rawNumber) && Number.isFinite(defaultNumber)) {
+        return Math.abs(rawNumber - defaultNumber) > 1e-9;
+    }
+    return rawText !== defaultText;
+}
+
 function formatRoadInputSourceLabel(source) {
     const normalized = String(source || '').trim().toLowerCase();
     if (!normalized || normalized === 'default') return 'provided';
@@ -2697,13 +2723,11 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
         if (!ref) return '';
         const defaultValue = getRoadDefaultValue(ref.row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
-        const inputValue = override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
-            ? override.value
-            : '';
+        const inputValue = getRoadInputValueWithDefault(override, defaultValue);
         return `
             <div class="road-year-input road-paired-share-input" data-share-role="${role}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
                 ${buildRoadCellLabelHtml(label, ROAD_VARIABLE_HELP.pairedFuelShare[role] || `${label}: enter a fraction between 0 and 1 for this transport type.`)}
-                <input type="number" step="any" ${getRoadPairedFuelShareBoundsAttrs()} class="road-value-input road-paired-share-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
+                <input type="number" step="any" ${getRoadPairedFuelShareBoundsAttrs()} class="road-value-input road-paired-share-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
     };
@@ -2747,13 +2771,12 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
         if (!ref) return '';
         const defaultValue = getRoadDefaultValue(row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
-        const inputValue = override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
-            ? override.value : '';
+        const inputValue = getRoadInputValueWithDefault(override, defaultValue);
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
             <div class="road-year-input road-reconciliation-input" data-reconciliation-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
                 ${buildRoadCellLabelHtml(label, helpText)}
-                <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
+                <input type="number" step="any" ${boundsAttrs} class="road-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
     };
@@ -2864,6 +2887,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
             const override = State.roadModule1.overrides.get(key);
             const defaultValueRaw = getRoadDefaultValue(row, year);
             const defaultValue = formatRoadDefaultValue(defaultValueRaw);
+            const inputValue = getRoadInputValueWithDefault(override, defaultValueRaw);
             const isBooleanToggle = role === 'pvs_reached';
             const defaultChecked = normalizeRoadBooleanish(defaultValueRaw);
             const currentChecked = override
@@ -2879,7 +2903,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
                             <button type="button" class="road-boolean-btn${currentChecked ? ' is-active' : ''}" data-value="1">True</button>
                         </div>
                         `
-                        : `<input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(defaultValue)}" value="${override ? escapeHtml(override.value) : ''}">`
+                        : `<input type="number" step="any" ${boundsAttrs} class="road-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValueRaw))}" value="${escapeHtml(inputValue)}">`
                     }
                 </div>
             `;
@@ -3030,13 +3054,12 @@ function buildRoadModule1TurnoverCalibrationEditorHtml(group, depth = 0) {
         if (!ref) return '';
         const defaultValue = getRoadDefaultValue(row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
-        const inputValue = override && override.value !== null && override.value !== undefined && String(override.value).trim() !== ''
-            ? override.value : '';
+        const inputValue = getRoadInputValueWithDefault(override, defaultValue);
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
             <div class="road-year-input road-turnover-calibration-input" data-turnover-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
                 ${buildRoadCellLabelHtml(label, helpText)}
-                <input type="number" step="any" ${boundsAttrs} class="road-value-input" placeholder="${escapeHtml(formatRoadDefaultValue(defaultValue))}" value="${escapeHtml(inputValue)}">
+                <input type="number" step="any" ${boundsAttrs} class="road-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
     };
@@ -3071,8 +3094,8 @@ function buildRoadModule1TurnoverConfigHtml() {
     const componentSection = (transportType, label) => {
         const ttCfg = cfg[transportType] || {};
         const d = DEFAULTS[transportType];
-        const lowerVal  = (ttCfg.lower  !== '' && ttCfg.lower  != null) ? ttCfg.lower  : '';
-        const upperVal  = (ttCfg.upper  !== '' && ttCfg.upper  != null) ? ttCfg.upper  : '';
+        const lowerVal  = (ttCfg.lower  !== '' && ttCfg.lower  != null) ? ttCfg.lower  : d.lower;
+        const upperVal  = (ttCfg.upper  !== '' && ttCfg.upper  != null) ? ttCfg.upper  : d.upper;
         const fitMode   = ttCfg.fitMode || 'auto';
         const fitOptions = [
             ['auto',        'Auto (recommended)'],
@@ -3087,11 +3110,11 @@ function buildRoadModule1TurnoverConfigHtml() {
                 <div class="road-year-grid">
                     <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="lower">
                         ${buildRoadCellLabelHtml('Lower rate %', ROAD_VARIABLE_HELP.turnoverCalibration.lowerRate)}
-                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" placeholder="${escapeHtml(d.lower)}" value="${escapeHtml(String(lowerVal))}">
+                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" data-default-value="${escapeHtml(d.lower)}" value="${escapeHtml(String(lowerVal))}">
                     </div>
                     <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="upper">
                         ${buildRoadCellLabelHtml('Upper rate %', ROAD_VARIABLE_HELP.turnoverCalibration.upperRate)}
-                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" placeholder="${escapeHtml(d.upper)}" value="${escapeHtml(String(upperVal))}">
+                        <input type="number" step="0.1" min="0" max="100" class="road-value-input" data-default-value="${escapeHtml(d.upper)}" value="${escapeHtml(String(upperVal))}">
                     </div>
                     <div class="road-year-input road-turnover-config-input" data-transport-type="${transportType}" data-field="fitMode">
                         ${buildRoadCellLabelHtml('Fit mode', ROAD_VARIABLE_HELP.turnoverCalibration.fitMode)}
@@ -3134,7 +3157,7 @@ function handleRoadModule1TurnoverConfigInputChange(rowEl, target) {
     if (field === 'fitMode') {
         State.roadModule1.turnoverConfig[transportType].fitMode = raw || 'auto';
     } else {
-        State.roadModule1.turnoverConfig[transportType][field] = raw;
+        State.roadModule1.turnoverConfig[transportType][field] = roadInputValueDiffersFromDefault(raw, target?.dataset.defaultValue || '') ? raw : '';
     }
     scheduleRoadModule1DraftSave();
 }
@@ -3144,7 +3167,7 @@ function handleRoadModule1TurnoverConfigResetClick(rowEl) {
         passenger: { lower: '', upper: '', fitMode: 'auto' },
         freight:   { lower: '', upper: '', fitMode: 'auto' }
     };
-    rowEl.querySelectorAll('.road-turnover-config-input input').forEach(el => { el.value = ''; });
+    rowEl.querySelectorAll('.road-turnover-config-input input').forEach(el => { el.value = el.dataset.defaultValue || ''; });
     rowEl.querySelectorAll('.road-turnover-fitmode-select').forEach(el => { el.value = 'auto'; });
     scheduleRoadModule1DraftSave();
 }
@@ -3176,12 +3199,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const sharedComment = getRoadSharedUtilisationComment(sharedKey, yearColumns);
         const yearInputs = yearColumns.map(year => {
             const override = State.roadModule1.sharedUtilisationOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
-            const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
+            const defaultValue = getRoadDefaultValue(first, year);
+            const inputValue = getRoadInputValueWithDefault(override, defaultValue);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
                     ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[first.Variable] || ROAD_VARIABLE_HELP.variables['PHEV Electric Driving Share']}`)}
-                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                 </div>
             `;
         }).join('');
@@ -3210,12 +3234,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             : 'One shared series is used across all drives and fuels in this vehicle type.';
         const yearInputs = yearColumns.map(year => {
             const override = State.roadModule1.sharedMileageOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
-            const providedValue = formatRoadDefaultValue(getRoadDefaultValue(first, year));
+            const defaultValue = getRoadDefaultValue(first, year);
+            const inputValue = getRoadInputValueWithDefault(override, defaultValue);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
                     ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables['Mileage']} ${mileageTooltipSuffix}`)}
-                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                 </div>
             `;
         }).join('');
@@ -3251,12 +3276,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const childNote = childCount > 1 ? ` · ${childCount} fuels` : '';
             const inputs = yearColumns.map(year => {
                 const override = State.roadModule1.sharedFuelEconomyOverrides.get(buildRoadSharedOverrideMapKey(sharedKey, year));
-                const providedValue = formatRoadDefaultValue(getRoadDefaultValue(refRow, year));
+                const defaultValue = getRoadDefaultValue(refRow, year);
+                const inputValue = getRoadInputValueWithDefault(override, defaultValue);
                 const boundsAttrs = getRoadModule1InputBoundsAttrs(refRow.Variable);
                 return `
                     <div class="road-year-input" data-year="${year}">
                         ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`)}
-                        <input type="number" step="any" class="road-value-input" ${boundsAttrs} placeholder="${escapeHtml(providedValue)}" value="${override ? escapeHtml(override.value) : ''}">
+                        <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                     </div>
                 `;
             }).join('');
@@ -3335,11 +3361,12 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 })
                 .join(', ')
                 .replace(/(, )+$/g, '');
+            const seriesText = providedSeriesText || defaultSeriesText;
             return {
                 html: `
                     <div class="road-sales-share-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}">
                         <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
-                        <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
+                        <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
                     </div>
                 `
             };
@@ -3351,7 +3378,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-row-title">Sales share by drive type ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.salesShareMix.rowTitle)}</div>
                     <div class="road-row-meta">${escapeHtml(yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : '')} | values are percentages</div>
                     <div class="road-series-legend">
-                        <span><i class="default"></i>Loaded defaults in placeholder</span>
+                        <span><i class="default"></i>Loaded defaults</span>
                     </div>
                 </div>
                 <div class="road-sales-share-series-grid">
@@ -3403,6 +3430,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             })
             .join(', ')
             .replace(/(, )+$/g, '');
+        const seriesText = providedSeriesText || defaultSeriesText;
         const seriesComment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
         const seriesTitle = `${first.Variable || getRoadRowTitle(first)} series`;
         const rowMeta = getRoadRowMeta(first, [getRoadBaseYearColumn(first)]);
@@ -3418,7 +3446,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 <div class="road-series-entry">
                     <label>Provided series (${rowRefs.length} values, age order)</label>
-                    <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" placeholder="${escapeHtml(defaultSeriesText)}">${escapeHtml(providedSeriesText)}</textarea>
+                    <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
                     <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                 </div>
                 <div class="road-row-actions road-series-actions">
@@ -3437,7 +3465,9 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const yearInputs = yearColumns.map(year => {
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
-            const defaultValue = formatRoadDefaultValue(getRoadDisplayedPlaceholderValue(row, year));
+            const defaultValueRaw = getRoadDisplayedPlaceholderValue(row, year);
+            const defaultValue = formatRoadEditableInputValue(defaultValueRaw);
+            const inputValue = getRoadInputValueWithDefault(override, defaultValueRaw);
             const inheritedValue = getRoadInheritedMileageValue(row, year);
             const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
             const isReadOnlyBaseStockShare = isStockShareRow && Number(year) === ROAD_MODULE1_BASE_YEAR;
@@ -3448,7 +3478,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             return `
                 <div class="road-year-input${isReadOnlyBaseStockShare ? ' road-stock-share-auto' : ''}" data-year="${year}">
                     ${buildRoadCellLabelHtml(cellLabel, cellHelpText)}
-                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} placeholder="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : (override ? escapeHtml(override.value) : '')}">
+                    <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} data-default-value="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : escapeHtml(inputValue)}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>
             `;
@@ -3666,8 +3696,9 @@ function handleRoadModule1InputChange(event) {
         const key = `${rowKey}||Year=${year}`;
         const valueInput = yearEl.querySelector('.road-value-input');
         const value = valueInput.value.trim();
+        const defaultValue = valueInput?.dataset.defaultValue || '';
 
-        if (!value) {
+        if (!value || !roadInputValueDiffersFromDefault(value, defaultValue)) {
             State.roadModule1.overrides.delete(key);
             return;
         }
@@ -3706,8 +3737,9 @@ function handleRoadModule1SimpleSharedInputChange(rowEl, overrides, datasetKey) 
         const key = buildRoadSharedOverrideMapKey(sharedKey, year);
         const valueInput = yearEl.querySelector('.road-value-input');
         const value = valueInput.value.trim();
+        const defaultValue = valueInput?.dataset.defaultValue || '';
 
-        if (!value) {
+        if (!value || !roadInputValueDiffersFromDefault(value, defaultValue)) {
             overrides.delete(key);
             return;
         }
@@ -3741,8 +3773,9 @@ function handleRoadModule1SharedFuelEconomyInputChange(rowEl) {
             const key = buildRoadSharedOverrideMapKey(sharedKey, year);
             const valueInput = yearEl.querySelector('.road-value-input');
             const value = valueInput.value.trim();
+            const defaultValue = valueInput?.dataset.defaultValue || '';
 
-            if (!value) {
+            if (!value || !roadInputValueDiffersFromDefault(value, defaultValue)) {
                 State.roadModule1.sharedFuelEconomyOverrides.delete(key);
                 return;
             }
@@ -3907,6 +3940,10 @@ function handleRoadModule1PairedFuelShareInputChange(rowEl, target) {
             comment: comment
         });
     };
+    const shareInputDefaultForRole = (wantedRole) => {
+        const input = rowEl.querySelector(`[data-share-role="${wantedRole}"] .road-value-input`);
+        return input?.dataset.defaultValue || '';
+    };
 
     if (role === 'gasoline' || role === 'diesel') {
         const total = 1.0;
@@ -3916,11 +3953,11 @@ function handleRoadModule1PairedFuelShareInputChange(rowEl, target) {
         target.value = safeValue;
 
         if (role === 'gasoline') {
-            setOverride(refByRole('gasoline'), safeValue);
-            setOverride(refByRole('diesel'), complementaryValue);
+            setOverride(refByRole('gasoline'), roadInputValueDiffersFromDefault(safeValue, shareInputDefaultForRole('gasoline')) ? safeValue : '');
+            setOverride(refByRole('diesel'), roadInputValueDiffersFromDefault(complementaryValue, shareInputDefaultForRole('diesel')) ? complementaryValue : '');
         } else {
-            setOverride(refByRole('diesel'), safeValue);
-            setOverride(refByRole('gasoline'), complementaryValue);
+            setOverride(refByRole('diesel'), roadInputValueDiffersFromDefault(safeValue, shareInputDefaultForRole('diesel')) ? safeValue : '');
+            setOverride(refByRole('gasoline'), roadInputValueDiffersFromDefault(complementaryValue, shareInputDefaultForRole('gasoline')) ? complementaryValue : '');
         }
 
         const gasolineInput = rowEl.querySelector('[data-share-role="gasoline"] .road-value-input');
@@ -3934,7 +3971,7 @@ function handleRoadModule1PairedFuelShareInputChange(rowEl, target) {
     } else if (role === 'tolerance') {
         const toleranceValue = parsedValue === null ? '' : Math.max(0, parsedValue);
         target.value = toleranceValue;
-        setOverride(refByRole('tolerance'), toleranceValue);
+        setOverride(refByRole('tolerance'), roadInputValueDiffersFromDefault(toleranceValue, shareInputDefaultForRole('tolerance')) ? toleranceValue : '');
     }
 
     if (comment) {
@@ -3971,8 +4008,10 @@ function handleRoadModule1SalesShareMixInputChange(rowEl) {
         const yearRefs = JSON.parse(decodeURIComponent(seriesEl.dataset.yearRefs || '%5B%5D'));
         const seriesInput = seriesEl.querySelector('.road-sales-share-series-input');
         const values = parseRoadSalesShareSeriesValues(seriesInput ? seriesInput.value : '');
+        const defaultValues = parseRoadSalesShareSeriesValues(seriesInput?.dataset.defaultSeries || '');
         values.slice(0, yearRefs.length).forEach((value, index) => {
             if (!value) return;
+            if (!roadInputValueDiffersFromDefault(value, defaultValues[index] || '')) return;
             const yearRef = yearRefs[index];
             (yearRef.refs || []).forEach(rowRef => {
                 State.roadModule1.overrides.set(`${rowRef.rowKey}||Year=${yearRef.year}`, {
@@ -4066,7 +4105,7 @@ function handleRoadModule1TransportParamsInputChange(rowEl) {
             shouldPersist = currentBool !== defaultBool || comment.length > 0;
         } else {
             value = valueInput ? valueInput.value.trim() : '';
-            shouldPersist = Boolean(value);
+            shouldPersist = Boolean(value) && roadInputValueDiffersFromDefault(value, valueInput?.dataset.defaultValue || '');
         }
 
         if (!shouldPersist) {
@@ -4107,6 +4146,7 @@ function handleRoadModule1TransportParamsResetClick(rowEl) {
     if (commentInput) commentInput.value = '';
     rowEl.classList.remove('is-edited');
     updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
     scheduleRoadModule1DraftSave();
 }
 
@@ -4155,7 +4195,8 @@ function handleRoadModule1ReconciliationInputChange(rowEl, target) {
     if (rawValue !== '' && !Number.isFinite(parsedValue)) return;
 
     if (role) {
-        setOverride(refByRole(role), parsedValue === null ? '' : parsedValue);
+        const nextValue = parsedValue === null ? '' : parsedValue;
+        setOverride(refByRole(role), roadInputValueDiffersFromDefault(nextValue, target?.dataset.defaultValue || '') ? nextValue : '');
     }
 
     if (comment) {
@@ -4215,7 +4256,6 @@ function handleRoadModule1TurnoverCalibrationInputChange(rowEl, target) {
             comment: comment
         });
     };
-
     if (isCommentInput) {
         rowEl.classList.toggle('is-edited', Boolean(comment) || rowRefs.some(ref => {
             const existing = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
@@ -4237,7 +4277,8 @@ function handleRoadModule1TurnoverCalibrationInputChange(rowEl, target) {
     if (rawValue !== '' && !Number.isFinite(parsedValue)) return;
 
     if (role) {
-        setOverride(refByRole(role), parsedValue === null ? '' : parsedValue);
+        const nextValue = parsedValue === null ? '' : parsedValue;
+        setOverride(refByRole(role), roadInputValueDiffersFromDefault(nextValue, target?.dataset.defaultValue || '') ? nextValue : '');
     }
 
     if (comment) {
@@ -4280,6 +4321,7 @@ function handleRoadModule1SeriesInputChange(rowEl) {
     const seriesInput = rowEl.querySelector('.road-series-input');
     const rowRefs = getRoadSeriesRowRefs(rowEl);
     const values = parseRoadSeriesValues(seriesInput ? seriesInput.value : '');
+    const defaultValues = parseRoadSeriesValues(seriesInput?.dataset.defaultSeries || '');
     let rowOverrideCount = 0;
 
     rowRefs.forEach(ref => {
@@ -4291,6 +4333,9 @@ function handleRoadModule1SeriesInputChange(rowEl) {
         const key = `${ref.rowKey}||Year=${ref.year}`;
 
         if (!value) {
+            return;
+        }
+        if (!roadInputValueDiffersFromDefault(value, defaultValues[index] || '')) {
             return;
         }
 
@@ -6865,3 +6910,4 @@ function handleCSVExport() {
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
+
