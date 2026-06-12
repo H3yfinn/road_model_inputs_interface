@@ -211,6 +211,7 @@ STATIC_CONTRACT_REQUIRED_COLUMNS = [*STATIC_CONTRACT_KEY_COLUMNS, "Current Accou
 STATIC_FUEL_BRANCH_EXCLUSIONS_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_static_fuel_branch_exclusions.csv"
 STATIC_FUEL_BRANCH_EXCLUSION_REASON = "0 data for fuel in esto dataset"
 STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS = ["Economy", "Branch Path", "Fuel", "Reason"]
+STATIC_LIST_DISPLAY_VARIABLES = {"Survival Rate", "Vintage Profile Share"}
 
 
 def _contract_bool(value: object, default: bool = True) -> bool:
@@ -367,6 +368,32 @@ def _filter_to_static_contract(long_df: pd.DataFrame, contract: pd.DataFrame) ->
     return filtered[MODULE1_LONG_COLUMNS].copy()
 
 
+def _is_drive_level_sales_share_row(df: pd.DataFrame) -> pd.Series:
+    """Rows edited as Ultra-mode sales-share series."""
+    branch_depth = df["Branch Path"].fillna("").astype(str).str.count(r"\\")
+    return df["Variable"].eq("Sales Share") & branch_depth.ge(3)
+
+
+def _round_static_display_values(long_df: pd.DataFrame) -> pd.DataFrame:
+    """Round values for the frontend static CSV display contract.
+
+    Series/list-style rows are rounded to whole percentages. Other numeric
+    values are rounded to 2 decimals so single-value editors stay readable.
+    """
+    if long_df.empty or "Value" not in long_df.columns:
+        return long_df
+
+    rounded = long_df.copy()
+    numeric_values = pd.to_numeric(rounded["Value"], errors="coerce")
+    list_mask = (
+        rounded["Variable"].isin(STATIC_LIST_DISPLAY_VARIABLES)
+        | _is_drive_level_sales_share_row(rounded)
+    )
+    rounded.loc[numeric_values.notna() & list_mask, "Value"] = numeric_values[list_mask].round(0)
+    rounded.loc[numeric_values.notna() & ~list_mask, "Value"] = numeric_values[~list_mask].round(2)
+    return rounded[MODULE1_LONG_COLUMNS].copy()
+
+
 def write_frontend_static_bundle(
     output_root: Path,
     static_root: Path,
@@ -414,6 +441,7 @@ def write_frontend_static_bundle(
             contract=static_contract,
             economy_code=economy_code,
         )
+        long_defaults_df = _round_static_display_values(long_defaults_df)
 
         economy_row_keys[economy_code] = set(
             zip(
