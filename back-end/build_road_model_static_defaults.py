@@ -167,7 +167,7 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
 
 
 def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, economy_code: str) -> pd.DataFrame:
-    """Build default 1.0 LEAP correction-factor rows from fuel-level Module 1 rows."""
+    """Build default 1.0 projected correction-factor rows from fuel-level Module 1 rows."""
     source_rows = long_defaults_df[
         long_defaults_df["Variable"].isin(["Mileage", "Fuel Economy"])
         & long_defaults_df["Branch Path"].astype(str).str.startswith("Demand\\")
@@ -184,7 +184,7 @@ def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, econ
         factor_variable = factor_variable_by_source.get(source_row["Variable"])
         if not factor_variable:
             continue
-        for year in range(BASE_YEAR, 2061):
+        for year in range(BASE_YEAR + 1, 2061):
             rows.append({
                 "Economy": economy_code,
                 "Scenario": "Target",

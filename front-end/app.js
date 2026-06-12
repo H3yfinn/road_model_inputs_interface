@@ -2212,6 +2212,9 @@ function getRoadYearColumns(row) {
         .filter(column => /^\d{4}$/.test(column) && isRoadEditableYear(column))
         .sort();
     if (wideYearColumns.length > 0) {
+        if (isRoadCorrectionFactorRow(row)) {
+            return wideYearColumns.filter(column => Number(column) > ROAD_MODULE1_BASE_YEAR);
+        }
         if (isRoadVehicleTypeStockShareRow(row)) return wideYearColumns;
         const populatedColumns = wideYearColumns.filter(column => {
             const value = row[column];
@@ -3449,48 +3452,75 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
     if (group.groupType === 'age-series' || group.groupType === 'time-series') {
         const isTimeSeries = group.groupType === 'time-series';
         const sortedRows = isTimeSeries
-            ? [...groupRows].sort((a, b) => Number(getRoadBaseYearColumn(a)) - Number(getRoadBaseYearColumn(b)))
+            ? [groupRows[0]].filter(Boolean)
             : [...groupRows].sort((a, b) => getRoadAgeFromBranchPath(a['Branch Path']) - getRoadAgeFromBranchPath(b['Branch Path']));
-        const defaultPoints = sortedRows.map(row => {
-            const year = getRoadBaseYearColumn(row);
-            const xValue = isTimeSeries ? Number(year) : getRoadAgeFromBranchPath(row['Branch Path']);
-            return {
-                age: xValue,
-                value: getRoadDefaultValue(row, year)
-            };
-        });
-        const providedPoints = [];
-        const rowRefs = sortedRows.map(row => {
-            const year = getRoadBaseYearColumn(row);
-            const xValue = isTimeSeries ? Number(year) : getRoadAgeFromBranchPath(row['Branch Path']);
-            const rowKey = buildRoadModule1Key(row);
-            const key = `${rowKey}||Year=${year}`;
-            const override = State.roadModule1.overrides.get(key);
-            if (override && override.value !== null && override.value !== '') {
-                providedPoints.push({ age: xValue, value: override.value });
-            }
-            return {
-                age: xValue,
+        const timeSeriesRow = isTimeSeries ? sortedRows[0] : null;
+        const yearColumns = isTimeSeries ? getRoadYearColumns(timeSeriesRow) : [];
+        const defaultPoints = isTimeSeries
+            ? yearColumns.map(year => ({
+                age: Number(year),
+                value: getRoadDefaultValue(timeSeriesRow, year)
+            }))
+            : sortedRows.map(row => {
+                const year = getRoadBaseYearColumn(row);
+                return {
+                    age: getRoadAgeFromBranchPath(row['Branch Path']),
+                    value: getRoadDefaultValue(row, year)
+                };
+            });
+        const providedPoints = isTimeSeries
+            ? yearColumns
+                .map(year => {
+                    const override = State.roadModule1.overrides.get(`${buildRoadModule1Key(timeSeriesRow)}||Year=${year}`);
+                    return override && override.value !== null && override.value !== ''
+                        ? { age: Number(year), value: override.value }
+                        : null;
+                })
+                .filter(Boolean)
+            : [];
+        const rowRefs = isTimeSeries
+            ? yearColumns.map(year => ({
+                age: Number(year),
                 year: year,
-                rowKey: rowKey,
-                keyPayload: roadModule1KeyPayload(row)
-            };
-        });
+                rowKey: buildRoadModule1Key(timeSeriesRow),
+                keyPayload: roadModule1KeyPayload(timeSeriesRow)
+            }))
+            : sortedRows.map(row => {
+                const year = getRoadBaseYearColumn(row);
+                return {
+                    age: getRoadAgeFromBranchPath(row['Branch Path']),
+                    year: year,
+                    rowKey: buildRoadModule1Key(row),
+                    keyPayload: roadModule1KeyPayload(row)
+                };
+            });
         const defaultSeriesText = defaultPoints.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
-        const providedSeriesText = rowRefs
-            .map(ref => {
-                const key = `${ref.rowKey}||Year=${ref.year}`;
-                const override = State.roadModule1.overrides.get(key);
-                return override && override.value !== null && override.value !== ''
-                    ? formatRoadSeriesInputValue(override.value)
-                    : '';
-            })
-            .join(', ')
-            .replace(/(, )+$/g, '');
+        const providedSeriesText = isTimeSeries
+            ? yearColumns
+                .map(year => {
+                    const override = State.roadModule1.overrides.get(`${buildRoadModule1Key(timeSeriesRow)}||Year=${year}`);
+                    return override && override.value !== null && override.value !== ''
+                        ? formatRoadSeriesInputValue(override.value)
+                        : '';
+                })
+                .join(', ')
+                .replace(/(, )+$/g, '')
+            : rowRefs
+                .map(ref => {
+                    const key = `${ref.rowKey}||Year=${ref.year}`;
+                    const override = State.roadModule1.overrides.get(key);
+                    return override && override.value !== null && override.value !== ''
+                        ? formatRoadSeriesInputValue(override.value)
+                        : '';
+                })
+                .join(', ')
+                .replace(/(, )+$/g, '');
         const seriesText = providedSeriesText || defaultSeriesText;
         const seriesComment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
         const seriesTitle = `${first.Variable || getRoadRowTitle(first)} series`;
-        const rowMeta = getRoadRowMeta(first, [getRoadBaseYearColumn(first)]);
+        const rowMeta = isTimeSeries
+            ? `${yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : ''}${first.Units ? ` | ${first.Units}` : ''}`
+            : getRoadRowMeta(first, [getRoadBaseYearColumn(first)]);
         const xStart = defaultPoints[0]?.age ?? '';
         const xEnd = defaultPoints[defaultPoints.length - 1]?.age ?? '';
         const orderLabel = isTimeSeries ? 'year order' : 'age order';

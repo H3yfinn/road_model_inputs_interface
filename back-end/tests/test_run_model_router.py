@@ -120,10 +120,10 @@ def test_stream_404_unknown_run_id(client):
 
 
 def test_road_model_docs_served_from_model_repo(client):
-    response = client.get("/road-model-docs/road_transport_model_simplified.md")
+    response = client.get("/road-model-docs/road_transport_model_overview.md")
 
     assert response.status_code == 200
-    assert "compact conceptual description" in response.text
+    assert "plain-English overview" in response.text
 
 
 # ---------------------------------------------------------------------------
