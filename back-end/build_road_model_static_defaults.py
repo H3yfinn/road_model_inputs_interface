@@ -211,7 +211,7 @@ STATIC_CONTRACT_REQUIRED_COLUMNS = [*STATIC_CONTRACT_KEY_COLUMNS, "Current Accou
 STATIC_FUEL_BRANCH_EXCLUSIONS_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_static_fuel_branch_exclusions.csv"
 STATIC_FUEL_BRANCH_EXCLUSION_REASON = "0 data for fuel in esto dataset"
 STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS = ["Economy", "Branch Path", "Fuel", "Reason"]
-STATIC_LIST_DISPLAY_VARIABLES = {"Survival Rate", "Vintage Profile Share"}
+STATIC_NO_DISPLAY_ROUND_VARIABLES = {"Survival Rate", "Vintage Profile Share"}
 
 
 def _contract_bool(value: object, default: bool = True) -> bool:
@@ -377,20 +377,20 @@ def _is_drive_level_sales_share_row(df: pd.DataFrame) -> pd.Series:
 def _round_static_display_values(long_df: pd.DataFrame) -> pd.DataFrame:
     """Round values for the frontend static CSV display contract.
 
-    Series/list-style rows are rounded to whole percentages. Other numeric
-    values are rounded to 2 decimals so single-value editors stay readable.
+    Ultra sales-share rows are rounded to whole percentages. Survival and
+    vintage profile rows keep their source precision because coarse rounding
+    makes those curves look jagged. Other numeric values are rounded to 2
+    decimals so single-value editors stay readable.
     """
     if long_df.empty or "Value" not in long_df.columns:
         return long_df
 
     rounded = long_df.copy()
     numeric_values = pd.to_numeric(rounded["Value"], errors="coerce")
-    list_mask = (
-        rounded["Variable"].isin(STATIC_LIST_DISPLAY_VARIABLES)
-        | _is_drive_level_sales_share_row(rounded)
-    )
+    no_round_mask = rounded["Variable"].isin(STATIC_NO_DISPLAY_ROUND_VARIABLES)
+    list_mask = _is_drive_level_sales_share_row(rounded)
     rounded.loc[numeric_values.notna() & list_mask, "Value"] = numeric_values[list_mask].round(0)
-    rounded.loc[numeric_values.notna() & ~list_mask, "Value"] = numeric_values[~list_mask].round(2)
+    rounded.loc[numeric_values.notna() & ~list_mask & ~no_round_mask, "Value"] = numeric_values[~list_mask & ~no_round_mask].round(2)
     return rounded[MODULE1_LONG_COLUMNS].copy()
 
 

@@ -2347,6 +2347,26 @@ function updateRoadSeriesChart(seriesEl) {
     chartEl.innerHTML = buildRoadSeriesSvg(defaultPoints, getRoadSeriesProvidedPoints(seriesEl));
 }
 
+function getRoadSalesShareSeriesProvidedPoints(seriesEl) {
+    const yearRefs = JSON.parse(decodeURIComponent(seriesEl.dataset.yearRefs || '%5B%5D'));
+    const values = parseRoadSalesShareSeriesValues(seriesEl.querySelector('.road-sales-share-series-input')?.value || '');
+    return values.slice(0, yearRefs.length)
+        .filter(value => Number.isFinite(Number(value)))
+        .map((value, index) => ({
+            age: Number(yearRefs[index]?.year),
+            value: value
+        }));
+}
+
+function updateRoadSalesShareSeriesCharts(rowEl) {
+    rowEl.querySelectorAll('.road-sales-share-series').forEach(seriesEl => {
+        const defaultPoints = JSON.parse(decodeURIComponent(seriesEl.dataset.defaultPoints || '%5B%5D'));
+        const chartEl = seriesEl.querySelector('.road-series-chart-wrap');
+        if (!chartEl) return;
+        chartEl.innerHTML = buildRoadSeriesSvg(defaultPoints, getRoadSalesShareSeriesProvidedPoints(seriesEl));
+    });
+}
+
 function bindRoadModule1InputEvents() {
     DOM.roadInputContainer.querySelectorAll('.road-value-input, .road-series-input, .road-comment-input').forEach(input => {
         input.addEventListener('input', handleRoadModule1InputChange);
@@ -2397,6 +2417,28 @@ function groupRoadRowsForEditors(filteredRows) {
             if (!groupedRows.has(groupKey)) {
                 groupedRows.set(groupKey, {
                     groupType: 'sales-share-mix',
+                    branchPath: branchPath,
+                    sharedKey: '',
+                    rows: []
+                });
+            }
+            groupedRows.get(groupKey).rows.push(row);
+        });
+
+    filteredRows
+        .filter(isRoadCorrectionFactorRow)
+        .forEach(row => {
+            const branchPath = row['Branch Path'] || '';
+            const groupKey = [
+                'time-series',
+                branchPath,
+                row.Variable || '',
+                row.Scenario || '',
+                row.Region || ''
+            ].join('|');
+            if (!groupedRows.has(groupKey)) {
+                groupedRows.set(groupKey, {
+                    groupType: 'time-series',
                     branchPath: branchPath,
                     sharedKey: '',
                     rows: []
@@ -2471,7 +2513,7 @@ function groupRoadRowsForEditors(filteredRows) {
         });
 
     filteredRows
-        .filter(row => !isRoadDriveLevelSalesShareRow(row) && !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
+        .filter(row => !isRoadDriveLevelSalesShareRow(row) && !isRoadCorrectionFactorRow(row) && !isRoadTransportLevelSharedRow(row) && !isRoadPairedFuelShareRow(row) && !isRoadReconciliationControlRow(row) && !isRoadTurnoverCalibrationControlRow(row) && !isRoadTransportParamRow(row))
         .forEach(row => {
             const detailed = State.roadModule1.dataDensity !== 'less';
             const useSharedMileage = isRoadMileageRow(row) && !detailed;
@@ -3351,6 +3393,10 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         );
         const editorRowsHtml = rowRefs.map(ref => {
             const defaultSeriesText = ref.yearRefs.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
+            const defaultPoints = ref.yearRefs.map(point => ({
+                age: Number(point.year),
+                value: point.value
+            }));
             const providedSeriesText = ref.yearRefs
                 .map(point => {
                     for (const rowRef of point.refs) {
@@ -3362,11 +3408,18 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 .join(', ')
                 .replace(/(, )+$/g, '');
             const seriesText = providedSeriesText || defaultSeriesText;
+            const providedPoints = parseRoadSalesShareSeriesValues(providedSeriesText)
+                .filter(value => Number.isFinite(Number(value)))
+                .map((value, index) => ({
+                    age: Number(ref.yearRefs[index]?.year),
+                    value: value
+                }));
             return {
                 html: `
-                    <div class="road-sales-share-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}">
+                    <div class="road-sales-share-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}">
                         <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
                         <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
+                        <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
                     </div>
                 `
             };
@@ -3393,27 +3446,31 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         `;
     }
 
-    if (group.groupType === 'age-series') {
-        const sortedRows = [...groupRows].sort((a, b) => getRoadAgeFromBranchPath(a['Branch Path']) - getRoadAgeFromBranchPath(b['Branch Path']));
+    if (group.groupType === 'age-series' || group.groupType === 'time-series') {
+        const isTimeSeries = group.groupType === 'time-series';
+        const sortedRows = isTimeSeries
+            ? [...groupRows].sort((a, b) => Number(getRoadBaseYearColumn(a)) - Number(getRoadBaseYearColumn(b)))
+            : [...groupRows].sort((a, b) => getRoadAgeFromBranchPath(a['Branch Path']) - getRoadAgeFromBranchPath(b['Branch Path']));
         const defaultPoints = sortedRows.map(row => {
             const year = getRoadBaseYearColumn(row);
+            const xValue = isTimeSeries ? Number(year) : getRoadAgeFromBranchPath(row['Branch Path']);
             return {
-                age: getRoadAgeFromBranchPath(row['Branch Path']),
+                age: xValue,
                 value: getRoadDefaultValue(row, year)
             };
         });
         const providedPoints = [];
         const rowRefs = sortedRows.map(row => {
-            const age = getRoadAgeFromBranchPath(row['Branch Path']);
             const year = getRoadBaseYearColumn(row);
+            const xValue = isTimeSeries ? Number(year) : getRoadAgeFromBranchPath(row['Branch Path']);
             const rowKey = buildRoadModule1Key(row);
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
             if (override && override.value !== null && override.value !== '') {
-                providedPoints.push({ age: age, value: override.value });
+                providedPoints.push({ age: xValue, value: override.value });
             }
             return {
-                age: age,
+                age: xValue,
                 year: year,
                 rowKey: rowKey,
                 keyPayload: roadModule1KeyPayload(row)
@@ -3434,18 +3491,22 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         const seriesComment = getRoadCommentForKeys(rowRefs.map(ref => ref.rowKey), rowRefs.map(ref => ref.year));
         const seriesTitle = `${first.Variable || getRoadRowTitle(first)} series`;
         const rowMeta = getRoadRowMeta(first, [getRoadBaseYearColumn(first)]);
+        const xStart = defaultPoints[0]?.age ?? '';
+        const xEnd = defaultPoints[defaultPoints.length - 1]?.age ?? '';
+        const orderLabel = isTimeSeries ? 'year order' : 'age order';
+        const rangeLabel = isTimeSeries ? `years ${xStart}-${xEnd}` : `ages ${xStart}-${xEnd}`;
         return `
             <div class="road-input-row road-series-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}" data-key-payload="${encodeURIComponent(JSON.stringify(roadModule1KeyPayload(first)))}">
                 <div class="road-row-label">
                     <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}${first.review_reason ? ` ${buildRoadInfoTooltip(first.review_reason)}` : ROAD_VARIABLE_HELP.variables[first.Variable] ? ` ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[first.Variable])}` : ''}</div>
-                    <div class="road-row-meta">${escapeHtml(rowMeta)} | ages ${defaultPoints[0]?.age ?? ''}-${defaultPoints[defaultPoints.length - 1]?.age ?? ''}</div>
+                    <div class="road-row-meta">${escapeHtml(rowMeta)} | ${escapeHtml(rangeLabel)}</div>
                     <div class="road-series-legend">
                         <span><i class="default"></i>Loaded</span>
                         <span><i class="provided"></i>Entered</span>
                     </div>
                 </div>
                 <div class="road-series-entry">
-                    <label>Provided series (${rowRefs.length} values, age order)</label>
+                    <label>Provided series (${rowRefs.length} values, ${escapeHtml(orderLabel)})</label>
                     <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
                     <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                 </div>
@@ -4038,6 +4099,7 @@ function handleRoadModule1SalesShareMixInputChange(rowEl) {
 
     rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
     updateRoadModule1OverrideCount();
+    updateRoadSalesShareSeriesCharts(rowEl);
     scheduleRoadModule1DraftSave();
 }
 

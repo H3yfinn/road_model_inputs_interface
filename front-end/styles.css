@@ -1225,7 +1225,7 @@ body.road-panel-resizing * {
 
 .road-sales-share-series {
     display: grid;
-    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
+    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr) minmax(10rem, 14rem);
     align-items: start;
     gap: 0.45rem;
 }
@@ -1243,6 +1243,15 @@ body.road-panel-resizing * {
 .road-sales-share-series-input {
     min-height: 2.75rem;
     resize: vertical;
+}
+
+.road-sales-share-series .road-series-chart-wrap {
+    min-height: 3.2rem;
+    padding: 0.15rem;
+}
+
+.road-sales-share-series .road-series-chart {
+    height: 3rem;
 }
 
 .road-sales-share-warning {
