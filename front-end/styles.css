@@ -1732,6 +1732,18 @@ body.road-panel-resizing * {
         grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
     }
 
+    .road-sales-share-mix-row {
+        grid-template-columns: minmax(240px, 1fr);
+    }
+
+    .road-sales-share-series {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .road-sales-share-label {
+        white-space: normal;
+    }
+
     .road-series-row {
         grid-template-columns: minmax(240px, 1fr);
     }
@@ -1760,6 +1772,18 @@ body.road-panel-resizing * {
 
     .road-series-row {
         grid-template-columns: minmax(240px, 1fr);
+    }
+
+    .road-sales-share-mix-row {
+        grid-template-columns: minmax(240px, 1fr);
+    }
+
+    .road-sales-share-series {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .road-sales-share-label {
+        white-space: normal;
     }
 
     .road-row-actions {

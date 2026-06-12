@@ -169,6 +169,12 @@ document.getElementById('content').innerHTML = marked.parse(md);
 </html>
 """
 
+_DOC_TITLE_OVERRIDES = {
+    "road_transport_model_overview": "Road Transport Model Overview",
+    "road_transport_model_simplified": "Road Transport Model Guide",
+    "road_transport_model_detailed": "Road Transport Model Workflow",
+}
+
 
 @app.get("/road-model-docs/{filepath:path}", include_in_schema=False, response_model=None)
 async def serve_road_model_docs(filepath: str) -> HTMLResponse | FileResponse:
@@ -181,7 +187,10 @@ async def serve_road_model_docs(filepath: str) -> HTMLResponse | FileResponse:
         raise HTTPException(status_code=404)
     if filepath.lower().endswith(".md"):
         content = full_path.read_text(encoding="utf-8-sig")
-        title = full_path.stem.replace("_", " ").title()
+        title = _DOC_TITLE_OVERRIDES.get(
+            full_path.stem,
+            full_path.stem.replace("_", " ").title(),
+        )
         html = _MD_PAGE_TEMPLATE.format(
             title=title,
             content_json=json.dumps(content),
