@@ -1216,6 +1216,7 @@ body.road-panel-resizing * {
 .road-sales-share-mix-row {
     grid-template-columns: minmax(230px, 0.8fr) minmax(300px, 1.4fr) minmax(260px, 320px);
     align-items: start;
+    --road-sales-share-control-height: 3rem;
 }
 
 .road-sales-share-mix-row .road-row-actions {
@@ -1246,8 +1247,10 @@ body.road-panel-resizing * {
 }
 
 .road-sales-share-series-input {
-    min-height: 2.75rem;
-    resize: vertical;
+    height: var(--road-sales-share-control-height);
+    min-height: var(--road-sales-share-control-height);
+    resize: none;
+    overflow-y: auto;
 }
 
 .road-sales-share-chart-item {
@@ -1268,12 +1271,13 @@ body.road-panel-resizing * {
 }
 
 .road-sales-share-chart-item .road-series-chart-wrap {
-    min-height: 3.2rem;
+    height: var(--road-sales-share-control-height);
+    min-height: var(--road-sales-share-control-height);
     padding: 0.15rem;
 }
 
 .road-sales-share-chart-item .road-series-chart {
-    height: 3rem;
+    height: calc(var(--road-sales-share-control-height) - 0.3rem);
 }
 
 .road-sales-share-warning {
