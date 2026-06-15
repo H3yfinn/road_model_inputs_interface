@@ -1214,7 +1214,12 @@ body.road-panel-resizing * {
 }
 
 .road-sales-share-mix-row {
+    grid-template-columns: minmax(230px, 0.8fr) minmax(300px, 1.4fr) minmax(260px, 320px);
     align-items: start;
+}
+
+.road-sales-share-mix-row .road-row-actions {
+    justify-content: flex-start;
 }
 
 .road-sales-share-series-grid {
@@ -1225,7 +1230,7 @@ body.road-panel-resizing * {
 
 .road-sales-share-series {
     display: grid;
-    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr) minmax(10rem, 14rem);
+    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
     align-items: start;
     gap: 0.45rem;
 }
@@ -1245,12 +1250,29 @@ body.road-panel-resizing * {
     resize: vertical;
 }
 
-.road-sales-share-series .road-series-chart-wrap {
+.road-sales-share-chart-item {
+    display: grid;
+    grid-template-columns: minmax(2rem, 3rem) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.road-sales-share-chart-label {
+    color: #475569;
+    font-size: 0.63rem;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.road-sales-share-chart-item .road-series-chart-wrap {
     min-height: 3.2rem;
     padding: 0.15rem;
 }
 
-.road-sales-share-series .road-series-chart {
+.road-sales-share-chart-item .road-series-chart {
     height: 3rem;
 }
 
@@ -1732,32 +1754,6 @@ body.road-panel-resizing * {
         grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
     }
 
-    .road-sales-share-mix-row {
-        grid-template-columns: minmax(240px, 1fr);
-    }
-
-    .road-sales-share-series {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .road-sales-share-label {
-        white-space: normal;
-    }
-
-    .road-series-row {
-        grid-template-columns: minmax(240px, 1fr);
-    }
-
-    .road-row-actions {
-        grid-column: 1 / -1;
-    }
-}
-
-@media (max-width: 1150px) {
-    .road-input-row {
-        grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
-    }
-
     .road-input-row.no-row-label {
         grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
     }
@@ -1784,6 +1780,10 @@ body.road-panel-resizing * {
 
     .road-sales-share-label {
         white-space: normal;
+    }
+
+    .road-sales-share-chart-item {
+        grid-template-columns: minmax(2rem, 3rem) minmax(0, 1fr);
     }
 
     .road-row-actions {

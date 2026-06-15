@@ -2362,9 +2362,11 @@ function getRoadSalesShareSeriesProvidedPoints(seriesEl) {
 }
 
 function updateRoadSalesShareSeriesCharts(rowEl) {
-    rowEl.querySelectorAll('.road-sales-share-series').forEach(seriesEl => {
+    const seriesEls = [...rowEl.querySelectorAll('.road-sales-share-series')];
+    const chartEls = [...rowEl.querySelectorAll('.road-sales-share-chart-item .road-series-chart-wrap')];
+    seriesEls.forEach((seriesEl, index) => {
         const defaultPoints = JSON.parse(decodeURIComponent(seriesEl.dataset.defaultPoints || '%5B%5D'));
-        const chartEl = seriesEl.querySelector('.road-series-chart-wrap');
+        const chartEl = chartEls[index];
         if (!chartEl) return;
         chartEl.innerHTML = buildRoadSeriesSvg(defaultPoints, getRoadSalesShareSeriesProvidedPoints(seriesEl));
     });
@@ -3394,7 +3396,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             allKeyYears.map(item => item.rowKey),
             allKeyYears.map(item => item.year)
         );
-        const editorRowsHtml = rowRefs.map(ref => {
+        const editorItems = rowRefs.map(ref => {
             const defaultSeriesText = ref.yearRefs.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
             const defaultPoints = ref.yearRefs.map(point => ({
                 age: Number(point.year),
@@ -3418,15 +3420,22 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     value: value
                 }));
             return {
-                html: `
+                seriesHtml: `
                     <div class="road-sales-share-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}">
                         <div class="road-sales-share-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
                         <textarea class="road-series-input road-sales-share-series-input road-value-input" rows="2" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
+                    </div>
+                `,
+                chartHtml: `
+                    <div class="road-sales-share-chart-item">
+                        <div class="road-sales-share-chart-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
                         <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
                     </div>
                 `
             };
-        }).map(item => item.html).join('');
+        });
+        const editorRowsHtml = editorItems.map(item => item.seriesHtml).join('');
+        const chartsHtml = editorItems.map(item => item.chartHtml).join('');
 
         return `
             <div class="road-input-row road-sales-share-mix-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-years="${encodeURIComponent(JSON.stringify(yearColumns))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
@@ -3435,6 +3444,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-row-meta">${escapeHtml(yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : '')} | values are percentages</div>
                     <div class="road-series-legend">
                         <span><i class="default"></i>Loaded defaults</span>
+                        <span><i class="provided"></i>Entered</span>
                     </div>
                 </div>
                 <div class="road-sales-share-series-grid">
@@ -3442,6 +3452,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-series-hint road-sales-share-warning">${escapeHtml(ROAD_VARIABLE_HELP.salesShareMix.warning)} ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                 </div>
                 <div class="road-row-actions road-series-actions">
+                    ${chartsHtml}
                     <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
                 </div>
