@@ -79,31 +79,19 @@
                             </div>
                             <select id="road-economy-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none"></select>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-1.5 mb-1">
-                                <label class="block text-xs font-semibold text-slate-500">Scenario</label>
-                                <div class="relative group flex-shrink-0">
-                                    <button class="road-help-button" aria-label="Explain Scenario">?</button>
-                                    <div class="road-help-tooltip road-version-tooltip">
-                                        <h4>Scenario</h4>
-                                        <p>Current Accounts is the locked base-year anchor. Projection scenarios contain editable future-year assumptions and must match configured LEAP scenario names before running the model.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <select id="road-scenario-select" class="w-full text-sm border-slate-300 rounded-md p-2 border bg-white outline-none"></select>
-                        </div>
                         <div class="rounded-md border border-slate-200 bg-white p-3">
                             <div class="flex items-center gap-1.5 mb-2">
-                                <label class="block text-xs font-semibold text-slate-500">Scenarios to run</label>
+                                <label class="block text-xs font-semibold text-slate-500">Projection scenarios</label>
                                 <div class="relative group flex-shrink-0">
                                     <button class="road-help-button" aria-label="Explain scenarios to run">?</button>
                                     <div class="road-help-tooltip road-version-tooltip">
-                                        <h4>Scenarios to run</h4>
-                                        <p>Tick the projection scenarios to include in the next model run. Unticked scenarios stay in the working CSV and can still be edited or downloaded.</p>
+                                        <h4>Projection scenarios</h4>
+                                        <p>All loaded projection scenarios are visible in the table by default. Tick the scenarios to include in the next model run; unticked scenarios stay in the working CSV and can still be edited or downloaded.</p>
                                     </div>
                                 </div>
                             </div>
                             <div id="road-run-scenario-list" class="space-y-1.5 text-xs text-slate-700"></div>
+                            <select id="road-scenario-select" class="mt-2 w-full text-xs border-slate-300 rounded-md p-1.5 border bg-white outline-none"></select>
                         </div>
                         <input id="road-provided-file-input" type="file" accept=".csv" class="hidden">
                     </div>
@@ -132,8 +120,8 @@
                     </div>
                     <div class="road-filter-grid">
                         <div>
-                            <label>Transport type</label>
-                            <select id="road-filter-transport" class="road-filter-select"></select>
+                            <label>Scenario</label>
+                            <select id="road-filter-scenario" class="road-filter-select"></select>
                         </div>
                         <div>
                             <label>Vehicle type</label>

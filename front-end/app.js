@@ -20,7 +20,7 @@ const State = {
         economy: null,
         scenario: 'Target',
         scenarios: ['Current Accounts', 'Target'],
-        runScenarios: ['Target'],
+        runScenarios: [],
         configuredScenarios: ['Current Accounts', 'Reference', 'Target'],
         keyColumns: [],
         rows: [],
@@ -35,7 +35,7 @@ const State = {
         },
         activeFilter: '',
         structuredFilters: {
-            transport: '',
+            scenario: '',
             vehicle: '',
             drive: '',
             measure: ''
@@ -188,7 +188,7 @@ const DOM = {
     roadLeftPanel: document.getElementById('road-left-panel'),
     roadLeftResizer: document.getElementById('road-left-resizer'),
     roadFilterInput: document.getElementById('road-filter-input'),
-    roadFilterTransport: document.getElementById('road-filter-transport'),
+    roadFilterScenario: document.getElementById('road-filter-scenario'),
     roadFilterVehicle: document.getElementById('road-filter-vehicle'),
     roadFilterDrive: document.getElementById('road-filter-drive'),
     roadFilterMeasure: document.getElementById('road-filter-measure'),
@@ -540,15 +540,11 @@ function setupRoadModule1() {
     }
     if (DOM.roadScenarioSelect) {
         DOM.roadScenarioSelect.addEventListener('change', () => {
-            const selected = DOM.roadScenarioSelect.value || ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO;
+            const selected = DOM.roadScenarioSelect.value || '';
             if (selected.startsWith('__add__:')) {
                 addRoadModule1Scenario(selected.slice('__add__:'.length));
-                return;
             }
-            State.roadModule1.scenario = selected;
-            populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
-            renderRoadModule1Inputs();
-            scheduleRoadModule1DraftSave();
+            DOM.roadScenarioSelect.value = '';
         });
     }
     if (DOM.roadRunLogClose) {
@@ -806,9 +802,8 @@ function syncRoadModule1ScenarioState(preferredScenario = '') {
     reconcileRoadModule1RunScenarioState();
 
     const preferred = normaliseRoadScenarioLabel(preferredScenario || State.roadModule1.scenario);
-    const fallback = scenarios.includes(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)
-        ? ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO
-        : scenarios[0] || ROAD_MODULE1_CURRENT_ACCOUNTS;
+    const fallback = scenarios.find(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
+        || ROAD_MODULE1_CURRENT_ACCOUNTS;
     State.roadModule1.scenario = scenarios.includes(preferred) ? preferred : fallback;
     updateRoadModule1ScenarioSelector();
     updateRoadModule1RunScenarioList();
@@ -817,23 +812,19 @@ function syncRoadModule1ScenarioState(preferredScenario = '') {
 function updateRoadModule1ScenarioSelector() {
     if (!DOM.roadScenarioSelect) return;
     DOM.roadScenarioSelect.innerHTML = '';
-    const activeScenarios = State.roadModule1.scenarios || [ROAD_MODULE1_CURRENT_ACCOUNTS];
-    activeScenarios.forEach(scenario => {
-        const suffix = scenario === ROAD_MODULE1_CURRENT_ACCOUNTS ? ' (base year)' : '';
-        DOM.roadScenarioSelect.add(new Option(`${scenario}${suffix}`, scenario));
-    });
+    DOM.roadScenarioSelect.add(new Option('Add configured scenario...', ''));
     const missingConfigured = getRoadModule1ConfiguredScenarios()
         .filter(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
-        .filter(scenario => !activeScenarios.includes(scenario));
-    if (missingConfigured.length > 0) {
-        const separator = new Option('Add scenario...', '');
-        separator.disabled = true;
-        DOM.roadScenarioSelect.add(separator);
-        missingConfigured.forEach(scenario => {
-            DOM.roadScenarioSelect.add(new Option(`+ ${scenario}`, `__add__:${scenario}`));
-        });
+        .filter(scenario => !(State.roadModule1.scenarios || []).includes(scenario));
+    missingConfigured.forEach(scenario => {
+        DOM.roadScenarioSelect.add(new Option(`+ ${scenario}`, `__add__:${scenario}`));
+    });
+    if (missingConfigured.length === 0) {
+        const option = new Option('All configured scenarios loaded', '');
+        option.disabled = true;
+        DOM.roadScenarioSelect.add(option);
     }
-    DOM.roadScenarioSelect.value = State.roadModule1.scenario;
+    DOM.roadScenarioSelect.value = '';
 }
 
 function isRoadCurrentAccountsRow(row) {
@@ -844,14 +835,8 @@ function isRoadProjectionRow(row) {
     return !isRoadCurrentAccountsRow(row);
 }
 
-function getRoadRowsForActiveScenario(rows = State.roadModule1.rows) {
-    const activeScenario = normaliseRoadScenarioLabel(State.roadModule1.scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
-    return (rows || []).filter(row => {
-        const scenario = normaliseRoadScenarioLabel(row?.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
-        return activeScenario === ROAD_MODULE1_CURRENT_ACCOUNTS
-            ? scenario === ROAD_MODULE1_CURRENT_ACCOUNTS
-            : scenario === activeScenario;
-    });
+function getRoadRowsForCurrentView(rows = State.roadModule1.rows) {
+    return rows || [];
 }
 
 function getRoadProjectionScenarioLabels() {
@@ -864,16 +849,14 @@ function reconcileRoadModule1RunScenarioState(preferredRunScenarios = null) {
     const source = Array.isArray(preferredRunScenarios)
         ? preferredRunScenarios
         : State.roadModule1.runScenarios;
-    let selected = (source || [])
+    let selected = source === null
+        ? [...available]
+        : (source || [])
         .map(normaliseRoadScenarioLabel)
         .filter(scenario => scenario && available.includes(scenario));
 
     if (selected.length === 0) {
-        if (available.includes(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) {
-            selected = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
-        } else if (available.length > 0) {
-            selected = [available[0]];
-        }
+        selected = [...available];
     }
     State.roadModule1.runScenarios = Array.from(new Set(selected));
 }
@@ -989,7 +972,7 @@ function addRoadModule1Scenario(scenarioLabel) {
         State.roadModule1.rows = ensureRoadModule1ProjectionScenarioRows(scenario, State.roadModule1.rows);
         syncRoadModule1ScenarioState(scenario);
         includeRoadModule1ScenarioInRun(scenario);
-        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+        populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         renderRoadModule1Inputs();
         scheduleRoadModule1DraftSave();
         showCustomToast(`Scenario ${scenario} added from ${ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO} projectable rows.`, 'success', 5000);
@@ -1134,7 +1117,7 @@ function setupRoadHelpTooltips() {
 
 function setupRoadModule1FilterControls() {
     const filterBindings = [
-        [DOM.roadFilterTransport, 'transport'],
+        [DOM.roadFilterScenario, 'scenario'],
         [DOM.roadFilterVehicle, 'vehicle'],
         [DOM.roadFilterDrive, 'drive'],
         [DOM.roadFilterMeasure, 'measure']
@@ -1432,7 +1415,7 @@ function applyRoadModule1Draft(draft) {
 function applyRoadModule1FilterControlValues() {
     if (DOM.roadFilterInput) DOM.roadFilterInput.value = State.roadModule1.activeFilter;
     const filterBindings = [
-        [DOM.roadFilterTransport, 'transport'],
+        [DOM.roadFilterScenario, 'scenario'],
         [DOM.roadFilterVehicle, 'vehicle'],
         [DOM.roadFilterDrive, 'drive'],
         [DOM.roadFilterMeasure, 'measure']
@@ -1467,7 +1450,7 @@ function getRoadModule1OverrideCount() {
 }
 
 function getRoadModule1RowStats() {
-    const rows = getRoadRowsForActiveScenario();
+    const rows = getRoadRowsForCurrentView();
     if (rows.length === 0) return null;
     const groups = groupRoadRowsForEditors(
         rows
@@ -1525,13 +1508,13 @@ async function loadRoadModule1Defaults() {
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
-        State.roadModule1.runScenarios = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
+        State.roadModule1.runScenarios = [];
         syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
-        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+        populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         const draft = readRoadModule1Draft(version, economy);
         if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || (draft.sharedFuelEconomyOverrides || []).length > 0 || (draft.sharedUtilisationOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
             const savedAtLabel = draft.savedAt ? new Date(draft.savedAt).toLocaleString('en-US') : 'an earlier time';
@@ -1614,13 +1597,13 @@ async function loadRoadModule1BuiltinProvidedValues() {
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
-        State.roadModule1.runScenarios = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
+        State.roadModule1.runScenarios = [];
         syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
-        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+        populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
         DOM.roadSaveStatus.innerText = 'Built-in provided values applied.';
@@ -1795,6 +1778,7 @@ function getRoadSalesShareVehicleBranchPath(row) {
 function getRoadSalesShareMixGroupKey(row) {
     return [
         getRoadSalesShareVehicleBranchPath(row),
+        row.Scenario || '',
         row.Region || ''
     ].join('||');
 }
@@ -1810,7 +1794,6 @@ function getRoadSalesShareNormaliseGroupKey(row) {
 function getRoadSalesShareScenarioRank(row, year) {
     const scenario = normalizeRoadTextToken(row?.Scenario || '');
     if (Number(year) === ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken('Current Accounts')) return 0;
-    if (Number(year) > ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken(State.roadModule1.scenario || ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) return 0;
     if (scenario === normalizeRoadTextToken(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) return 1;
     return 2;
 }
@@ -2252,6 +2235,7 @@ function getRoadRowFilterMeta(row) {
     const fuel = !isAgeSeries ? (leafFuel || (!looksLikeRoadDrive(detail) ? detail : '')) : '';
 
     return {
+        scenario: row.Scenario || '',
         branch: row['Branch Path'] || '',
         transport: transport,
         vehicle: vehicle,
@@ -2284,8 +2268,7 @@ function getUniqueRoadFilterValues(rows, metaKey) {
 }
 
 function populateRoadModule1StructuredFilters(rows) {
-    const transportRows = rows.filter(row => row.Variable !== 'PHEV Electric Driving Share');
-    addRoadSelectOptions(DOM.roadFilterTransport, getUniqueRoadFilterValues(transportRows, 'transport'));
+    addRoadSelectOptions(DOM.roadFilterScenario, getUniqueRoadFilterValues(rows, 'scenario'), 'All scenarios');
     addRoadSelectOptions(DOM.roadFilterVehicle, getUniqueRoadFilterValues(rows, 'vehicle'));
     addRoadSelectOptions(DOM.roadFilterDrive, getUniqueRoadFilterValues(rows, 'drive'));
     addRoadSelectOptions(DOM.roadFilterMeasure, getUniqueRoadFilterValues(rows, 'measure'));
@@ -2810,7 +2793,7 @@ function groupRoadRowsForEditors(filteredRows) {
                 : '';
             const groupKey = (useSharedMileage || useDetailedMileage || useSharedFuelEconomy)
                 ? `${groupType}|${sharedKey}`
-                : `${groupType}|${branchPath}|${row.Variable}`;
+                : `${groupType}|${branchPath}|${row.Variable}|${row.Scenario || ''}|${row.Region || ''}`;
             if (!groupedRows.has(groupKey)) {
                 groupedRows.set(groupKey, {
                     groupType: groupType,
@@ -3959,7 +3942,7 @@ function renderRoadModule1Inputs() {
     if (!DOM.roadInputContainer) return;
 
     syncRoadModule1ScenarioState(State.roadModule1.scenario);
-    const rows = getRoadRowsForActiveScenario();
+    const rows = getRoadRowsForCurrentView();
     State.roadModule1.stockMap = buildRoadStockMap(rows);
     State.roadModule1.energyMap = buildRoadEnergyMap(rows);
     const filter = State.roadModule1.activeFilter;
@@ -3972,6 +3955,7 @@ function renderRoadModule1Inputs() {
                 row.Units,
                 row.Region,
                 meta.transport,
+                meta.scenario,
                 meta.vehicle,
                 meta.drive,
                 meta.fuel,
@@ -5338,21 +5322,27 @@ function buildRoadUploadSummaryText(fileName, parseSummary, overlayResult) {
 
 function buildRoadStockShareValidationSummary(rows) {
     const messages = [];
-    ['passenger', 'freight'].forEach(group => {
-        ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS.forEach(year => {
-            const total = (rows || [])
-                .filter(row => getRoadStockShareTransportGroup(row) === group)
-                .reduce((sum, row) => {
-                    const override = State.roadModule1.overrides.get(`${buildRoadModule1Key(row)}||Year=${year}`);
-                    const value = override && override.value !== '' && override.value !== null
-                        ? override.value
-                        : getRoadDefaultValue(row, String(year));
-                    const numeric = Number(value);
-                    return Number.isFinite(numeric) ? sum + numeric : sum;
-                }, 0);
-            if (Math.abs(total - 100) > 0.001 && total !== 0) {
-                messages.push(`${group} Stock Share ${year} sums to ${total.toFixed(3)}; expected 100.`);
-            }
+    const scenarios = [...new Set((rows || [])
+        .map(row => normaliseRoadScenarioLabel(row?.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS)
+        .filter(Boolean))];
+    scenarios.forEach(scenario => {
+        ['passenger', 'freight'].forEach(group => {
+            ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS.forEach(year => {
+                const total = (rows || [])
+                    .filter(row => normaliseRoadScenarioLabel(row?.Scenario) === scenario)
+                    .filter(row => getRoadStockShareTransportGroup(row) === group)
+                    .reduce((sum, row) => {
+                        const override = State.roadModule1.overrides.get(`${buildRoadModule1Key(row)}||Year=${year}`);
+                        const value = override && override.value !== '' && override.value !== null
+                            ? override.value
+                            : getRoadDefaultValue(row, String(year));
+                        const numeric = Number(value);
+                        return Number.isFinite(numeric) ? sum + numeric : sum;
+                    }, 0);
+                if (Math.abs(total - 100) > 0.001 && total !== 0) {
+                    messages.push(`${scenario} ${group} Stock Share ${year} sums to ${total.toFixed(3)}; expected 100.`);
+                }
+            });
         });
     });
     return messages.join('\n');
@@ -5522,7 +5512,7 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.sharedMileageOverrides = new Map();
     State.roadModule1.sharedFuelEconomyOverrides = new Map();
     State.roadModule1.sharedUtilisationOverrides = new Map();
-    populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+    populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
     clearRoadModule1Draft(version, economy);
     DOM.roadSaveOutput.disabled = false;
     if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
