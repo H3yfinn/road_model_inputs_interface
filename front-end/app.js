@@ -18,7 +18,10 @@ const State = {
     roadModule1: {
         version: null,
         economy: null,
-        scenario: 'Current Accounts',
+        scenario: 'Target',
+        scenarios: ['Current Accounts', 'Target'],
+        runScenarios: ['Target'],
+        configuredScenarios: ['Current Accounts', 'Reference', 'Target'],
         keyColumns: [],
         rows: [],
         hiddenRows: [],
@@ -63,6 +66,9 @@ const State = {
 };
 
 const ROAD_MODULE1_BASE_YEAR = 2022;
+const ROAD_MODULE1_CURRENT_ACCOUNTS = 'Current Accounts';
+const ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO = 'Target';
+const ROAD_MODULE1_CONFIGURED_SCENARIOS = ['Current Accounts', 'Reference', 'Target'];
 const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
@@ -172,6 +178,8 @@ const DOM = {
     roadModule1Main: document.getElementById('road-module1-main'),
     roadVersionSelect: document.getElementById('road-version-select'),
     roadEconomySelect: document.getElementById('road-economy-select'),
+    roadScenarioSelect: document.getElementById('road-scenario-select'),
+    roadRunScenarioList: document.getElementById('road-run-scenario-list'),
     roadLoadDefaults: document.getElementById('road-load-defaults'),
     roadUseBuiltinProvidedValues: document.getElementById('road-use-builtin-provided-values'),
     roadDownloadProvidedTemplate: document.getElementById('road-download-provided-template'),
@@ -530,6 +538,19 @@ function setupRoadModule1() {
     if (DOM.roadRunModel) {
         DOM.roadRunModel.addEventListener('click', runRoadModel);
     }
+    if (DOM.roadScenarioSelect) {
+        DOM.roadScenarioSelect.addEventListener('change', () => {
+            const selected = DOM.roadScenarioSelect.value || ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO;
+            if (selected.startsWith('__add__:')) {
+                addRoadModule1Scenario(selected.slice('__add__:'.length));
+                return;
+            }
+            State.roadModule1.scenario = selected;
+            populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+            renderRoadModule1Inputs();
+            scheduleRoadModule1DraftSave();
+        });
+    }
     if (DOM.roadRunLogClose) {
         DOM.roadRunLogClose.addEventListener('click', hideRoadRunLogModal);
     }
@@ -691,6 +712,11 @@ async function fetchRoadModule1StaticIndex() {
 
     RoadModule1StaticBundleState.indexLoaded = true;
     RoadModule1StaticBundleState.indexData = data;
+    if (Array.isArray(data.configured_scenarios) && data.configured_scenarios.length > 0) {
+        State.roadModule1.configuredScenarios = data.configured_scenarios
+            .map(normaliseRoadScenarioLabel)
+            .filter(Boolean);
+    }
     return data;
 }
 
@@ -736,6 +762,242 @@ function normalizeRoadModule1RowsForUi(rows) {
     }));
 }
 
+function normaliseRoadScenarioLabel(value) {
+    return String(value || '').trim();
+}
+
+function getRoadModule1ConfiguredScenarios() {
+    return Array.from(new Set([
+        ...ROAD_MODULE1_CONFIGURED_SCENARIOS,
+        ...(State.roadModule1.configuredScenarios || [])
+    ].map(normaliseRoadScenarioLabel).filter(Boolean)));
+}
+
+function isRoadConfiguredProjectionScenario(label) {
+    const scenario = normaliseRoadScenarioLabel(label);
+    return scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS
+        && getRoadModule1ConfiguredScenarios().includes(scenario);
+}
+
+function getRoadModule1ScenariosFromRows(rows) {
+    const labels = new Set([ROAD_MODULE1_CURRENT_ACCOUNTS]);
+    (rows || []).forEach(row => {
+        const scenario = normaliseRoadScenarioLabel(row?.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
+        labels.add(scenario);
+    });
+    return [
+        ROAD_MODULE1_CURRENT_ACCOUNTS,
+        ...Array.from(labels)
+            .filter(label => label !== ROAD_MODULE1_CURRENT_ACCOUNTS)
+            .sort((a, b) => {
+                if (a === ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO) return -1;
+                if (b === ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO) return 1;
+                return a.localeCompare(b, 'en-US', { numeric: true });
+            })
+    ];
+}
+
+function syncRoadModule1ScenarioState(preferredScenario = '') {
+    const scenarios = getRoadModule1ScenariosFromRows([
+        ...(State.roadModule1.rows || []),
+        ...(State.roadModule1.hiddenRows || [])
+    ]);
+    State.roadModule1.scenarios = scenarios;
+    reconcileRoadModule1RunScenarioState();
+
+    const preferred = normaliseRoadScenarioLabel(preferredScenario || State.roadModule1.scenario);
+    const fallback = scenarios.includes(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)
+        ? ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO
+        : scenarios[0] || ROAD_MODULE1_CURRENT_ACCOUNTS;
+    State.roadModule1.scenario = scenarios.includes(preferred) ? preferred : fallback;
+    updateRoadModule1ScenarioSelector();
+    updateRoadModule1RunScenarioList();
+}
+
+function updateRoadModule1ScenarioSelector() {
+    if (!DOM.roadScenarioSelect) return;
+    DOM.roadScenarioSelect.innerHTML = '';
+    const activeScenarios = State.roadModule1.scenarios || [ROAD_MODULE1_CURRENT_ACCOUNTS];
+    activeScenarios.forEach(scenario => {
+        const suffix = scenario === ROAD_MODULE1_CURRENT_ACCOUNTS ? ' (base year)' : '';
+        DOM.roadScenarioSelect.add(new Option(`${scenario}${suffix}`, scenario));
+    });
+    const missingConfigured = getRoadModule1ConfiguredScenarios()
+        .filter(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
+        .filter(scenario => !activeScenarios.includes(scenario));
+    if (missingConfigured.length > 0) {
+        const separator = new Option('Add scenario...', '');
+        separator.disabled = true;
+        DOM.roadScenarioSelect.add(separator);
+        missingConfigured.forEach(scenario => {
+            DOM.roadScenarioSelect.add(new Option(`+ ${scenario}`, `__add__:${scenario}`));
+        });
+    }
+    DOM.roadScenarioSelect.value = State.roadModule1.scenario;
+}
+
+function isRoadCurrentAccountsRow(row) {
+    return normaliseRoadScenarioLabel(row?.Scenario) === ROAD_MODULE1_CURRENT_ACCOUNTS;
+}
+
+function isRoadProjectionRow(row) {
+    return !isRoadCurrentAccountsRow(row);
+}
+
+function getRoadRowsForActiveScenario(rows = State.roadModule1.rows) {
+    const activeScenario = normaliseRoadScenarioLabel(State.roadModule1.scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
+    return (rows || []).filter(row => {
+        const scenario = normaliseRoadScenarioLabel(row?.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
+        return activeScenario === ROAD_MODULE1_CURRENT_ACCOUNTS
+            ? scenario === ROAD_MODULE1_CURRENT_ACCOUNTS
+            : scenario === activeScenario;
+    });
+}
+
+function getRoadProjectionScenarioLabels() {
+    return (State.roadModule1.scenarios || [])
+        .filter(scenario => scenario && scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS);
+}
+
+function reconcileRoadModule1RunScenarioState(preferredRunScenarios = null) {
+    const available = getRoadProjectionScenarioLabels();
+    const source = Array.isArray(preferredRunScenarios)
+        ? preferredRunScenarios
+        : State.roadModule1.runScenarios;
+    let selected = (source || [])
+        .map(normaliseRoadScenarioLabel)
+        .filter(scenario => scenario && available.includes(scenario));
+
+    if (selected.length === 0) {
+        if (available.includes(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) {
+            selected = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
+        } else if (available.length > 0) {
+            selected = [available[0]];
+        }
+    }
+    State.roadModule1.runScenarios = Array.from(new Set(selected));
+}
+
+function includeRoadModule1ScenarioInRun(scenarioLabel) {
+    const scenario = normaliseRoadScenarioLabel(scenarioLabel);
+    if (!scenario || scenario === ROAD_MODULE1_CURRENT_ACCOUNTS) return;
+    const available = getRoadProjectionScenarioLabels();
+    if (!available.includes(scenario)) return;
+    const selected = new Set(State.roadModule1.runScenarios || []);
+    selected.add(scenario);
+    State.roadModule1.runScenarios = available.filter(label => selected.has(label));
+    updateRoadModule1RunScenarioList();
+}
+
+function getRoadRunScenarioLabels() {
+    reconcileRoadModule1RunScenarioState();
+    return State.roadModule1.runScenarios || [];
+}
+
+function updateRoadModule1RunScenarioList() {
+    if (!DOM.roadRunScenarioList) return;
+    const available = getRoadProjectionScenarioLabels();
+    if (available.length === 0) {
+        DOM.roadRunScenarioList.innerHTML = '<div class="text-slate-400">No projection scenarios loaded.</div>';
+        return;
+    }
+
+    const selected = new Set(State.roadModule1.runScenarios || []);
+    DOM.roadRunScenarioList.innerHTML = '';
+    available.forEach(scenario => {
+        const id = `road-run-scenario-${scenario.replace(/[^A-Za-z0-9_-]+/g, '-')}`;
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2 cursor-pointer';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = id;
+        checkbox.value = scenario;
+        checkbox.checked = selected.has(scenario);
+        checkbox.className = 'rounded border-slate-300 text-indigo-600 focus:ring-indigo-500';
+        checkbox.addEventListener('change', () => {
+            const next = new Set(State.roadModule1.runScenarios || []);
+            if (checkbox.checked) {
+                next.add(scenario);
+            } else {
+                next.delete(scenario);
+            }
+            if (next.size === 0) {
+                checkbox.checked = true;
+                showCustomToast('Select at least one projection scenario to run.', 'warning');
+                return;
+            }
+            State.roadModule1.runScenarios = available.filter(label => next.has(label));
+            scheduleRoadModule1DraftSave();
+        });
+        const text = document.createElement('span');
+        text.textContent = scenario;
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        DOM.roadRunScenarioList.appendChild(label);
+    });
+}
+
+function cloneRoadProjectionRowsForScenario(rows, sourceScenario, targetScenario) {
+    return (rows || [])
+        .filter(row => normaliseRoadScenarioLabel(row?.Scenario) === sourceScenario)
+        .filter(isRoadProjectionRow)
+        .map(row => {
+            const clone = { ...row, Scenario: targetScenario, _inputStatus: row._inputStatus || 'default' };
+            Object.keys(clone).forEach(column => {
+                if (/^\d{4}$/.test(column) && Number(column) <= ROAD_MODULE1_BASE_YEAR) {
+                    delete clone[column];
+                }
+            });
+            return clone;
+        });
+}
+
+function ensureRoadModule1ProjectionScenarioRows(scenarioLabel, rows = State.roadModule1.rows) {
+    const scenario = normaliseRoadScenarioLabel(scenarioLabel);
+    if (!scenario || scenario === ROAD_MODULE1_CURRENT_ACCOUNTS) return rows || [];
+    if (!isRoadConfiguredProjectionScenario(scenario)) {
+        throw new Error(`Scenario "${scenario}" is not configured. Add it to the road model scenario config before using it.`);
+    }
+    const existing = (rows || []).some(row => normaliseRoadScenarioLabel(row?.Scenario) === scenario);
+    if (existing) return rows || [];
+
+    const sourceScenario = (rows || []).some(row => normaliseRoadScenarioLabel(row?.Scenario) === ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)
+        ? ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO
+        : normaliseRoadScenarioLabel((rows || []).find(isRoadProjectionRow)?.Scenario);
+    if (!sourceScenario) {
+        throw new Error('No projection scenario rows are available to clone.');
+    }
+    const clonedRows = cloneRoadProjectionRowsForScenario(rows, sourceScenario, scenario);
+    if (clonedRows.length === 0) {
+        throw new Error(`No projectable rows found in source scenario "${sourceScenario}".`);
+    }
+    return [...(rows || []), ...clonedRows];
+}
+
+function addRoadModule1Scenario(scenarioLabel) {
+    if (!Array.isArray(State.roadModule1.rows) || State.roadModule1.rows.length === 0) {
+        showCustomToast('Load an economy before adding a scenario.', 'warning');
+        return;
+    }
+    const scenario = normaliseRoadScenarioLabel(scenarioLabel);
+    if (!scenario) return;
+    if (scenario === ROAD_MODULE1_CURRENT_ACCOUNTS) {
+        showCustomToast('Current Accounts already exists as the locked base-year scenario.', 'warning');
+        return;
+    }
+    try {
+        State.roadModule1.rows = ensureRoadModule1ProjectionScenarioRows(scenario, State.roadModule1.rows);
+        syncRoadModule1ScenarioState(scenario);
+        includeRoadModule1ScenarioInRun(scenario);
+        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
+        renderRoadModule1Inputs();
+        scheduleRoadModule1DraftSave();
+        showCustomToast(`Scenario ${scenario} added from ${ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO} projectable rows.`, 'success', 5000);
+    } catch (error) {
+        showCustomToast(error.message, 'error', 6000);
+    }
+}
+
 function isRoadModule1ShownInInterface(row) {
     const rawValue = row?.['Shown In Interface'] ?? row?.shown_in_interface ?? row?.shownInInterface;
     if (rawValue === undefined || rawValue === null || rawValue === '') return true;
@@ -746,7 +1008,7 @@ function splitRoadModule1RowsByVisibility(rows) {
     const visibleRows = [];
     const hiddenRows = [];
     (Array.isArray(rows) ? rows : []).forEach(row => {
-        if (isRoadModule1ShownInInterface(row) || isRoadDriveLevelSalesShareRow(row)) {
+        if (isRoadProjectionRow(row) || isRoadModule1ShownInInterface(row) || isRoadDriveLevelSalesShareRow(row)) {
             visibleRows.push(row);
         } else {
             hiddenRows.push(row);
@@ -789,6 +1051,7 @@ function convertRoadLongRowsToWideUiRows(longRows) {
             'Per...': '',
             input_source: inputStatus,
             _inputStatus: inputStatus,
+            'Shown In Interface': row['Shown In Interface'] ?? 'True',
             standardized_label_status: 'standardized',
             notes: row.Comment ?? '',
             source_type: 'module1_long_csv',
@@ -1041,7 +1304,9 @@ function serializeRoadModule1Draft() {
         savedAt: new Date().toISOString(),
         version: State.roadModule1.version,
         economy: State.roadModule1.economy,
-        scenario: 'Current Accounts',
+        scenario: State.roadModule1.scenario,
+        scenarios: State.roadModule1.scenarios,
+        runScenarios: State.roadModule1.runScenarios,
         overrides: Array.from(State.roadModule1.overrides.values()),
         activeFilter: State.roadModule1.activeFilter,
         structuredFilters: { ...State.roadModule1.structuredFilters },
@@ -1158,6 +1423,9 @@ function applyRoadModule1Draft(draft) {
         };
     }
     State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
+    syncRoadModule1ScenarioState(draft.scenario || State.roadModule1.scenario);
+    reconcileRoadModule1RunScenarioState(draft.runScenarios);
+    updateRoadModule1RunScenarioList();
     applyRoadModule1FilterControlValues();
 }
 
@@ -1199,7 +1467,7 @@ function getRoadModule1OverrideCount() {
 }
 
 function getRoadModule1RowStats() {
-    const rows = State.roadModule1.rows || [];
+    const rows = getRoadRowsForActiveScenario();
     if (rows.length === 0) return null;
     const groups = groupRoadRowsForEditors(
         rows
@@ -1253,16 +1521,17 @@ async function loadRoadModule1Defaults() {
 
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
-        State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
+        State.roadModule1.runScenarios = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
+        syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
-        populateRoadModule1StructuredFilters(State.roadModule1.rows);
+        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
         const draft = readRoadModule1Draft(version, economy);
         if (draft && ((draft.overrides || []).length > 0 || (draft.sharedMileageOverrides || []).length > 0 || (draft.sharedFuelEconomyOverrides || []).length > 0 || (draft.sharedUtilisationOverrides || []).length > 0 || draft.activeFilter || draft.savedAt)) {
             const savedAtLabel = draft.savedAt ? new Date(draft.savedAt).toLocaleString('en-US') : 'an earlier time';
@@ -1341,16 +1610,17 @@ async function loadRoadModule1BuiltinProvidedValues() {
         const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
-        State.roadModule1.scenario = 'Current Accounts';
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
+        State.roadModule1.runScenarios = [ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO];
+        syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
-        populateRoadModule1StructuredFilters(State.roadModule1.rows);
+        populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
         clearRoadModule1Draft(version, economy);
         DOM.roadSaveOutput.disabled = false;
         DOM.roadSaveStatus.innerText = 'Built-in provided values applied.';
@@ -1540,8 +1810,8 @@ function getRoadSalesShareNormaliseGroupKey(row) {
 function getRoadSalesShareScenarioRank(row, year) {
     const scenario = normalizeRoadTextToken(row?.Scenario || '');
     if (Number(year) === ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken('Current Accounts')) return 0;
-    if (Number(year) > ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken('Target')) return 0;
-    if (scenario === normalizeRoadTextToken('Target')) return 1;
+    if (Number(year) > ROAD_MODULE1_BASE_YEAR && scenario === normalizeRoadTextToken(State.roadModule1.scenario || ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) return 0;
+    if (scenario === normalizeRoadTextToken(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO)) return 1;
     return 2;
 }
 
@@ -3688,7 +3958,8 @@ function renderRoadModule1ListInputs(filteredRows) {
 function renderRoadModule1Inputs() {
     if (!DOM.roadInputContainer) return;
 
-    const rows = State.roadModule1.rows || [];
+    syncRoadModule1ScenarioState(State.roadModule1.scenario);
+    const rows = getRoadRowsForActiveScenario();
     State.roadModule1.stockMap = buildRoadStockMap(rows);
     State.roadModule1.energyMap = buildRoadEnergyMap(rows);
     const filter = State.roadModule1.activeFilter;
@@ -4660,7 +4931,19 @@ async function runRoadModel() {
 
     const completedRows = buildRoadModule1CompletedRowsForCheckpoint();
     const completedLongRows = buildRoadModule1CompletedLongRowsForHandoff();
-    _appendRoadRunLog(`Sending ${completedLongRows.length.toLocaleString('en-US')} long rows to backend...`);
+    const projectionScenarios = getRoadRunScenarioLabels();
+    if (projectionScenarios.length === 0) {
+        _appendRoadRunLog('Select at least one projection scenario to run.', true);
+        _setRoadRunStatus('error');
+        return;
+    }
+    const unknownScenarios = projectionScenarios.filter(scenario => !isRoadConfiguredProjectionScenario(scenario));
+    if (unknownScenarios.length > 0) {
+        _appendRoadRunLog(`Unknown scenario label(s): ${unknownScenarios.join(', ')}`, true);
+        _setRoadRunStatus('error');
+        return;
+    }
+    _appendRoadRunLog(`Sending ${completedLongRows.length.toLocaleString('en-US')} long rows for scenarios ${projectionScenarios.join(', ')} to backend...`);
 
     let runId, economyCanonical;
 
@@ -4672,6 +4955,7 @@ async function runRoadModel() {
                 economy: State.roadModule1.economy,
                 version: State.roadModule1.version,
                 rows: completedLongRows,
+                scenarios: projectionScenarios,
                 enable_visualisations: true,
                 turnover_config: buildRoadTurnoverConfigPayload(completedRows)
             })
@@ -5122,16 +5406,26 @@ function previewRoadModule1UploadedRows(uploadRows) {
     }
 
     const seenUploadKeys = new Set();
+    const uploadScenarios = new Set();
     uploadRows.forEach(uploadRow => {
         const key = getRoadModule1ComparableKeyFromRow(uploadRow);
         if (seenUploadKeys.has(key)) {
             throw new Error(`Uploaded file has duplicate row key: ${key}`);
         }
         seenUploadKeys.add(key);
+        const scenario = normaliseRoadScenarioLabel(uploadRow.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
+        uploadScenarios.add(scenario);
+    });
+
+    let candidateRows = State.roadModule1.rows.map(row => ({ ...row }));
+    uploadScenarios.forEach(scenario => {
+        if (scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS) {
+            candidateRows = ensureRoadModule1ProjectionScenarioRows(scenario, candidateRows);
+        }
     });
 
     const targetLongRows = [
-        ...convertRoadWideUiRowsToLongRows(State.roadModule1.rows, State.roadModule1.economy, true),
+        ...convertRoadWideUiRowsToLongRows(candidateRows, State.roadModule1.economy, true),
         ...(Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [])
     ];
     const targetLongKeys = new Set(targetLongRows.map(row => getRoadModule1ComparableKeyFromRow(row)));
@@ -5141,7 +5435,7 @@ function previewRoadModule1UploadedRows(uploadRows) {
         throw new Error(`Uploaded file contains keys that are not in the current template. First unmatched keys:\n${sample}`);
     }
 
-    const targetRows = State.roadModule1.rows.map(row => ({ ...row }));
+    const targetRows = candidateRows.map(row => ({ ...row }));
     const targetRowByKey = new Map(
         targetRows.map(row => [
             [row['Branch Path'] || '', row.Variable || '', row.Scenario || ''].join('||'),
@@ -5207,18 +5501,28 @@ function previewRoadModule1UploadedRows(uploadRows) {
         });
     });
 
-    return { targetRows, appliedCount, unmatchedCount: 0, validationIssueCount, changedCells };
+    return {
+        targetRows,
+        appliedCount,
+        unmatchedCount: 0,
+        validationIssueCount,
+        changedCells,
+        uploadedScenarios: Array.from(uploadScenarios)
+            .filter(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
+    };
 }
 
 function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.rows = preview.targetRows;
     State.roadModule1.version = version;
     State.roadModule1.economy = economy;
-    State.roadModule1.scenario = 'Current Accounts';
+    syncRoadModule1ScenarioState(State.roadModule1.scenario);
+    (preview.uploadedScenarios || []).forEach(includeRoadModule1ScenarioInRun);
     State.roadModule1.overrides = new Map();
     State.roadModule1.sharedMileageOverrides = new Map();
+    State.roadModule1.sharedFuelEconomyOverrides = new Map();
     State.roadModule1.sharedUtilisationOverrides = new Map();
-    populateRoadModule1StructuredFilters(State.roadModule1.rows);
+    populateRoadModule1StructuredFilters(getRoadRowsForActiveScenario());
     clearRoadModule1Draft(version, economy);
     DOM.roadSaveOutput.disabled = false;
     if (DOM.roadRunModel) DOM.roadRunModel.disabled = false;
@@ -5450,7 +5754,7 @@ function convertRoadWideUiRowsToLongRows(rows, economyCode, includeBlankStockSha
                 Source: row.source_name || row.Source || '',
                 Comment: row.notes || row.Comment || '',
                 'Input Status': row._inputStatus || 'default',
-                'Shown In Interface': 'True'
+                'Shown In Interface': row['Shown In Interface'] ?? 'True'
             });
         });
     });

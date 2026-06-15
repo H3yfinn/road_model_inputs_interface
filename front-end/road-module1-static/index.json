@@ -1,5 +1,10 @@
 {
   "default_version": "v2026_06_05_road_module1_sources",
+  "configured_scenarios": [
+    "Current Accounts",
+    "Reference",
+    "Target"
+  ],
   "versions": [
     {
       "version": "v2026_05_25_best_guess",

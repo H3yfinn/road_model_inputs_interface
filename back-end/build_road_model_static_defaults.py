@@ -20,6 +20,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
 from core.road_module1_defaults import (
     BASE_YEAR,
@@ -61,7 +62,19 @@ def _coerce_bool_text(value: bool) -> str:
     return "True" if bool(value) else "False"
 
 
-def _load_projected_sales_share_from_processed_source(economy_code: str) -> pd.DataFrame:
+def _projection_scenario_labels() -> list[str]:
+    """Configured non-Current Accounts scenario labels for static projected rows."""
+    return [
+        scenario
+        for scenario in _load_configured_scenario_labels()
+        if str(scenario).strip() and str(scenario).strip() != "Current Accounts"
+    ]
+
+
+def _load_projected_sales_share_from_processed_source(
+    economy_code: str,
+    scenario: str | None = None,
+) -> pd.DataFrame:
     """Read future Sales Share rows from the processed source CSV."""
     src_path = PROCESSED_SOURCE_DIR / f"road_module1_source_{economy_code}.csv"
     if not src_path.exists():
@@ -72,6 +85,8 @@ def _load_projected_sales_share_from_processed_source(economy_code: str) -> pd.D
         df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
         & pd.to_numeric(df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
     ].copy()
+    if scenario and "Scenario" in future.columns:
+        future = future[future["Scenario"].fillna("").astype(str).str.strip().eq(str(scenario))]
     if future.empty:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
 
@@ -79,7 +94,7 @@ def _load_projected_sales_share_from_processed_source(economy_code: str) -> pd.D
     for _, row in future.iterrows():
         rows.append({
             "Economy": economy_code,
-            "Scenario": row.get("Scenario", "Target") or "Target",
+            "Scenario": scenario or row.get("Scenario", "Target") or "Target",
             "Branch Path": row.get("Branch Path", ""),
             "Variable": "Sales Share",
             "Year": int(row["Year"]),
@@ -96,14 +111,14 @@ def _load_projected_sales_share_from_processed_source(economy_code: str) -> pd.D
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
-def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
-    """Load 2023-2060 Sales Share rows from the matched transport LEAP workbook.
+def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -> pd.DataFrame:
+    """Load 2023-2060 Sales Share rows for one projected scenario.
 
     Falls back to the processed source CSV when no workbook is available.
     """
-    workbook_path = find_transport_leap_export_path(economy=economy_code)
+    workbook_path = find_transport_leap_export_path(economy=economy_code, scenario=scenario)
     if workbook_path is None:
-        return _load_projected_sales_share_from_processed_source(economy_code)
+        return _load_projected_sales_share_from_processed_source(economy_code, scenario=scenario)
 
     raw_df = pd.read_excel(
         workbook_path,
@@ -116,6 +131,9 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
 
     sales_df = raw_df[
         raw_df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
+    ].copy()
+    sales_df = sales_df[
+        sales_df["Scenario"].fillna("").astype(str).str.strip().eq(str(scenario))
     ].copy()
     if sales_df.empty:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
@@ -147,7 +165,7 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
             rows.append(
                 {
                     "Economy": economy_code,
-                    "Scenario": source_row.get("Scenario", "Target") or "Target",
+                    "Scenario": scenario,
                     "Branch Path": source_row.get("Branch Path", ""),
                     "Variable": "Sales Share",
                     "Year": int(year),
@@ -166,6 +184,48 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
+def _clone_projected_sales_share_rows(source_rows: pd.DataFrame, scenario: str) -> pd.DataFrame:
+    """Clone projected sales-share rows from another scenario with explicit metadata."""
+    if source_rows.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    cloned = source_rows.copy()
+    source_scenarios = sorted(cloned["Scenario"].dropna().astype(str).unique())
+    source_label = source_scenarios[0] if len(source_scenarios) == 1 else "another scenario"
+    cloned["Scenario"] = scenario
+    cloned["Source"] = cloned["Source"].fillna("").astype(str).map(
+        lambda source: f"{source}; cloned_from_{source_label}" if source else f"cloned_from_{source_label}"
+    )
+    cloned["Comment"] = (
+        "Projected Sales Share cloned from "
+        f"{source_label} because no source rows were found for {scenario}."
+    )
+    return cloned[MODULE1_LONG_COLUMNS].copy()
+
+
+def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
+    """Load projected Sales Share rows for every configured projection scenario."""
+    projection_scenarios = _projection_scenario_labels() or ["Target"]
+    rows_by_scenario: dict[str, pd.DataFrame] = {}
+    for scenario in projection_scenarios:
+        rows_by_scenario[scenario] = _load_projected_sales_share_for_scenario(economy_code, scenario)
+
+    fallback_source = rows_by_scenario.get("Target")
+    if fallback_source is None or fallback_source.empty:
+        fallback_source = _load_projected_sales_share_for_scenario(economy_code, "Target")
+
+    resolved_rows: list[pd.DataFrame] = []
+    for scenario in projection_scenarios:
+        scenario_rows = rows_by_scenario.get(scenario, pd.DataFrame(columns=MODULE1_LONG_COLUMNS))
+        if scenario_rows.empty and scenario != "Target":
+            scenario_rows = _clone_projected_sales_share_rows(fallback_source, scenario)
+        if not scenario_rows.empty:
+            resolved_rows.append(scenario_rows)
+
+    if not resolved_rows:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    return pd.concat(resolved_rows, ignore_index=True)[MODULE1_LONG_COLUMNS].copy()
+
+
 def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, economy_code: str) -> pd.DataFrame:
     """Build default 1.0 projected correction-factor rows from fuel-level Module 1 rows."""
     source_rows = long_defaults_df[
@@ -180,25 +240,27 @@ def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, econ
         "Fuel Economy": "Fuel Economy Correction Factor",
     }
     rows: list[dict[str, object]] = []
+    projection_scenarios = _projection_scenario_labels() or ["Target"]
     for _, source_row in source_rows[["Branch Path", "Variable"]].drop_duplicates().iterrows():
         factor_variable = factor_variable_by_source.get(source_row["Variable"])
         if not factor_variable:
             continue
-        for year in range(BASE_YEAR + 1, 2061):
-            rows.append({
-                "Economy": economy_code,
-                "Scenario": "Target",
-                "Branch Path": source_row["Branch Path"],
-                "Variable": factor_variable,
-                "Year": int(year),
-                "Value": 1.0,
-                "Scale": "",
-                "Units": "Multiplier",
-                "Source": "generated_default_correction_factor",
-                "Comment": "Default LEAP correction factor. Set to 1.0 unless a scenario adjustment is needed.",
-                "Input Status": "default",
-                "Shown In Interface": "True",
-            })
+        for scenario in projection_scenarios:
+            for year in range(BASE_YEAR + 1, 2061):
+                rows.append({
+                    "Economy": economy_code,
+                    "Scenario": scenario,
+                    "Branch Path": source_row["Branch Path"],
+                    "Variable": factor_variable,
+                    "Year": int(year),
+                    "Value": 1.0,
+                    "Scale": "",
+                    "Units": "Multiplier",
+                    "Source": "generated_default_correction_factor",
+                    "Comment": "Default LEAP correction factor. Set to 1.0 unless a scenario adjustment is needed.",
+                    "Input Status": "default",
+                    "Shown In Interface": "True",
+                })
     if not rows:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
@@ -212,6 +274,8 @@ STATIC_FUEL_BRANCH_EXCLUSIONS_PATH = ROAD_MODEL_CONFIG_DIR / "road_module1_stati
 STATIC_FUEL_BRANCH_EXCLUSION_REASON = "0 data for fuel in esto dataset"
 STATIC_FUEL_BRANCH_EXCLUSION_COLUMNS = ["Economy", "Branch Path", "Fuel", "Reason"]
 STATIC_NO_DISPLAY_ROUND_VARIABLES = {"Survival Rate", "Vintage Profile Share"}
+LEAP_ROAD_MODEL_DIR = Path(__file__).resolve().parents[2] / "leap_road_model"
+LEAP_ROAD_SCENARIOS_CONFIG = LEAP_ROAD_MODEL_DIR / "codebase" / "config" / "scenarios.yaml"
 
 
 def _contract_bool(value: object, default: bool = True) -> bool:
@@ -320,6 +384,22 @@ def _load_static_fuel_branch_exclusions() -> pd.DataFrame:
         )
 
     return exclusions
+
+
+def _load_configured_scenario_labels() -> list[str]:
+    """Read configured LEAP scenario labels for the frontend scenario manager."""
+    if not LEAP_ROAD_SCENARIOS_CONFIG.exists():
+        return ["Current Accounts", "Reference", "Target"]
+    try:
+        with LEAP_ROAD_SCENARIOS_CONFIG.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        scenarios = data.get("scenarios") if isinstance(data, dict) else {}
+        if not isinstance(scenarios, dict):
+            return ["Current Accounts", "Reference", "Target"]
+        labels = [str(label).strip() for label in scenarios if str(label).strip()]
+        return labels or ["Current Accounts", "Reference", "Target"]
+    except Exception:
+        return ["Current Accounts", "Reference", "Target"]
 
 
 def _apply_static_contract(long_df: pd.DataFrame, contract: pd.DataFrame, economy_code: str) -> pd.DataFrame:
@@ -470,6 +550,7 @@ def write_frontend_static_bundle(
 
     index_payload = {
         "default_version": version,
+        "configured_scenarios": _load_configured_scenario_labels(),
         "versions": versions_index,
     }
     (static_root / "index.json").write_text(
@@ -663,19 +744,23 @@ def _validate_static_contract_output(
             contract.loc[contract["Current Accounts"], "Variable"],
         )
     )
-    # Pairs required in non-CA (Target and other projected) scenarios
-    target_required: frozenset[tuple[str, str]] = frozenset(
+    # Pairs required in every configured non-CA projected scenario
+    projected_required: frozenset[tuple[str, str]] = frozenset(
         zip(
             contract.loc[contract["Projected Scenario"], "Branch Path"],
             contract.loc[contract["Projected Scenario"], "Variable"],
         )
     )
+    projection_scenarios = _projection_scenario_labels() or ["Target"]
 
     failures: list[str] = []
 
     for economy_code, generated_keys in sorted(economy_row_keys.items()):
         ca_generated = {(bp, var) for scen, bp, var in generated_keys if scen == "Current Accounts"}
-        target_generated = {(bp, var) for scen, bp, var in generated_keys if scen != "Current Accounts"}
+        projected_generated_by_scenario = {
+            scenario: {(bp, var) for scen, bp, var in generated_keys if scen == scenario}
+            for scenario in projection_scenarios
+        }
         all_generated = {(bp, var) for _, bp, var in generated_keys}
 
         # Check 1: no uncontracted (Branch Path, Variable) pairs
@@ -697,15 +782,16 @@ def _validate_static_contract_output(
                 + "\n    (Add missing Mileage/Fuel Economy rows to manually_filled_rows/ to fix.)"
             )
 
-        # Check 3: required Target rows present (no exclusion exemptions)
-        missing_target = target_required - target_generated
-        if missing_target:
-            sample = sorted(missing_target)[:20]
-            failures.append(
-                f"  {economy_code}: missing required projected scenario rows:\n"
-                + "\n".join(f"    {key!r}" for key in sample)
-                + "\n    (Add missing rows to manually_filled_rows/ to fix.)"
-            )
+        # Check 3: required projected rows present in every configured scenario
+        for scenario, projected_generated in projected_generated_by_scenario.items():
+            missing_projected = projected_required - projected_generated
+            if missing_projected:
+                sample = sorted(missing_projected)[:20]
+                failures.append(
+                    f"  {economy_code}: missing required projected rows for {scenario}:\n"
+                    + "\n".join(f"    {key!r}" for key in sample)
+                    + "\n    (Add scenario source rows or allow explicit fallback generation to fix.)"
+                )
 
     if failures:
         raise SystemExit(

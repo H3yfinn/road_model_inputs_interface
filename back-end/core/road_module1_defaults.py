@@ -1989,12 +1989,20 @@ def _latest_existing_file(paths: Iterable[Path]) -> Path | None:
     return max(existing_paths, key=_transport_export_sort_key)
 
 
-def _iter_transport_leap_all_econs_candidates() -> Iterable[Path]:
+def _iter_transport_leap_all_econs_candidates(scenario: str | None = None) -> Iterable[Path]:
     search_dirs = [TRANSPORT_LEAP_EXPORT_DIR]
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
-        yield from search_dir.glob(TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN)
+        if scenario:
+            yield from search_dir.glob(
+                f"transport_leap_export_combined_ALL_ECONS*_domestic_international_{scenario}_*.xlsx"
+            )
+            yield from search_dir.glob(
+                f"transport_leap_export_combined_ALL_ECONS*_{scenario}_*.xlsx"
+            )
+        else:
+            yield from search_dir.glob(TRANSPORT_LEAP_EXPORT_ALL_ECONS_PATTERN)
 
 
 def _economy_to_leap_import_token(economy: str | None) -> str:
@@ -2004,11 +2012,12 @@ def _economy_to_leap_import_token(economy: str | None) -> str:
     return economy_text
 
 
-def _iter_transport_leap_economy_candidates(economy: str) -> Iterable[Path]:
+def _iter_transport_leap_economy_candidates(economy: str, scenario: str | None = None) -> Iterable[Path]:
     token = _economy_to_leap_import_token(economy)
     if not token:
         return
-    pattern = f"transport_leap_export_combined_{token}_domestic_international_Target_*.xlsx"
+    scenario_token = str(scenario or "Target").strip() or "Target"
+    pattern = f"transport_leap_export_combined_{token}_domestic_international_{scenario_token}_*.xlsx"
     for search_dir in [TRANSPORT_LEAP_EXPORT_DIR]:
         if not search_dir.exists():
             continue
@@ -2018,6 +2027,7 @@ def _iter_transport_leap_economy_candidates(economy: str) -> Iterable[Path]:
 def find_transport_leap_export_path(
     explicit_path: str | Path | None = None,
     economy: str | None = None,
+    scenario: str | None = None,
 ) -> Path | None:
     """Find the latest transport LEAP export workbook used to improve defaults."""
     if explicit_path:
@@ -2026,11 +2036,13 @@ def find_transport_leap_export_path(
             return explicit_candidate
 
     if economy:
-        latest_economy_file = _latest_existing_file(_iter_transport_leap_economy_candidates(economy))
+        latest_economy_file = _latest_existing_file(
+            _iter_transport_leap_economy_candidates(economy, scenario=scenario)
+        )
         if latest_economy_file is not None:
             return latest_economy_file
 
-    latest_all_econs = _latest_existing_file(_iter_transport_leap_all_econs_candidates())
+    latest_all_econs = _latest_existing_file(_iter_transport_leap_all_econs_candidates(scenario=scenario))
     if latest_all_econs is not None:
         return latest_all_econs
     return None

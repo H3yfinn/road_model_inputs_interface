@@ -43,6 +43,7 @@ _ROAD_MODEL_REPO = Path(
 )
 _ROAD_WORKFLOW = _ROAD_MODEL_REPO / "codebase" / "road_workflow.py"
 _MODULE1_INPUT_DIR = _ROAD_MODEL_REPO / "input_data" / "module1_defaults"
+_ROAD_SCENARIOS_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "scenarios.yaml"
 
 # In-memory registry of active subprocess handles keyed by run_id.
 _active_runs: dict[str, tuple[asyncio.subprocess.Process, str, bool]] = {}
@@ -79,6 +80,58 @@ def _to_canonical_economy(economy: str) -> str:
         return economy
     match = re.match(r"^(\d+)([A-Za-z].*)$", economy)
     return f"{match.group(1)}_{match.group(2)}" if match else economy
+
+
+def _configured_scenario_labels() -> set[str]:
+    """Read configured scenario labels from leap_road_model's scenarios.yaml."""
+    if not _ROAD_SCENARIOS_CONFIG.exists():
+        return set()
+    try:
+        import yaml
+
+        with _ROAD_SCENARIOS_CONFIG.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        scenarios = data.get("scenarios") if isinstance(data, dict) else {}
+        if not isinstance(scenarios, dict):
+            return set()
+        return {str(label).strip() for label in scenarios if str(label).strip()}
+    except Exception as exc:
+        logger.warning(f"Failed to read scenario config {_ROAD_SCENARIOS_CONFIG}: {exc}")
+        return set()
+
+
+def _normalise_projection_scenarios(rows: list[dict[str, Any]], requested: list[str] | None) -> list[str]:
+    """Return ordered non-Current Accounts scenario labels for a run."""
+    labels: list[str] = []
+    seen: set[str] = set()
+    for value in requested or []:
+        text = str(value or "").strip()
+        if not text or text == "Current Accounts" or text in seen:
+            continue
+        labels.append(text)
+        seen.add(text)
+    if labels:
+        return labels
+
+    for row in rows:
+        text = str(row.get("Scenario") or "").strip()
+        if not text or text == "Current Accounts" or text in seen:
+            continue
+        labels.append(text)
+        seen.add(text)
+    return labels or ["Target"]
+
+
+def _validate_projection_scenarios(scenarios: list[str]) -> None:
+    configured = _configured_scenario_labels()
+    if not configured:
+        return
+    unknown = [scenario for scenario in scenarios if scenario not in configured]
+    if unknown:
+        raise ValueError(
+            "Projection scenario label(s) are not configured for LEAP import: "
+            f"{', '.join(unknown)}. Add them to {_ROAD_SCENARIOS_CONFIG} first."
+        )
 
 
 def _write_lifecycle_factors_csv(turnover_config: dict[str, Any], dest_dir: Path) -> Path | None:
@@ -237,6 +290,7 @@ class RunModelRequest(BaseModel):
     economy: str
     version: str
     rows: list[dict[str, Any]]
+    scenarios: list[str] | None = None
     enable_visualisations: bool = True
     turnover_config: dict[str, Any] | None = None
 
@@ -270,6 +324,11 @@ async def start_road_model_run(payload: RunModelRequest):
         )
 
     economy_canonical = _to_canonical_economy(payload.economy)
+    try:
+        projection_scenarios = _normalise_projection_scenarios(payload.rows, payload.scenarios)
+        _validate_projection_scenarios(projection_scenarios)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
         csv_path = _write_module1_csv(payload.rows, payload.economy, payload.version)
@@ -292,6 +351,8 @@ async def start_road_model_run(payload: RunModelRequest):
         str(_MODULE1_INPUT_DIR),
         "--module1-defaults-version",
         payload.version,
+        "--scenarios",
+        *projection_scenarios,
     ]
     if payload.enable_visualisations:
         cmd.append("--vis")

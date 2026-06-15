@@ -79,6 +79,43 @@ def test_write_module1_csv_normalises_economy_code(tmp_path, monkeypatch):
     assert path.exists()
 
 
+def test_normalise_projection_scenarios_prefers_requested_values():
+    import api.run_model_router as router_mod
+
+    rows = [
+        {"Scenario": "Current Accounts"},
+        {"Scenario": "Target"},
+        {"Scenario": "Reference"},
+    ]
+
+    assert router_mod._normalise_projection_scenarios(rows, ["Reference", "Target"]) == [
+        "Reference",
+        "Target",
+    ]
+
+
+def test_normalise_projection_scenarios_falls_back_to_row_labels():
+    import api.run_model_router as router_mod
+
+    rows = [
+        {"Scenario": "Current Accounts"},
+        {"Scenario": "Target"},
+        {"Scenario": "Reference"},
+        {"Scenario": "Target"},
+    ]
+
+    assert router_mod._normalise_projection_scenarios(rows, None) == ["Target", "Reference"]
+
+
+def test_validate_projection_scenarios_rejects_unknown(monkeypatch):
+    import api.run_model_router as router_mod
+
+    monkeypatch.setattr(router_mod, "_configured_scenario_labels", lambda: {"Current Accounts", "Target"})
+
+    with pytest.raises(ValueError, match="NotARealScenario"):
+        router_mod._validate_projection_scenarios(["Target", "NotARealScenario"])
+
+
 # ---------------------------------------------------------------------------
 # FastAPI endpoint tests via TestClient
 # ---------------------------------------------------------------------------
