@@ -1459,6 +1459,24 @@ body.road-panel-resizing * {
     font-size: 0.56rem;
 }
 
+.road-cell-scenario-badge {
+    display: inline-flex;
+    align-items: center;
+    max-width: 5.5rem;
+    min-width: 0;
+    padding: 0.08rem 0.26rem;
+    border-radius: 9999px;
+    background: #eef2ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+    font-size: 0.48rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 
 .road-value-input,
 .road-comment-input {

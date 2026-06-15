@@ -20,7 +20,6 @@ const State = {
         economy: null,
         scenario: 'Target',
         scenarios: ['Current Accounts', 'Target'],
-        runScenarios: [],
         configuredScenarios: ['Current Accounts', 'Reference', 'Target'],
         keyColumns: [],
         rows: [],
@@ -178,8 +177,6 @@ const DOM = {
     roadModule1Main: document.getElementById('road-module1-main'),
     roadVersionSelect: document.getElementById('road-version-select'),
     roadEconomySelect: document.getElementById('road-economy-select'),
-    roadScenarioSelect: document.getElementById('road-scenario-select'),
-    roadRunScenarioList: document.getElementById('road-run-scenario-list'),
     roadLoadDefaults: document.getElementById('road-load-defaults'),
     roadUseBuiltinProvidedValues: document.getElementById('road-use-builtin-provided-values'),
     roadDownloadProvidedTemplate: document.getElementById('road-download-provided-template'),
@@ -538,15 +535,6 @@ function setupRoadModule1() {
     if (DOM.roadRunModel) {
         DOM.roadRunModel.addEventListener('click', runRoadModel);
     }
-    if (DOM.roadScenarioSelect) {
-        DOM.roadScenarioSelect.addEventListener('change', () => {
-            const selected = DOM.roadScenarioSelect.value || '';
-            if (selected.startsWith('__add__:')) {
-                addRoadModule1Scenario(selected.slice('__add__:'.length));
-            }
-            DOM.roadScenarioSelect.value = '';
-        });
-    }
     if (DOM.roadRunLogClose) {
         DOM.roadRunLogClose.addEventListener('click', hideRoadRunLogModal);
     }
@@ -799,32 +787,11 @@ function syncRoadModule1ScenarioState(preferredScenario = '') {
         ...(State.roadModule1.hiddenRows || [])
     ]);
     State.roadModule1.scenarios = scenarios;
-    reconcileRoadModule1RunScenarioState();
 
     const preferred = normaliseRoadScenarioLabel(preferredScenario || State.roadModule1.scenario);
     const fallback = scenarios.find(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
         || ROAD_MODULE1_CURRENT_ACCOUNTS;
     State.roadModule1.scenario = scenarios.includes(preferred) ? preferred : fallback;
-    updateRoadModule1ScenarioSelector();
-    updateRoadModule1RunScenarioList();
-}
-
-function updateRoadModule1ScenarioSelector() {
-    if (!DOM.roadScenarioSelect) return;
-    DOM.roadScenarioSelect.innerHTML = '';
-    DOM.roadScenarioSelect.add(new Option('Add configured scenario...', ''));
-    const missingConfigured = getRoadModule1ConfiguredScenarios()
-        .filter(scenario => scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS)
-        .filter(scenario => !(State.roadModule1.scenarios || []).includes(scenario));
-    missingConfigured.forEach(scenario => {
-        DOM.roadScenarioSelect.add(new Option(`+ ${scenario}`, `__add__:${scenario}`));
-    });
-    if (missingConfigured.length === 0) {
-        const option = new Option('All configured scenarios loaded', '');
-        option.disabled = true;
-        DOM.roadScenarioSelect.add(option);
-    }
-    DOM.roadScenarioSelect.value = '';
 }
 
 function isRoadCurrentAccountsRow(row) {
@@ -844,80 +811,8 @@ function getRoadProjectionScenarioLabels() {
         .filter(scenario => scenario && scenario !== ROAD_MODULE1_CURRENT_ACCOUNTS);
 }
 
-function reconcileRoadModule1RunScenarioState(preferredRunScenarios = null) {
-    const available = getRoadProjectionScenarioLabels();
-    const source = Array.isArray(preferredRunScenarios)
-        ? preferredRunScenarios
-        : State.roadModule1.runScenarios;
-    let selected = source === null
-        ? [...available]
-        : (source || [])
-        .map(normaliseRoadScenarioLabel)
-        .filter(scenario => scenario && available.includes(scenario));
-
-    if (selected.length === 0) {
-        selected = [...available];
-    }
-    State.roadModule1.runScenarios = Array.from(new Set(selected));
-}
-
-function includeRoadModule1ScenarioInRun(scenarioLabel) {
-    const scenario = normaliseRoadScenarioLabel(scenarioLabel);
-    if (!scenario || scenario === ROAD_MODULE1_CURRENT_ACCOUNTS) return;
-    const available = getRoadProjectionScenarioLabels();
-    if (!available.includes(scenario)) return;
-    const selected = new Set(State.roadModule1.runScenarios || []);
-    selected.add(scenario);
-    State.roadModule1.runScenarios = available.filter(label => selected.has(label));
-    updateRoadModule1RunScenarioList();
-}
-
 function getRoadRunScenarioLabels() {
-    reconcileRoadModule1RunScenarioState();
-    return State.roadModule1.runScenarios || [];
-}
-
-function updateRoadModule1RunScenarioList() {
-    if (!DOM.roadRunScenarioList) return;
-    const available = getRoadProjectionScenarioLabels();
-    if (available.length === 0) {
-        DOM.roadRunScenarioList.innerHTML = '<div class="text-slate-400">No projection scenarios loaded.</div>';
-        return;
-    }
-
-    const selected = new Set(State.roadModule1.runScenarios || []);
-    DOM.roadRunScenarioList.innerHTML = '';
-    available.forEach(scenario => {
-        const id = `road-run-scenario-${scenario.replace(/[^A-Za-z0-9_-]+/g, '-')}`;
-        const label = document.createElement('label');
-        label.className = 'flex items-center gap-2 cursor-pointer';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = id;
-        checkbox.value = scenario;
-        checkbox.checked = selected.has(scenario);
-        checkbox.className = 'rounded border-slate-300 text-indigo-600 focus:ring-indigo-500';
-        checkbox.addEventListener('change', () => {
-            const next = new Set(State.roadModule1.runScenarios || []);
-            if (checkbox.checked) {
-                next.add(scenario);
-            } else {
-                next.delete(scenario);
-            }
-            if (next.size === 0) {
-                checkbox.checked = true;
-                showCustomToast('Select at least one projection scenario to run.', 'warning');
-                return;
-            }
-            State.roadModule1.runScenarios = available.filter(label => next.has(label));
-            scheduleRoadModule1DraftSave();
-        });
-        const text = document.createElement('span');
-        text.textContent = scenario;
-        label.appendChild(checkbox);
-        label.appendChild(text);
-        DOM.roadRunScenarioList.appendChild(label);
-    });
+    return getRoadProjectionScenarioLabels();
 }
 
 function cloneRoadProjectionRowsForScenario(rows, sourceScenario, targetScenario) {
@@ -971,7 +866,6 @@ function addRoadModule1Scenario(scenarioLabel) {
     try {
         State.roadModule1.rows = ensureRoadModule1ProjectionScenarioRows(scenario, State.roadModule1.rows);
         syncRoadModule1ScenarioState(scenario);
-        includeRoadModule1ScenarioInRun(scenario);
         populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         renderRoadModule1Inputs();
         scheduleRoadModule1DraftSave();
@@ -1289,7 +1183,6 @@ function serializeRoadModule1Draft() {
         economy: State.roadModule1.economy,
         scenario: State.roadModule1.scenario,
         scenarios: State.roadModule1.scenarios,
-        runScenarios: State.roadModule1.runScenarios,
         overrides: Array.from(State.roadModule1.overrides.values()),
         activeFilter: State.roadModule1.activeFilter,
         structuredFilters: { ...State.roadModule1.structuredFilters },
@@ -1407,8 +1300,6 @@ function applyRoadModule1Draft(draft) {
     }
     State.roadModule1.lastDraftSavedAt = draft.savedAt || null;
     syncRoadModule1ScenarioState(draft.scenario || State.roadModule1.scenario);
-    reconcileRoadModule1RunScenarioState(draft.runScenarios);
-    updateRoadModule1RunScenarioList();
     applyRoadModule1FilterControlValues();
 }
 
@@ -1508,7 +1399,6 @@ async function loadRoadModule1Defaults() {
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
-        State.roadModule1.runScenarios = [];
         syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
@@ -1597,7 +1487,6 @@ async function loadRoadModule1BuiltinProvidedValues() {
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
         State.roadModule1.hiddenRows = splitRows.hiddenRows;
-        State.roadModule1.runScenarios = [];
         syncRoadModule1ScenarioState(ROAD_MODULE1_DEFAULT_PROJECTION_SCENARIO);
         State.roadModule1.overrides = new Map();
         State.roadModule1.sharedMileageOverrides = new Map();
@@ -2043,8 +1932,20 @@ function buildRoadInfoTooltip(text) {
     return `<button type="button" class="road-info-tip" data-tip="${escapeHtml(text)}" aria-label="More information" tabindex="0">?</button>`;
 }
 
-function buildRoadCellLabelHtml(label, helpText) {
-    return `<label>${escapeHtml(label)} ${buildRoadInfoTooltip(helpText)}</label>`;
+function getRoadCellScenarioLabel(row, year) {
+    if (!row) return '';
+    const numericYear = Number(year);
+    if (Number.isFinite(numericYear) && numericYear <= ROAD_MODULE1_BASE_YEAR) {
+        return ROAD_MODULE1_CURRENT_ACCOUNTS;
+    }
+    return normaliseRoadScenarioLabel(row.Scenario) || ROAD_MODULE1_CURRENT_ACCOUNTS;
+}
+
+function buildRoadCellLabelHtml(label, helpText, scenarioLabel = '') {
+    const scenarioBadge = scenarioLabel
+        ? `<span class="road-cell-scenario-badge">${escapeHtml(scenarioLabel)}</span>`
+        : '';
+    return `<label>${escapeHtml(label)}${scenarioBadge} ${buildRoadInfoTooltip(helpText)}</label>`;
 }
 
 function isRoadTransportParamRow(row) {
@@ -3023,10 +2924,10 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
         if (!ref) return '';
         const defaultValue = getRoadDefaultValue(ref.row, ref.year);
         const override = State.roadModule1.overrides.get(`${ref.rowKey}||Year=${ref.year}`);
-        const inputValue = getRoadInputValueWithDefault(override, defaultValue);
+            const inputValue = getRoadInputValueWithDefault(override, defaultValue);
         return `
             <div class="road-year-input road-paired-share-input" data-share-role="${role}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
-                ${buildRoadCellLabelHtml(label, ROAD_VARIABLE_HELP.pairedFuelShare[role] || `${label}: enter a fraction between 0 and 1 for this transport type.`)}
+                ${buildRoadCellLabelHtml(label, ROAD_VARIABLE_HELP.pairedFuelShare[role] || `${label}: enter a fraction between 0 and 1 for this transport type.`, getRoadCellScenarioLabel(ref.row, ref.year))}
                 <input type="number" step="any" ${getRoadPairedFuelShareBoundsAttrs()} class="road-value-input road-paired-share-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
@@ -3075,7 +2976,7 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
             <div class="road-year-input road-reconciliation-input" data-reconciliation-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
-                ${buildRoadCellLabelHtml(label, helpText)}
+                ${buildRoadCellLabelHtml(label, helpText, getRoadCellScenarioLabel(row, ref.year))}
                 <input type="number" step="any" ${boundsAttrs} class="road-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
@@ -3195,7 +3096,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
                 : defaultChecked;
             return `
                 <div class="road-year-input road-transport-param-input" data-param-role="${role}" data-row-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}" data-year="${year}">
-                    <label>${escapeHtml(year)}</label>
+                    ${buildRoadCellLabelHtml(year, _paramHelpText || `${labelText} for ${year}.`, getRoadCellScenarioLabel(row, year))}
                     ${isBooleanToggle
                         ? `
                         <div class="road-view-toggle road-boolean-toggle" data-default-bool="${defaultChecked ? '1' : '0'}">
@@ -3358,7 +3259,7 @@ function buildRoadModule1TurnoverCalibrationEditorHtml(group, depth = 0) {
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         return `
             <div class="road-year-input road-turnover-calibration-input" data-turnover-role="${bindRole}" data-row-key="${encodeURIComponent(ref.rowKey)}" data-year="${ref.year}">
-                ${buildRoadCellLabelHtml(label, helpText)}
+                ${buildRoadCellLabelHtml(label, helpText, getRoadCellScenarioLabel(row, ref.year))}
                 <input type="number" step="any" ${boundsAttrs} class="road-value-input" data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
             </div>
         `;
@@ -3504,7 +3405,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[first.Variable] || ROAD_VARIABLE_HELP.variables['PHEV Electric Driving Share']}`)}
+                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[first.Variable] || ROAD_VARIABLE_HELP.variables['PHEV Electric Driving Share']}`, getRoadCellScenarioLabel(first, year))}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                 </div>
             `;
@@ -3539,7 +3440,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             const boundsAttrs = getRoadModule1InputBoundsAttrs(first.Variable);
             return `
                 <div class="road-year-input" data-year="${year}">
-                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables['Mileage']} ${mileageTooltipSuffix}`)}
+                    ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables['Mileage']} ${mileageTooltipSuffix}`, getRoadCellScenarioLabel(first, year))}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                 </div>
             `;
@@ -3581,7 +3482,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 const boundsAttrs = getRoadModule1InputBoundsAttrs(refRow.Variable);
                 return `
                     <div class="road-year-input" data-year="${year}">
-                        ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`)}
+                        ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`, getRoadCellScenarioLabel(refRow, year))}
                         <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                     </div>
                 `;
@@ -3832,7 +3733,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 : `${year}${ROAD_VARIABLE_HELP.variables[row.Variable] ? ' — ' + ROAD_VARIABLE_HELP.variables[row.Variable] : ''}. Leave blank to keep the provided default value.`;
             return `
                 <div class="road-year-input${isReadOnlyBaseStockShare ? ' road-stock-share-auto' : ''}" data-year="${year}">
-                    ${buildRoadCellLabelHtml(cellLabel, cellHelpText)}
+                    ${buildRoadCellLabelHtml(cellLabel, cellHelpText, getRoadCellScenarioLabel(row, year))}
                     <input type="number" step="any" class="road-value-input" ${boundsAttrs} ${isReadOnlyBaseStockShare ? 'readonly aria-readonly="true"' : ''} data-default-value="${escapeHtml(defaultValue)}" value="${isReadOnlyBaseStockShare ? escapeHtml(defaultValue) : escapeHtml(inputValue)}">
                     ${inheritedValue !== '' && !override ? '<div class="road-inherited-label">Inherited</div>' : ''}
                 </div>
@@ -5507,7 +5408,6 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.version = version;
     State.roadModule1.economy = economy;
     syncRoadModule1ScenarioState(State.roadModule1.scenario);
-    (preview.uploadedScenarios || []).forEach(includeRoadModule1ScenarioInRun);
     State.roadModule1.overrides = new Map();
     State.roadModule1.sharedMileageOverrides = new Map();
     State.roadModule1.sharedFuelEconomyOverrides = new Map();
