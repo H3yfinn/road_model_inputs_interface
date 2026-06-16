@@ -1123,6 +1123,7 @@ body.road-panel-resizing * {
 .road-input-row.no-row-label .road-year-grid {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.45rem;
     grid-column: 2;
     grid-template-columns: none;
@@ -1131,11 +1132,24 @@ body.road-panel-resizing * {
     width: 100%;
 }
 
-/* Stock share rows (labeled): force 3 equal columns in the year grid */
+/* Stock share rows (labeled): right-align the 1-3 year cells. A fixed
+   3-equal-column grid left-bunched the cells whenever fewer than 3 were
+   present; flex + flex-wrap right-aligns them and wraps to a second line
+   instead of squeezing cells until labels/inputs overlap. */
 .road-stock-share-row .road-year-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.5rem;
+}
+
+.road-stock-share-row .road-year-input {
+    flex: 0 1 6.5rem;
+    min-width: 4.5rem;
+}
+
+.road-stock-share-row .road-year-input .road-value-input {
+    width: 100%;
 }
 
 /* Stock share rows (no-row-label): col1 has no label so give all space to col2 */
@@ -1144,17 +1158,22 @@ body.road-panel-resizing * {
 }
 
 .road-input-row.no-row-label .road-year-grid.road-stock-share-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.5rem;
-    justify-content: unset;
 }
 
-/* In no-row-label context, stock share cells use column layout (label above input) */
+/* In no-row-label context, stock share cells use column layout (label above input).
+   These repeat the flex-basis/min-width from above with extra specificity so they
+   win over the generic ".road-input-row.no-row-label .road-year-input" rule, which
+   would otherwise zero out min-width and force a fixed 7rem input width. */
 .road-input-row.no-row-label .road-stock-share-grid .road-year-input {
+    flex: 0 1 6.5rem;
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
+    min-width: 4.5rem;
 }
 
 .road-input-row.no-row-label .road-stock-share-grid .road-year-input label {
@@ -1200,30 +1219,6 @@ body.road-panel-resizing * {
     width: 7rem;
 }
 
-/* Shared mileage rows should use the same stacked cell treatment as fuel economy rows. */
-.road-input-row.no-row-label.road-shared-mileage-row .road-year-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
-    justify-content: unset;
-}
-
-.road-input-row.no-row-label.road-shared-mileage-row .road-year-input {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0;
-}
-
-.road-input-row.no-row-label.road-shared-mileage-row .road-year-input label {
-    margin-bottom: 0.14rem;
-    white-space: normal;
-}
-
-.road-input-row.no-row-label.road-shared-mileage-row .road-year-input .road-value-input {
-    min-height: 1.52rem;
-    padding: 0.2rem 0.36rem;
-    width: 100%;
-}
-
 .road-input-row:last-child {
     border-bottom: 0;
 }
@@ -1237,14 +1232,12 @@ body.road-panel-resizing * {
     border-left-color: #22c55e;
 }
 
+/* Column widths only — shared label/actions alignment lives with
+   .road-reconciliation-row / .road-transport-params-row below, since all
+   three are the same "label · content · actions" row treatment. */
 .road-sales-share-mix-row {
     grid-template-columns: minmax(230px, 0.7fr) minmax(560px, 1.7fr) minmax(170px, 220px);
-    align-items: start;
     --road-sales-share-control-height: 3.6rem;
-}
-
-.road-sales-share-mix-row .road-row-actions {
-    justify-content: flex-start;
 }
 
 .road-paired-series-grid {
@@ -1563,7 +1556,8 @@ body.road-panel-resizing * {
 }
 
 .road-reconciliation-row,
-.road-transport-params-row {
+.road-transport-params-row,
+.road-sales-share-mix-row {
     grid-template-columns: minmax(210px, 1fr) minmax(210px, 430px) minmax(170px, 225px);
     gap: 0.45rem;
     padding-top: 0.34rem;
@@ -1571,18 +1565,22 @@ body.road-panel-resizing * {
 }
 
 .road-reconciliation-row .road-row-label,
-.road-transport-params-row .road-row-label {
+.road-transport-params-row .road-row-label,
+.road-sales-share-mix-row .road-row-label {
     align-self: flex-start;
 }
 
 .road-reconciliation-row .road-row-actions,
-.road-transport-params-row .road-row-actions {
+.road-transport-params-row .road-row-actions,
+.road-sales-share-mix-row .road-row-actions {
     align-self: flex-start;
     padding-top: 0.08rem;
+    justify-content: flex-start;
 }
 
 .road-reconciliation-row .road-row-actions .road-comment-input,
-.road-transport-params-row .road-row-actions .road-comment-input {
+.road-transport-params-row .road-row-actions .road-comment-input,
+.road-sales-share-mix-row .road-row-actions .road-comment-input {
     max-width: 8rem;
 }
 
@@ -1590,16 +1588,19 @@ body.road-panel-resizing * {
     max-width: 8rem;
 }
 
-.road-shared-fe-subgroup {
-    display: grid;
-    grid-template-columns: minmax(170px, 380px) minmax(190px, 240px);
+.road-shared-fe-label {
+    grid-column: 1;
+    display: flex;
     align-items: center;
-    gap: 0.65rem;
-    grid-column: 2 / 4;
+    gap: 0.3rem;
     min-width: 0;
-}
-.road-shared-fe-row .road-shared-fe-subgroup .road-year-grid {
-    width: 100%;
+    padding-left: var(--road-indent, 0);
+    color: #475569;
+    font-size: 0.62rem;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .road-group-card.is-compact .road-breadcrumbs {
@@ -1794,11 +1795,6 @@ body.road-panel-resizing * {
         grid-column: 1 / -1;
     }
 
-    .road-shared-fe-subgroup {
-        grid-column: 1 / -1;
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .road-series-row {
         grid-template-columns: minmax(240px, 1fr);
     }
@@ -1817,6 +1813,18 @@ body.road-panel-resizing * {
 
     .road-row-actions {
         grid-column: 1 / -1;
+    }
+
+    /* Below this width there isn't room for the header and the input row
+       side by side without squeezing the input column until its cells
+       overflow and overlap the header text. Stack them instead. */
+    .road-group-card.is-compact {
+        grid-template-columns: 1fr;
+    }
+
+    .road-group-card.is-compact .road-group-rows {
+        justify-content: flex-start;
+        padding: 0 0.42rem 0.4rem;
     }
 }
 
