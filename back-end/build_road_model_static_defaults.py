@@ -139,20 +139,30 @@ def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -
     if sales_df.empty:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
 
-    # FOR_VIEWING workbooks put 2022-2060 values in unnamed columns immediately
-    # after Method. They are not labelled as years in the header row.
-    value_columns = [
-        column
-        for column in sales_df.columns
-        if str(column).startswith("Unnamed:")
-        and pd.to_numeric(sales_df[column], errors="coerce").notna().any()
-    ]
-    value_columns = value_columns[: len([BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])]
-    year_by_column = {
-        column: year
-        for column, year in zip(value_columns, [BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])
-        if year in PROJECTED_SALES_SHARE_YEARS
-    }
+    year_by_column = {}
+    for column in sales_df.columns:
+        try:
+            year = int(float(column))
+        except (TypeError, ValueError):
+            continue
+        if year in PROJECTED_SALES_SHARE_YEARS:
+            year_by_column[column] = year
+
+    if not year_by_column:
+        # Older FOR_VIEWING workbooks put 2022-2060 values in unnamed columns
+        # immediately after Method. Newer exports label these columns as years.
+        value_columns = [
+            column
+            for column in sales_df.columns
+            if str(column).startswith("Unnamed:")
+            and pd.to_numeric(sales_df[column], errors="coerce").notna().any()
+        ]
+        value_columns = value_columns[: len([BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])]
+        year_by_column = {
+            column: year
+            for column, year in zip(value_columns, [BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])
+            if year in PROJECTED_SALES_SHARE_YEARS
+        }
     if not year_by_column:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
 

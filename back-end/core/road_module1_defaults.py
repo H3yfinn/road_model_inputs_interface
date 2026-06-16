@@ -635,6 +635,12 @@ def _phev_rate_for_branch(
         parts = str(branch_path).split("\\")
         # vehicle type is parts[2] (Demand\Transport road\VehicleType\...)
         vehicle_type = parts[2] if len(parts) > 2 else ""
+        if vehicle_type == "PHEV" and len(parts) > 1:
+            transport_raw = parts[1].lower()
+            if "passenger" in transport_raw:
+                vehicle_type = "LPVs"
+            elif "freight" in transport_raw:
+                vehicle_type = "LCVs"
         vt_rows = source_rows[source_rows["vehicle_type"] == vehicle_type]
         if vt_rows.empty:
             return None, None
@@ -647,7 +653,10 @@ def _phev_rate_for_branch(
     return float(rate), source_row
 
 
-PHEV_UTILISATION_BRANCH_PATH = "Demand\\PHEV electric driving share"
+PHEV_UTILISATION_BRANCH_PATHS = [
+    "Demand\\Passenger road\\PHEV",
+    "Demand\\Freight road\\PHEV",
+]
 
 
 def _economy_level_phev_rate(
@@ -714,60 +723,60 @@ def overlay_phev_utilisation_rates(
 
     overlaid_df = default_filled_df.copy()
     report_rows = []
-    rate, source_row = _economy_level_phev_rate(source_rows)
-    if rate is None:
-        report_rows.append({
-            "status": "fail",
-            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
-            "Variable": "PHEV Electric Driving Share",
-            "Scenario": "",
-            "Region": economy.name,
-            "source_year": "",
-            "details": f"No usable PHEV utilisation value found for {economy.code}.",
-        })
-        return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)
-
     overlaid_df = overlaid_df[~overlaid_df["Variable"].eq("PHEV Electric Driving Share")].copy()
     scenarios = overlaid_df["Scenario"].dropna().unique().tolist() or ["Current Accounts"]
-    note = (
-        f"PHEV utilisation rate from {resolved_path.name}; source data_year "
-        f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
-        f"evidence_grade {source_row['evidence_grade']}; "
-        f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
-        f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
-    )
     new_rows: list[dict] = []
-    for scenario in scenarios:
-        new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
-        new_row.update({
-            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
-            "Variable": "PHEV Electric Driving Share",
-            "Scenario": scenario,
-            "Region": economy.name,
-            "Scale": _default_scale_for_variable("PHEV Electric Driving Share"),
-            "Units": "Share",
-            "Per...": "",
-            str(BASE_YEAR): rate,
-            "input_source": "provided",
-            "source_type": "apec_phev_utilisation_rates",
-            "source_name": resolved_path.name,
-            "source_scope": economy.code,
-            "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
-            "notes": note,
-            "standardized_label_status": "standardized",
-            "researcher_review_recommended": False,
-            "review_reason": "",
-        })
-        new_rows.append(new_row)
-        report_rows.append({
-            "status": "applied",
-            "Branch Path": PHEV_UTILISATION_BRANCH_PATH,
-            "Variable": "PHEV Electric Driving Share",
-            "Scenario": scenario,
-            "Region": economy.name,
-            "source_year": new_row["source_date"],
-            "details": f"{BASE_YEAR}={rate}",
-        })
+    for branch_path in PHEV_UTILISATION_BRANCH_PATHS:
+        rate, source_row = _phev_rate_for_branch(source_rows, branch_path, economy.code)
+        if rate is None:
+            report_rows.append({
+                "status": "fail",
+                "Branch Path": branch_path,
+                "Variable": "PHEV Electric Driving Share",
+                "Scenario": "",
+                "Region": economy.name,
+                "source_year": "",
+                "details": f"No usable PHEV utilisation value found for {economy.code}.",
+            })
+            continue
+        note = (
+            f"PHEV utilisation rate from {resolved_path.name}; source data_year "
+            f"{int(source_row['data_year']) if not pd.isna(source_row['data_year']) else ''}; "
+            f"evidence_grade {source_row['evidence_grade']}; "
+            f"range {source_row['lower_rate']}-{source_row['upper_rate']}; "
+            f"{source_row['estimation_status']}. Future-year changes are handled by LEAP adjustment variables."
+        )
+        for scenario in scenarios:
+            new_row = {column: pd.NA for column in MODULE1_INPUT_COLUMNS}
+            new_row.update({
+                "Branch Path": branch_path,
+                "Variable": "PHEV Electric Driving Share",
+                "Scenario": scenario,
+                "Region": economy.name,
+                "Scale": _default_scale_for_variable("PHEV Electric Driving Share"),
+                "Units": "Share",
+                "Per...": "",
+                str(BASE_YEAR): rate,
+                "input_source": "provided",
+                "source_type": "apec_phev_utilisation_rates",
+                "source_name": resolved_path.name,
+                "source_scope": economy.code,
+                "source_date": str(int(source_row["data_year"])) if not pd.isna(source_row["data_year"]) else "",
+                "notes": note,
+                "standardized_label_status": "standardized",
+                "researcher_review_recommended": False,
+                "review_reason": "",
+            })
+            new_rows.append(new_row)
+            report_rows.append({
+                "status": "applied",
+                "Branch Path": branch_path,
+                "Variable": "PHEV Electric Driving Share",
+                "Scenario": scenario,
+                "Region": economy.name,
+                "source_year": new_row["source_date"],
+                "details": f"{BASE_YEAR}={rate}",
+            })
 
     overlaid_df = pd.concat([overlaid_df, pd.DataFrame(new_rows)], ignore_index=True)
     return overlaid_df[MODULE1_INPUT_COLUMNS], pd.DataFrame(report_rows)

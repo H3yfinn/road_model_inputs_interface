@@ -1200,6 +1200,30 @@ body.road-panel-resizing * {
     width: 7rem;
 }
 
+/* Shared mileage rows should use the same stacked cell treatment as fuel economy rows. */
+.road-input-row.no-row-label.road-shared-mileage-row .road-year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+    justify-content: unset;
+}
+
+.road-input-row.no-row-label.road-shared-mileage-row .road-year-input {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+}
+
+.road-input-row.no-row-label.road-shared-mileage-row .road-year-input label {
+    margin-bottom: 0.14rem;
+    white-space: normal;
+}
+
+.road-input-row.no-row-label.road-shared-mileage-row .road-year-input .road-value-input {
+    min-height: 1.52rem;
+    padding: 0.2rem 0.36rem;
+    width: 100%;
+}
+
 .road-input-row:last-child {
     border-bottom: 0;
 }

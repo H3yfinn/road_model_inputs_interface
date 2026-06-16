@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 
@@ -27,6 +28,7 @@ DEFAULT_EXPORT_PATH = (
     / "leap_import_workbooks"
     / "transport_leap_export_combined_ALL_ECONS_domestic_international_Target_20260526.xlsx"
 )
+DEFAULT_EXPORT_SCENARIOS = ("Target", "Reference")
 PROCESSED_SOURCE_DIR = ROAD_MODEL_DATA_DIR / "processed_source"
 
 EXPORT_SHEET_NAME = "FOR_VIEWING"
@@ -168,6 +170,35 @@ def expand_export_to_long(export_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _transport_export_sort_key(path: Path) -> tuple[str, float]:
+    match = re.search(r"_(\d{8})(?:\D|$)", path.stem)
+    date_token = match.group(1) if match else ""
+    return date_token, path.stat().st_mtime
+
+
+def find_latest_all_economies_exports(
+    workbook_dir: Path = ROAD_MODEL_DATA_DIR / "leap_import_workbooks",
+    scenarios: Iterable[str] = DEFAULT_EXPORT_SCENARIOS,
+) -> list[Path]:
+    """Find the latest combined all-economies export for each requested scenario."""
+    export_paths: list[Path] = []
+    for scenario in scenarios:
+        scenario_text = str(scenario).strip()
+        if not scenario_text:
+            continue
+        candidates = [
+            path
+            for path in workbook_dir.glob(
+                f"transport_leap_export_combined_ALL_ECONS*_domestic_international_{scenario_text}_*.xlsx"
+            )
+            if path.is_file()
+        ]
+        if not candidates:
+            continue
+        export_paths.append(max(candidates, key=_transport_export_sort_key))
+    return export_paths
+
+
 def write_processed_source_files(long_df: pd.DataFrame, output_dir: Path) -> list[Path]:
     """Write one processed source CSV per economy."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -182,17 +213,51 @@ def write_processed_source_files(long_df: pd.DataFrame, output_dir: Path) -> lis
     return written
 
 
-def prepare_road_source(export_path: Path = DEFAULT_EXPORT_PATH, output_dir: Path = PROCESSED_SOURCE_DIR) -> list[Path]:
+def prepare_road_source(
+    export_path: Path | Iterable[Path] | None = DEFAULT_EXPORT_PATH,
+    output_dir: Path = PROCESSED_SOURCE_DIR,
+) -> list[Path]:
     """Run the LEAP-export-to-processed-source preparation workflow."""
     os.chdir(REPO_DIR)
-    export_df = load_road_export_rows(export_path)
-    long_df = expand_export_to_long(export_df)
+    if export_path is None:
+        export_paths = find_latest_all_economies_exports()
+    elif isinstance(export_path, (str, Path)):
+        export_paths = [Path(export_path)]
+    else:
+        export_paths = [Path(path) for path in export_path]
+
+    if not export_paths:
+        raise FileNotFoundError(
+            "No all-economies Target/Reference LEAP export workbooks found in "
+            f"{ROAD_MODEL_DATA_DIR / 'leap_import_workbooks'}."
+        )
+
+    long_frames: list[pd.DataFrame] = []
+    for source_order, path in enumerate(export_paths):
+        export_df = load_road_export_rows(path)
+        long_df = expand_export_to_long(export_df)
+        if long_df.empty:
+            continue
+        long_df = long_df.copy()
+        long_df["_source_order"] = source_order
+        long_frames.append(long_df)
+
+    if not long_frames:
+        return []
+
+    long_df = pd.concat(long_frames, ignore_index=True)
+    key_columns = ["Region", "Branch Path", "Variable", "Scenario", "Year"]
+    long_df = (
+        long_df.sort_values([*key_columns, "_source_order"])
+        .drop_duplicates(subset=key_columns, keep="last")
+        .drop(columns=["_source_order"])
+    )
     return write_processed_source_files(long_df, output_dir)
 
 
 # --- Frequently changed toggles ---
 RUN_PREPARE_ROAD_SOURCE = False
-EXPORT_PATH = DEFAULT_EXPORT_PATH
+EXPORT_PATH = None
 OUTPUT_DIR = PROCESSED_SOURCE_DIR
 
 

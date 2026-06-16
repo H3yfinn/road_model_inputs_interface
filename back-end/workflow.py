@@ -61,12 +61,20 @@ def print_path(label: str, path: Path) -> None:
     print(f"{label}: {path.resolve()}")
 
 
-def run_source_prep_from_leap_export(export_path: Path | None = None) -> list[Path]:
+def run_source_prep_from_leap_export(export_path: Path | list[Path] | None = None) -> list[Path]:
     """Regenerate processed_source/ from an upstream LEAP export workbook."""
     prepare_module = load_prepare_road_source_module()
-    selected_export_path = export_path or get_latest_leap_export_workbook()
+    selected_export_path = export_path
+    if selected_export_path is None and hasattr(prepare_module, "find_latest_all_economies_exports"):
+        selected_export_path = prepare_module.find_latest_all_economies_exports()
+    if selected_export_path is None:
+        selected_export_path = get_latest_leap_export_workbook()
     print("\n--- Source prep ---")
-    print_path("LEAP export workbook", selected_export_path)
+    if isinstance(selected_export_path, list):
+        for path in selected_export_path:
+            print_path("LEAP export workbook", path)
+    else:
+        print_path("LEAP export workbook", selected_export_path)
     written_files = prepare_module.prepare_road_source(
         export_path=selected_export_path,
         output_dir=PROCESSED_SOURCE_DIR,

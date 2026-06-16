@@ -181,7 +181,8 @@ Demand\Freight road\Trucks\ICE medium\Motor gasoline,Fuel Economy,fuel,True,Fals
 Demand\Freight road\Trucks\ICE medium\Motor gasoline,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\ICE medium\Natural gas,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\ICE medium\Natural gas,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
-Demand\PHEV electric driving share,PHEV Electric Driving Share,economy,True,False,True,True,%,Single economy-level PHEV electric driving share used by Module 6.
+Demand\Passenger road\PHEV,PHEV Electric Driving Share,transport,True,False,True,True,%,Passenger PHEV electric driving share used by Module 6.
+Demand\Freight road\PHEV,PHEV Electric Driving Share,transport,True,False,True,True,%,Freight PHEV electric driving share used by Module 6.
 Demand\Passenger road,Passenger Saturation Reached,transport,True,False,True,True,True/False,
 Demand\Passenger road,Passenger Stock Growth Rate Adjustment,transport,True,False,True,True,multiplier,
 Demand\Passenger road,Passenger Vehicle Saturation,transport,True,False,True,True,vehicles per 1000 people,

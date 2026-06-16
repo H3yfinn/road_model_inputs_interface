@@ -93,9 +93,11 @@ reshapes annual values into long rows, and writes:
 processed_source/road_module1_source_<ECONOMY>.csv
 ```
 
-The current upstream source is the combined all-economies workbook in
-`leap_import_workbooks/`. The individual per-economy export workbooks are not
-part of the active source package.
+The current upstream source prep combines the latest combined all-economies
+Target and Reference workbooks in `leap_import_workbooks/`. The individual
+per-economy export workbooks are not used for `processed_source/`, but the
+static bundle can use them to load scenario-specific projected sales-share rows
+when a matching economy/scenario workbook exists.
 
 After source prep, run the regular build so generated outputs and frontend
 static CSVs use the refreshed processed sources. `back-end/workflow.py` does
@@ -126,7 +128,7 @@ Active supplemental source files include:
 
 | File | Supplies |
 |---|---|
-| `apec_phev_utilisation_rates.csv` | PHEV electric driving share by economy |
+| `apec_phev_utilisation_rates.csv` | PHEV electric driving share by economy and vehicle type; LPVs feed passenger road and LCVs feed freight road |
 | `apec_reconciliation_factors.csv` | Module 6 reconciliation weights and scalar bounds |
 | `apec_vehicle_equivalent_weights.csv` | Vehicle equivalent weights for Module 3 |
 | `apec_passenger_vehicle_saturation.csv` | Passenger vehicle saturation for Module 3 |
