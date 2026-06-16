@@ -844,7 +844,7 @@ body.road-panel-resizing * {
     align-items: center;
     display: grid;
     gap: 0.2rem;
-    grid-template-columns: minmax(240px, 1fr) auto;
+    grid-template-columns: minmax(240px, 1fr) minmax(0, auto);
 }
 
 .road-group-card.is-compact .road-group-count {
@@ -1246,26 +1246,38 @@ body.road-panel-resizing * {
     min-width: 0;
 }
 
+/* Flex + wrap rather than a fixed-floor grid: the label/textarea/chart
+   trio needs ~30rem at their old hard minimums, but this row only ever
+   gets the outer row's narrow content column (as little as 170px in
+   compact cards). A rigid grid can't shrink below its column minimums,
+   so it was overflowing its track and visually overlapping the
+   reset/comment column next to it. Flex items can shrink past their
+   flex-basis (down to min-width) and, failing that, wrap to their own
+   line instead of overlapping anything. */
 .road-paired-series-row {
-    display: grid;
-    grid-template-columns: minmax(5.5rem, 8.5rem) minmax(14rem, 1fr) minmax(12rem, 16rem);
-    align-items: start;
-    gap: 0.42rem;
-    min-width: 0;
-}
-
-.road-paired-series-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.3rem 0.42rem;
     min-width: 0;
 }
 
 .road-paired-series-label {
     color: #475569;
+    flex: 0 1 auto;
     font-size: 0.68rem;
     font-weight: 800;
     line-height: 1.2;
+    max-width: 8.5rem;
+    min-width: 3rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.road-paired-series-control {
+    flex: 3 1 8rem;
+    min-width: 5rem;
 }
 
 .road-paired-series-input {
@@ -1276,8 +1288,11 @@ body.road-panel-resizing * {
 }
 
 .road-paired-series-row .road-series-chart-wrap {
+    flex: 2 1 6rem;
     height: var(--road-sales-share-control-height);
+    max-width: 16rem;
     min-height: var(--road-sales-share-control-height);
+    min-width: 4rem;
     padding: 0.15rem;
 }
 
@@ -1644,8 +1659,12 @@ body.road-panel-resizing * {
 }
 
 .road-series-row {
-    grid-template-columns: minmax(230px, 0.8fr) minmax(300px, 1.4fr) minmax(260px, 320px);
+    grid-template-columns: minmax(200px, 0.8fr) minmax(260px, 1.4fr) minmax(220px, 300px);
     align-items: stretch;
+}
+
+.road-series-entry {
+    min-width: 0;
 }
 
 .road-series-entry label {
@@ -1683,6 +1702,7 @@ body.road-panel-resizing * {
     border: 1px solid #e2e8f0;
     border-radius: 0.375rem;
     min-height: 86px;
+    min-width: 0;
     padding: 0.25rem;
 }
 
@@ -1801,10 +1821,6 @@ body.road-panel-resizing * {
 
     .road-sales-share-mix-row {
         grid-template-columns: minmax(240px, 1fr);
-    }
-
-    .road-paired-series-row {
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .road-paired-series-label {

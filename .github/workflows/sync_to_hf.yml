@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: sync-to-hf
+  cancel-in-progress: false
+
 jobs:
   sync-to-hub:
     runs-on: ubuntu-latest
@@ -36,4 +40,12 @@ jobs:
           # Remove docs/ — contains PNGs which HF rejects as binary files
           git rm -rf --cached docs/ 2>/dev/null || true
           git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ) lrm@${LRM_SHA:0:7}"
-          git push hf hf-deploy:main --force
+          for attempt in 1 2 3 4 5; do
+            if git push hf hf-deploy:main --force; then
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt), retrying after backoff..."
+            sleep $((attempt * 30))
+          done
+          echo "Push failed after 5 attempts" >&2
+          exit 1
