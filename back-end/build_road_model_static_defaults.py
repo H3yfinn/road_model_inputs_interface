@@ -598,7 +598,7 @@ def write_frontend_static_bundle(
         )
 
         csv_path = version_root / f"{economy_safe}.csv"
-        long_defaults_df[MODULE1_LONG_COLUMNS].to_csv(csv_path, index=False)
+        long_defaults_df[MODULE1_LONG_COLUMNS].drop_duplicates().to_csv(csv_path, index=False)
         defaults_files_written += 1
 
     versions_index = []
