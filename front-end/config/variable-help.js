@@ -146,6 +146,6 @@ const ROAD_VARIABLE_HELP = {
             'Ultra detail editor for sales shares by drive type within one vehicle type. It shows one 2022-2060 series by combining the base-year row with projected rows. Values are entered as percentages and are normalised within each vehicle type and year before the model runs.',
 
         warning:
-            'These drive-type sales shares should add to 100 within each vehicle type for every year. If they do not, the CSV sent to the model is normalised. If you enter shares for one drive type, review the other drive types in the same vehicle type. Use REMAINDER(100) on one drive type to fill the remaining share; this token is resolved here and is not sent to LEAP.'
+            'Paste from Excel or type values separated by commas, tabs, spaces, or new lines. For a full path to 2060, it is often easiest to prepare the values in Excel or ask an AI tool to draft a year-by-year series, then paste it here. Drive-type sales shares should add to 100 within each vehicle type for every year. If they do not, the CSV sent to the model is normalised. If you enter shares for one drive type, review the other drive types in the same vehicle type. Use <code>REMAINDER(100)</code> on one drive type to fill the remaining share; this token is resolved here and is not sent to LEAP.'
     }
 };

@@ -768,3 +768,420 @@ Some older code and output folders still use names such as
 `road_module1_default_filled_inputs.csv` and produce wide year columns. Treat
 that as current implementation debt. The target contract is the long CSV
 described here.
+
+## Appendix A: Road Branch Tree and Module 1 Measures
+
+This appendix summarizes the implemented road branch structure and the Module 1
+measures required at each level of the tree. It is intended as a compact
+reference for diagrams, static-contract checks, and handoff discussions.
+
+The taxonomy comes from `codebase/config/vehicle_mappings.yaml` and
+`codebase/config/fuel_mappings.yaml` in `leap_road_model`. The measure placement
+reflects the current Module 1 static contract used by the interface. One current
+mismatch is worth noting: the model taxonomy allows `FCEV` for `Motorcycles` and
+`LCVs`, but the current static contract does not require `Motorcycles\FCEV` or
+`LCVs\FCEV` rows.
+
+Data density labels show the minimum interface density at which each measure is
+visible in the researcher UI: **[Less]** = visible at the default (Less) density;
+**[More]** = requires More density; **[Ultra]** = requires Ultra density.
+
+```text
+Demand
+
+  Passenger road
+    Measures:
+      Passenger Vehicle Saturation                          [More]
+      Passenger Saturation Reached                          [More]
+      Passenger Stock Growth Rate Adjustment                [More]
+      Reconciliation Weight Stock                           [More]
+      Reconciliation Weight Mileage                         [More]
+      Reconciliation Weight Efficiency                      [More]
+      Reconciliation Bound Lower Mileage                    [More]
+      Reconciliation Bound Upper Mileage                    [More]
+      Reconciliation Bound Lower Efficiency                 [More]
+      Reconciliation Bound Upper Efficiency                 [More]
+      PHEV Electric Driving Share                           [More]
+
+    Turnover calibration
+      Measures:
+        Turnover Rate Bound Lower                           [More]
+        Turnover Rate Bound Upper                           [More]
+
+    Age <0-37>
+      Measures:
+        Survival Rate                                       [More]
+        Vintage Profile Share                               [More]
+
+    LPVs [sizes: small, medium, large]
+      Measures:
+        Stock                                               [Less]
+        Stock Share                                         [Less]
+        Sales Share                                         [Less]
+        Vehicle Equivalent Weight                           [More]
+
+      ICE <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil, Natural gas, LPG, LNG,
+          Biogasoline, Biodiesel, Biogas, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      HEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil,
+          Biogasoline, Biodiesel, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      EREV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity, Motor gasoline, Biogasoline, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      PHEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity, Motor gasoline, Biogasoline, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      BEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      FCEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Hydrogen
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+    Motorcycles
+      Measures:
+        Stock                                               [Less]
+        Stock Share                                         [Less]
+        Sales Share                                         [Less]
+        Vehicle Equivalent Weight                           [More]
+        Vehicle Equivalent Weight Lower Bound               [More]
+        Vehicle Equivalent Weight Upper Bound               [More]
+
+      ICE
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil, Natural gas, LPG, LNG,
+          Biogasoline, Biodiesel, Biogas, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      BEV
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      FCEV
+        Note:
+          Valid in model taxonomy, but not currently present in the static contract.
+
+    Buses
+      Measures:
+        Stock                                               [Less]
+        Stock Share                                         [Less]
+        Sales Share                                         [Less]
+        Vehicle Equivalent Weight                           [More]
+        Vehicle Equivalent Weight Lower Bound               [More]
+        Vehicle Equivalent Weight Upper Bound               [More]
+
+      ICE
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil, Natural gas, LPG, LNG,
+          Biogasoline, Biodiesel, Biogas, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      BEV
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      FCEV
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Hydrogen
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+  Freight road
+    Measures:
+      Freight GDP Elasticity Adjustment                     [More]
+      Reconciliation Weight Stock                           [More]
+      Reconciliation Weight Mileage                         [More]
+      Reconciliation Weight Efficiency                      [More]
+      Reconciliation Bound Lower Mileage                    [More]
+      Reconciliation Bound Upper Mileage                    [More]
+      Reconciliation Bound Lower Efficiency                 [More]
+      Reconciliation Bound Upper Efficiency                 [More]
+      PHEV Electric Driving Share                           [More]
+
+    Turnover calibration
+      Measures:
+        Turnover Rate Bound Lower                           [More]
+        Turnover Rate Bound Upper                           [More]
+
+    Age <0-37>
+      Measures:
+        Survival Rate                                       [More]
+        Vintage Profile Share                               [More]
+
+    Trucks [sizes: medium, heavy]
+      Measures:
+        Stock                                               [Less]
+        Stock Share                                         [Less]
+        Sales Share                                         [Less]
+
+      ICE <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil, Natural gas, LPG, LNG,
+          Biogasoline, Biodiesel, Biogas, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      BEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      FCEV <size>
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Hydrogen
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+    LCVs
+      Measures:
+        Stock                                               [Less]
+        Stock Share                                         [Less]
+        Sales Share                                         [Less]
+
+      ICE
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Motor gasoline, Gas and diesel oil, Natural gas, LPG, LNG,
+          Biogasoline, Biodiesel, Biogas, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      PHEV
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity, Motor gasoline, Biogasoline, Efuel
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      BEV
+        Measures:
+          Stock Share                                       [Less]
+          Sales Share                                       [Ultra]
+        Fuels:
+          Electricity
+        Fuel-level measures:
+          Mileage                                           [Less]
+          Fuel Economy                                      [Less]
+          Mileage correction factor                         [Ultra]
+          Fuel Economy correction factor                    [Ultra]
+
+      FCEV
+        Note:
+          Valid in model taxonomy, but not currently present in the static contract.
+```
+
+## Appendix B: Module 1 Measures by Branch Level
+
+This appendix describes the same Module 1 measure placement without dictating
+the actual branch taxonomy. Use it when designing diagrams or validation logic
+that should apply to branch levels rather than to specific vehicle, drive, or
+fuel names.
+
+Data density labels are the same as Appendix A: **[Less]**, **[More]**, **[Ultra]**.
+
+```text
+
+Transport level
+  Example path shape:
+    Demand\<Passenger road or Freight road>
+  Measures:
+    Passenger-only:
+      Passenger Vehicle Saturation                          [More]
+      Passenger Saturation Reached                          [More]
+      Passenger Stock Growth Rate Adjustment                [More]
+    Freight-only:
+      Freight GDP Elasticity Adjustment                     [More]
+    Passenger and freight:
+      Reconciliation Weight Stock                           [More]
+      Reconciliation Weight Mileage                         [More]
+      Reconciliation Weight Efficiency                      [More]
+      Reconciliation Bound Lower Mileage                    [More]
+      Reconciliation Bound Upper Mileage                    [More]
+      Reconciliation Bound Lower Efficiency                 [More]
+      Reconciliation Bound Upper Efficiency                 [More]
+      PHEV Electric Driving Share                           [More]
+
+Turnover-calibration level
+  Example path shape:
+    Demand\<transport>\Turnover calibration
+  Measures:
+    Turnover Rate Bound Lower                               [More]
+    Turnover Rate Bound Upper                               [More]
+
+Age-profile level
+  Example path shape:
+    Demand\<transport>\Age <0-37>
+  Measures:
+    Survival Rate                                           [More]
+    Vintage Profile Share                                   [More]
+
+Vehicle-type level
+  Example path shape:
+    Demand\<transport>\<vehicle type>
+  Measures:
+    Stock                                                   [Less]
+    Stock Share                                             [Less]
+    Sales Share                                             [Less]
+    Vehicle Equivalent Weight                               [More]
+    Vehicle Equivalent Weight Lower Bound                   [More]
+    Vehicle Equivalent Weight Upper Bound                   [More]
+  Notes:
+    Vehicle Equivalent Weight bounds are currently used for some passenger
+    vehicle types. Freight vehicle types currently require Stock, Stock Share,
+    and Sales Share only.
+
+Drive or drive-size level
+  Example path shapes:
+    Demand\<transport>\<vehicle type>\<drive>
+    Demand\<transport>\<vehicle type>\<drive> <size>
+  Measures:
+    Stock Share                                             [Less]
+    Sales Share                                             [Ultra]
+
+Fuel level
+  Example path shapes:
+    Demand\<transport>\<vehicle type>\<drive>\<fuel>
+    Demand\<transport>\<vehicle type>\<drive> <size>\<fuel>
+  Measures:
+    Mileage                                                 [Less]
+    Fuel Economy                                            [Less]
+    Mileage correction factor                               [Ultra]
+    Fuel Economy correction factor                          [Ultra]
+```
+
+Condensed rule of thumb:
+
+```text
+Transport level:
+  growth controls [More], reconciliation controls [More], turnover controls [More], age profiles [More]
+
+Vehicle-type level:
+  Stock [Less], Stock Share [Less], Sales Share [Less], vehicle-equivalent weights [More]
+
+Drive or drive-size level:
+  Stock Share [Less], Sales Share [Ultra]
+
+Fuel level:
+  Mileage [Less], Fuel Economy [Less], correction factors [Ultra]
+```

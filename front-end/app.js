@@ -1769,6 +1769,15 @@ function getRoadSharedFuelEconomyKey(row) {
     ].join('||');
 }
 
+function getRoadCorrectionFactorMixGroupKey(row) {
+    return [
+        getRoadDriveBranchPath(row),
+        row.Variable || '',
+        row.Scenario || '',
+        row.Region || ''
+    ].join('||');
+}
+
 function getRoadSharedFuelEconomyOverride(row, year) {
     if (!isRoadFuelEconomyRow(row)) return null;
     return State.roadModule1.sharedFuelEconomyOverrides.get(
@@ -2598,17 +2607,11 @@ function groupRoadRowsForEditors(filteredRows) {
     filteredRows
         .filter(isRoadCorrectionFactorRow)
         .forEach(row => {
-            const branchPath = row['Branch Path'] || '';
-            const groupKey = [
-                'time-series',
-                branchPath,
-                row.Variable || '',
-                row.Scenario || '',
-                row.Region || ''
-            ].join('|');
+            const branchPath = getRoadDriveBranchPath(row);
+            const groupKey = `correction-factor-mix|${getRoadCorrectionFactorMixGroupKey(row)}`;
             if (!groupedRows.has(groupKey)) {
                 groupedRows.set(groupKey, {
-                    groupType: 'time-series',
+                    groupType: 'correction-factor-mix',
                     branchPath: branchPath,
                     sharedKey: '',
                     rows: []
@@ -2866,7 +2869,9 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
                     ? getRoadTransportParamGroupTitle(group)
                     : (group.groupType === 'sales-share-mix'
                         ? 'Sales share by drive type'
-                        : (first.Variable || 'Measure')))));
+                        : (group.groupType === 'correction-factor-mix'
+                            ? (first.Variable || 'Correction factor')
+                            : (first.Variable || 'Measure'))))));
     return `
         <section class="road-graph-editor">
             <div class="road-graph-editor-header">
@@ -2896,7 +2901,9 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
                     ? getRoadTransportParamGroupTitle(group)
                     : (group.groupType === 'sales-share-mix'
                         ? 'Sales share by drive type'
-                        : first.Variable))));
+                        : (group.groupType === 'correction-factor-mix'
+                            ? (first.Variable || 'Correction factor')
+                            : first.Variable)))));
     return `
         <section class="road-group-card road-tree-editor ${isCompactGroup ? 'is-compact' : ''}" style="--road-indent:${Math.max(0, depth - 1) * 0.45}rem">
             <div class="road-group-header">
@@ -3640,11 +3647,101 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 <div class="road-paired-series-grid">
                     ${editorRowsHtml}
-                    <div class="road-series-hint road-sales-share-warning">${escapeHtml(ROAD_VARIABLE_HELP.salesShareMix.warning)} ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
+                    <div class="road-series-hint">${ROAD_VARIABLE_HELP.salesShareMix.warning}</div>
                 </div>
                 <div class="road-row-actions road-series-actions">
                     <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
                     <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
+                </div>
+            </div>
+        `;
+    }
+
+    if (group.groupType === 'correction-factor-mix') {
+        const rowsByFuelPath = new Map();
+        groupRows.forEach(row => {
+            const fuelPath = row['Branch Path'] || '';
+            if (!rowsByFuelPath.has(fuelPath)) rowsByFuelPath.set(fuelPath, []);
+            rowsByFuelPath.get(fuelPath).push(row);
+        });
+        const yearColumns = Array.from(new Set(groupRows.flatMap(getRoadYearColumns))).sort();
+        const firstRow = groupRows[0];
+        const variable = firstRow?.Variable || 'Correction Factor';
+        const units = firstRow?.Units || 'Multiplier';
+        const rowRefs = [...rowsByFuelPath.entries()]
+            .sort((a, b) => getRoadBranchLeafLabel(a[0]).localeCompare(getRoadBranchLeafLabel(b[0]), 'en-US', { numeric: true }))
+            .map(([fuelPath, fuelRows]) => {
+                const yearRefs = yearColumns.map(year => {
+                    const matchingRows = fuelRows.filter(row => getRoadYearColumns(row).includes(String(year)));
+                    const preferredRow = matchingRows[0] || null;
+                    return {
+                        year: year,
+                        value: preferredRow ? getRoadDefaultValue(preferredRow, year) : '',
+                        refs: matchingRows.map(row => ({
+                            rowKey: buildRoadModule1Key(row),
+                            keyPayload: roadModule1KeyPayload(row)
+                        }))
+                    };
+                }).filter(item => item.refs.length > 0);
+                return {
+                    label: getRoadBranchLeafLabel(fuelPath) || fuelPath,
+                    yearRefs: yearRefs
+                };
+            });
+        const allKeyYears = rowRefs.flatMap(ref => ref.yearRefs.flatMap(yearRef =>
+            yearRef.refs.map(rowRef => ({ rowKey: rowRef.rowKey, year: yearRef.year }))
+        ));
+        const comment = getRoadCommentForKeys(
+            allKeyYears.map(item => item.rowKey),
+            allKeyYears.map(item => item.year)
+        );
+        const editorItems = rowRefs.map(ref => {
+            const defaultSeriesText = ref.yearRefs.map(point => formatRoadSeriesInputValue(point.value)).join(', ');
+            const defaultPoints = ref.yearRefs.map(point => ({ age: Number(point.year), value: point.value }));
+            const providedSeriesText = ref.yearRefs
+                .map(point => {
+                    for (const rowRef of point.refs) {
+                        const override = State.roadModule1.overrides.get(`${rowRef.rowKey}||Year=${point.year}`);
+                        if (override && override.value !== null && override.value !== '') return String(override.value);
+                    }
+                    return '';
+                })
+                .join(', ')
+                .replace(/(, )+$/g, '');
+            const seriesText = providedSeriesText || defaultSeriesText;
+            const providedPoints = parseRoadSeriesValues(providedSeriesText)
+                .filter(value => Number.isFinite(Number(value)))
+                .map((value, index) => ({ age: Number(ref.yearRefs[index]?.year), value: value }));
+            return {
+                seriesHtml: `
+                    <div class="road-paired-series-row">
+                        <div class="road-paired-series-label" title="${escapeHtml(ref.label)}">${escapeHtml(ref.label)}</div>
+                        <div class="road-paired-series-control road-correction-factor-series" data-year-refs="${encodeURIComponent(JSON.stringify(ref.yearRefs))}" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}">
+                            <textarea class="road-series-input road-paired-series-input road-correction-factor-series-input road-value-input" rows="2" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
+                        </div>
+                        <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
+                    </div>
+                `
+            };
+        });
+        const editorRowsHtml = editorItems.map(item => item.seriesHtml).join('');
+        return `
+            <div class="road-input-row road-correction-factor-mix-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-years="${encodeURIComponent(JSON.stringify(yearColumns))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}">
+                <div class="road-row-label">
+                    <div class="road-row-title">${escapeHtml(variable)} ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[variable] || variable)}</div>
+                    <div class="road-row-meta">${escapeHtml(yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : '')} | ${escapeHtml(units)} | years ${escapeHtml(yearColumns.length ? `${yearColumns[0]}-${yearColumns[yearColumns.length - 1]}` : '')}</div>
+                    <div class="road-series-legend">
+                        <span><i class="default"></i>Loaded defaults</span>
+                        <span><i class="provided"></i>Entered</span>
+                    </div>
+                </div>
+                <div class="road-paired-series-grid">
+                    ${editorRowsHtml}
+                    <div class="road-series-hint">${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
+                </div>
+                <div class="road-row-actions road-series-actions">
+                    <button type="button" class="road-reset-button" title="Reset correction factor series to provided defaults" aria-label="Reset correction factor series">&#8634;</button>
+                    <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(comment)}">
                 </div>
             </div>
         `;
@@ -3842,7 +3939,9 @@ function buildRoadModule1ListGroupHtml(group) {
                     ? getRoadTransportParamGroupTitle(group)
                     : (group.groupType === 'sales-share-mix'
                         ? 'Sales share by drive type'
-                        : first.Variable))));
+                        : (group.groupType === 'correction-factor-mix'
+                            ? (first.Variable || 'Correction factor')
+                            : first.Variable)))));
     const isFlagged = groupRows.some(isRoadRowFlagged);
     const flagIcon = isFlagged
         ? `<svg class="road-flag-icon" viewBox="0 0 10 13" width="10" height="13" aria-label="Key input"><path d="M1.5 1v11M1.5 1.5h7L5.5 5.5l3 4H1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -3961,6 +4060,11 @@ function handleRoadModule1InputChange(event) {
 
     if (rowEl.classList.contains('road-sales-share-mix-row')) {
         handleRoadModule1SalesShareMixInputChange(rowEl);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-correction-factor-mix-row')) {
+        handleRoadModule1CorrectionFactorMixInputChange(rowEl);
         return;
     }
 
@@ -4147,6 +4251,11 @@ function handleRoadModule1ResetClick(event) {
 
     if (rowEl.classList.contains('road-sales-share-mix-row')) {
         handleRoadModule1SalesShareMixResetClick(rowEl);
+        return;
+    }
+
+    if (rowEl.classList.contains('road-correction-factor-mix-row')) {
+        handleRoadModule1CorrectionFactorMixResetClick(rowEl);
         return;
     }
 
@@ -4351,6 +4460,91 @@ function handleRoadModule1SalesShareMixResetClick(rowEl) {
         });
     });
     rowEl.querySelectorAll('.road-sales-share-series-input').forEach(input => { input.value = ''; });
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    if (commentInput) commentInput.value = '';
+    rowEl.classList.remove('is-edited');
+    updateRoadModule1OverrideCount();
+    renderRoadModule1Inputs();
+    scheduleRoadModule1DraftSave();
+}
+
+function handleRoadModule1CorrectionFactorMixInputChange(rowEl) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    const commentInput = rowEl.querySelector('.road-comment-input');
+    const comment = commentInput ? commentInput.value.trim() : '';
+    let rowOverrideCount = 0;
+
+    rowRefs.forEach(ref => {
+        (ref.yearRefs || []).forEach(yearRef => {
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.delete(`${rowRef.rowKey}||Year=${yearRef.year}`);
+            });
+        });
+    });
+
+    rowEl.querySelectorAll('.road-correction-factor-series').forEach(seriesEl => {
+        const yearRefs = JSON.parse(decodeURIComponent(seriesEl.dataset.yearRefs || '%5B%5D'));
+        const seriesInput = seriesEl.querySelector('.road-correction-factor-series-input');
+        const values = parseRoadSeriesValues(seriesInput ? seriesInput.value : '');
+        const defaultValues = parseRoadSeriesValues(seriesInput?.dataset.defaultSeries || '');
+        values.slice(0, yearRefs.length).forEach((value, index) => {
+            if (!value) return;
+            if (!roadInputValueDiffersFromDefault(value, defaultValues[index] || '')) return;
+            const yearRef = yearRefs[index];
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.set(`${rowRef.rowKey}||Year=${yearRef.year}`, {
+                    key: rowRef.keyPayload,
+                    year: yearRef.year,
+                    value: value,
+                    comment: comment
+                });
+                rowOverrideCount += 1;
+            });
+        });
+    });
+
+    if (comment) {
+        rowRefs.forEach(ref => {
+            (ref.yearRefs || []).forEach(yearRef => {
+                (yearRef.refs || []).forEach(rowRef => {
+                    const existing = State.roadModule1.overrides.get(`${rowRef.rowKey}||Year=${yearRef.year}`);
+                    if (existing) existing.comment = comment;
+                });
+            });
+        });
+    }
+
+    rowEl.classList.toggle('is-edited', rowOverrideCount > 0 || comment.length > 0);
+    updateRoadModule1OverrideCount();
+    updateRoadCorrectionFactorSeriesCharts(rowEl);
+    scheduleRoadModule1DraftSave();
+}
+
+function updateRoadCorrectionFactorSeriesCharts(rowEl) {
+    const seriesEls = [...rowEl.querySelectorAll('.road-correction-factor-series')];
+    const chartEls = [...rowEl.querySelectorAll('.road-paired-series-row .road-series-chart-wrap')];
+    seriesEls.forEach((seriesEl, index) => {
+        const defaultPoints = JSON.parse(decodeURIComponent(seriesEl.dataset.defaultPoints || '%5B%5D'));
+        const chartEl = chartEls[index];
+        if (!chartEl) return;
+        const yearRefs = JSON.parse(decodeURIComponent(seriesEl.dataset.yearRefs || '%5B%5D'));
+        const providedPoints = parseRoadSeriesValues(seriesEl.querySelector('.road-correction-factor-series-input')?.value || '')
+            .filter(value => Number.isFinite(Number(value)))
+            .map((value, idx) => ({ age: Number(yearRefs[idx]?.year), value: value }));
+        chartEl.innerHTML = buildRoadSeriesSvg(defaultPoints, providedPoints);
+    });
+}
+
+function handleRoadModule1CorrectionFactorMixResetClick(rowEl) {
+    const rowRefs = JSON.parse(decodeURIComponent(rowEl.dataset.rowRefs || '%5B%5D'));
+    rowRefs.forEach(ref => {
+        (ref.yearRefs || []).forEach(yearRef => {
+            (yearRef.refs || []).forEach(rowRef => {
+                State.roadModule1.overrides.delete(`${rowRef.rowKey}||Year=${yearRef.year}`);
+            });
+        });
+    });
+    rowEl.querySelectorAll('.road-correction-factor-series-input').forEach(input => { input.value = ''; });
     const commentInput = rowEl.querySelector('.road-comment-input');
     if (commentInput) commentInput.value = '';
     rowEl.classList.remove('is-edited');
