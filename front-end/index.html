@@ -59,7 +59,7 @@
                         </a>
                         <span class="text-slate-300 select-none">|</span>
                         <button id="road-variable-map-btn" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline" type="button">
-                            View variable structure map
+                            Branch and Measure hierarchy
                         </button>
                     </div>
                     <div class="space-y-3">
@@ -270,18 +270,20 @@
         </div>
     </div>
 
-    <!-- Road Variable Structure Map Modal -->
+    <!-- Branch and Measure Hierarchy Modal -->
     <div id="road-variable-map-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center hidden opacity-0 transition-opacity duration-200" role="dialog" aria-modal="true" aria-labelledby="road-variable-map-title">
         <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4 overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
             <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
                 <div>
-                    <h3 id="road-variable-map-title" class="text-base font-bold text-slate-800">Variable Structure Map</h3>
+                    <h3 id="road-variable-map-title" class="text-base font-bold text-slate-800">Branch and Measure Hierarchy</h3>
                     <p class="text-xs text-slate-500 mt-0.5">Branch path hierarchy and all user-fillable variables at a glance.</p>
                 </div>
                 <button id="road-variable-map-close" class="px-3 py-1.5 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all">Close</button>
             </div>
             <div class="p-6 overflow-auto" style="max-height: 80vh;">
-                <div id="road-variable-map-diagram" class="flex justify-center"></div>
+                <div id="road-variable-map-diagram" class="flex justify-center">
+                    <img src="/road-model-docs/Branch%20and%20measure%20hierarchy.png" alt="Branch and Measure Hierarchy" class="max-w-full h-auto">
+                </div>
             </div>
         </div>
     </div>
