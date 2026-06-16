@@ -1214,29 +1214,34 @@ body.road-panel-resizing * {
 }
 
 .road-sales-share-mix-row {
-    grid-template-columns: minmax(230px, 0.8fr) minmax(300px, 1.4fr) minmax(260px, 320px);
+    grid-template-columns: minmax(230px, 0.7fr) minmax(560px, 1.7fr) minmax(170px, 220px);
     align-items: start;
-    --road-sales-share-control-height: 3rem;
+    --road-sales-share-control-height: 3.6rem;
 }
 
 .road-sales-share-mix-row .road-row-actions {
     justify-content: flex-start;
 }
 
-.road-sales-share-series-grid {
+.road-paired-series-grid {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.32rem;
     min-width: 0;
 }
 
-.road-sales-share-series {
+.road-paired-series-row {
     display: grid;
-    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
+    grid-template-columns: minmax(5.5rem, 8.5rem) minmax(14rem, 1fr) minmax(12rem, 16rem);
     align-items: start;
-    gap: 0.45rem;
+    gap: 0.42rem;
+    min-width: 0;
 }
 
-.road-sales-share-label {
+.road-paired-series-control {
+    min-width: 0;
+}
+
+.road-paired-series-label {
     color: #475569;
     font-size: 0.68rem;
     font-weight: 800;
@@ -1246,37 +1251,20 @@ body.road-panel-resizing * {
     white-space: nowrap;
 }
 
-.road-sales-share-series-input {
+.road-paired-series-input {
     height: var(--road-sales-share-control-height);
     min-height: var(--road-sales-share-control-height);
     resize: none;
     overflow-y: auto;
 }
 
-.road-sales-share-chart-item {
-    display: grid;
-    grid-template-columns: minmax(2rem, 3rem) minmax(0, 1fr);
-    align-items: center;
-    gap: 0.35rem;
-}
-
-.road-sales-share-chart-label {
-    color: #475569;
-    font-size: 0.63rem;
-    font-weight: 800;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.road-sales-share-chart-item .road-series-chart-wrap {
+.road-paired-series-row .road-series-chart-wrap {
     height: var(--road-sales-share-control-height);
     min-height: var(--road-sales-share-control-height);
     padding: 0.15rem;
 }
 
-.road-sales-share-chart-item .road-series-chart {
+.road-paired-series-row .road-series-chart {
     height: calc(var(--road-sales-share-control-height) - 0.3rem);
 }
 
@@ -1304,6 +1292,21 @@ body.road-panel-resizing * {
     gap: 0.3rem;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.road-row-modifier-badge {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0.1rem 0.34rem;
+    border-radius: 9999px;
+    border: 1px solid #dbe3ee;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.56rem;
+    font-weight: 800;
+    line-height: 1;
     white-space: nowrap;
 }
 
@@ -1445,12 +1448,13 @@ body.road-panel-resizing * {
 .road-year-input label {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.3rem;
     color: #94a3b8;
-    font-size: 0.56rem;
+    font-size: 0.58rem;
     font-weight: 700;
-    line-height: 1;
-    margin-bottom: 0.1rem;
+    line-height: 1.15;
+    margin-bottom: 0.14rem;
 }
 
 .road-year-input label .road-info-tip {
@@ -1459,17 +1463,17 @@ body.road-panel-resizing * {
     font-size: 0.56rem;
 }
 
-.road-cell-scenario-badge {
+.road-row-scenario-badge {
     display: inline-flex;
     align-items: center;
-    max-width: 5.5rem;
+    max-width: 8rem;
     min-width: 0;
-    padding: 0.08rem 0.26rem;
-    border-radius: 9999px;
-    background: #eef2ff;
-    color: #3730a3;
-    border: 1px solid #c7d2fe;
-    font-size: 0.48rem;
+    padding: 0.16rem 0.42rem;
+    border-radius: 0.25rem;
+    background: #e0f2fe;
+    color: #075985;
+    border: 1px solid #7dd3fc;
+    font-size: 0.62rem;
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
@@ -1570,30 +1574,16 @@ body.road-panel-resizing * {
     max-width: 8rem;
 }
 
-/* Shared fuel economy sub-groups (PHEV/EREV split) */
-.road-shared-fe-row {
-    padding: 0;
-}
 .road-shared-fe-subgroup {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(170px, 380px) minmax(190px, 240px);
     align-items: center;
-    gap: 0.36rem;
-    padding: 0;
+    gap: 0.65rem;
     grid-column: 2 / 4;
+    min-width: 0;
 }
 .road-shared-fe-row .road-shared-fe-subgroup .road-year-grid {
-    width: auto;
-    flex: 1;
-}
-.road-shared-fe-sublabel {
-    font-size: 0.65rem;
-    color: var(--slate-500, #64748b);
-    white-space: nowrap;
-    text-align: right;
-    padding-right: 0.5rem;
-    grid-column: 1;
-    align-self: center;
-    padding-left: var(--road-indent, 0);
+    width: 100%;
 }
 
 .road-group-card.is-compact .road-breadcrumbs {
@@ -1788,6 +1778,11 @@ body.road-panel-resizing * {
         grid-column: 1 / -1;
     }
 
+    .road-shared-fe-subgroup {
+        grid-column: 1 / -1;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .road-series-row {
         grid-template-columns: minmax(240px, 1fr);
     }
@@ -1796,16 +1791,12 @@ body.road-panel-resizing * {
         grid-template-columns: minmax(240px, 1fr);
     }
 
-    .road-sales-share-series {
+    .road-paired-series-row {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .road-sales-share-label {
+    .road-paired-series-label {
         white-space: normal;
-    }
-
-    .road-sales-share-chart-item {
-        grid-template-columns: minmax(2rem, 3rem) minmax(0, 1fr);
     }
 
     .road-row-actions {

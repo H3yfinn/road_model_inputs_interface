@@ -85,9 +85,8 @@ Demand\Freight road\Age 8,Survival Rate,age,True,False,True,True,%,
 Demand\Freight road\Age 8,Vintage Profile Share,age,True,False,True,True,%,
 Demand\Freight road\Age 9,Survival Rate,age,True,False,True,True,%,
 Demand\Freight road\Age 9,Vintage Profile Share,age,True,False,True,True,%,
-Demand\Freight road\LCVs,Sales Share,vehicle_type,True,True,True,False,%,
 Demand\Freight road\LCVs,Stock,vehicle_type,True,False,True,True,Millions,
-Demand\Freight road\LCVs,Stock Share,vehicle_type,True,False,True,True,%,
+Demand\Freight road\LCVs,Stock Share,vehicle_type,True,True,True,True,%,
 Demand\Freight road\LCVs\BEV,Sales Share,drive_or_size,True,True,True,False,%,
 Demand\Freight road\LCVs\BEV,Stock Share,drive_or_size,True,False,True,True,%,
 Demand\Freight road\LCVs\BEV\Electricity,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
@@ -124,9 +123,8 @@ Demand\Freight road\LCVs\PHEV\Gas and diesel oil,Fuel Economy,fuel,True,False,Tr
 Demand\Freight road\LCVs\PHEV\Gas and diesel oil,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\LCVs\PHEV\Motor gasoline,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\LCVs\PHEV\Motor gasoline,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
-Demand\Freight road\Trucks,Sales Share,vehicle_type,True,True,True,False,%,
 Demand\Freight road\Trucks,Stock,vehicle_type,True,False,True,True,Millions,
-Demand\Freight road\Trucks,Stock Share,vehicle_type,True,False,True,True,%,
+Demand\Freight road\Trucks,Stock Share,vehicle_type,True,True,True,True,%,
 Demand\Freight road\Trucks\BEV heavy,Sales Share,drive_or_size,True,True,True,False,%,
 Demand\Freight road\Trucks\BEV heavy,Stock Share,drive_or_size,True,False,True,True,%,
 Demand\Freight road\Trucks\BEV heavy\Electricity,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
@@ -272,9 +270,8 @@ Demand\Passenger road\Age 8,Survival Rate,age,True,False,True,True,%,
 Demand\Passenger road\Age 8,Vintage Profile Share,age,True,False,True,True,%,
 Demand\Passenger road\Age 9,Survival Rate,age,True,False,True,True,%,
 Demand\Passenger road\Age 9,Vintage Profile Share,age,True,False,True,True,%,
-Demand\Passenger road\Buses,Sales Share,vehicle_type,True,True,True,False,%,
 Demand\Passenger road\Buses,Stock,vehicle_type,True,False,True,True,Millions,
-Demand\Passenger road\Buses,Stock Share,vehicle_type,True,False,True,True,%,
+Demand\Passenger road\Buses,Stock Share,vehicle_type,True,True,True,True,%,
 Demand\Passenger road\Buses,Vehicle Equivalent Weight,vehicle_type,True,False,True,True,passenger car equivalent,
 Demand\Passenger road\Buses,Vehicle Equivalent Weight Lower Bound,vehicle_type,True,False,True,True,passenger car equivalent,
 Demand\Passenger road\Buses,Vehicle Equivalent Weight Upper Bound,vehicle_type,True,False,True,True,passenger car equivalent,
@@ -304,9 +301,8 @@ Demand\Passenger road\Buses\ICE\Motor gasoline,Fuel Economy,fuel,True,False,True
 Demand\Passenger road\Buses\ICE\Motor gasoline,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Passenger road\Buses\ICE\Natural gas,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Passenger road\Buses\ICE\Natural gas,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
-Demand\Passenger road\LPVs,Sales Share,vehicle_type,True,True,True,False,%,
 Demand\Passenger road\LPVs,Stock,vehicle_type,True,False,True,True,Millions,
-Demand\Passenger road\LPVs,Stock Share,vehicle_type,True,False,True,True,%,
+Demand\Passenger road\LPVs,Stock Share,vehicle_type,True,True,True,True,%,
 Demand\Passenger road\LPVs,Vehicle Equivalent Weight,vehicle_type,True,False,True,True,passenger car equivalent,
 Demand\Passenger road\LPVs\BEV large,Sales Share,drive_or_size,True,True,True,False,%,
 Demand\Passenger road\LPVs\BEV large,Stock Share,drive_or_size,True,False,True,True,%,
@@ -488,9 +484,8 @@ Demand\Passenger road\LPVs\PHEV small\Gas and diesel oil,Fuel Economy,fuel,True,
 Demand\Passenger road\LPVs\PHEV small\Gas and diesel oil,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Passenger road\LPVs\PHEV small\Motor gasoline,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Passenger road\LPVs\PHEV small\Motor gasoline,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
-Demand\Passenger road\Motorcycles,Sales Share,vehicle_type,True,True,True,False,%,
 Demand\Passenger road\Motorcycles,Stock,vehicle_type,True,False,True,True,Millions,
-Demand\Passenger road\Motorcycles,Stock Share,vehicle_type,True,False,True,True,%,
+Demand\Passenger road\Motorcycles,Stock Share,vehicle_type,True,True,True,True,%,
 Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight,vehicle_type,True,False,True,True,passenger car equivalent,
 Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight Lower Bound,vehicle_type,True,False,True,True,passenger car equivalent,
 Demand\Passenger road\Motorcycles,Vehicle Equivalent Weight Upper Bound,vehicle_type,True,False,True,True,passenger car equivalent,

@@ -36,6 +36,7 @@ from core.road_module1_defaults import (
     ROAD_MODEL_DATA_DIR,
     ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH,
     SUPPLEMENTAL_SOURCE_DIR,
+    STOCK_SHARE_PROJECTION_YEARS,
     TRANSPORT_LEAP_EXPORT_HEADER_ROW,
     TRANSPORT_LEAP_EXPORT_SHEET,
     _wide_defaults_to_long,
@@ -224,6 +225,58 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
     if not resolved_rows:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
     return pd.concat(resolved_rows, ignore_index=True)[MODULE1_LONG_COLUMNS].copy()
+
+
+def _build_projected_stock_share_rows(
+    long_defaults_df: pd.DataFrame,
+    contract: pd.DataFrame,
+    economy_code: str,
+) -> pd.DataFrame:
+    """Seed scenario-specific vehicle-type Stock Share rows from base-year CA shares."""
+    branch_level = contract["branch_level"] if "branch_level" in contract.columns else ""
+    contract_keys = contract[
+        contract["Projected Scenario"]
+        & contract["Variable"].eq("Stock Share")
+        & pd.Series(branch_level, index=contract.index).eq("vehicle_type")
+    ][["Branch Path", "Variable"]].drop_duplicates()
+    if contract_keys.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    base_rows = long_defaults_df[
+        long_defaults_df["Scenario"].eq("Current Accounts")
+        & long_defaults_df["Variable"].eq("Stock Share")
+        & pd.to_numeric(long_defaults_df["Year"], errors="coerce").eq(BASE_YEAR)
+    ].merge(contract_keys, on=["Branch Path", "Variable"], how="inner")
+    if base_rows.empty:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+
+    rows: list[dict[str, object]] = []
+    for _, base_row in base_rows.iterrows():
+        value = pd.to_numeric(base_row.get("Value"), errors="coerce")
+        if pd.isna(value):
+            continue
+        for scenario in _projection_scenario_labels() or ["Target"]:
+            for year in STOCK_SHARE_PROJECTION_YEARS:
+                rows.append({
+                    "Economy": economy_code,
+                    "Scenario": scenario,
+                    "Branch Path": base_row.get("Branch Path", ""),
+                    "Variable": "Stock Share",
+                    "Year": int(year),
+                    "Value": float(value),
+                    "Scale": base_row.get("Scale", "%") or "%",
+                    "Units": base_row.get("Units", "Share") or "Share",
+                    "Source": base_row.get("Source", "") or "derived_from_base_year_stock",
+                    "Comment": (
+                        f"Projected vehicle-type Stock Share seeded from {BASE_YEAR} "
+                        "Current Accounts stock split; edit by scenario as needed."
+                    ),
+                    "Input Status": "default",
+                    "Shown In Interface": "True",
+                })
+    if not rows:
+        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+    return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
 def _build_projected_correction_factor_rows(long_defaults_df: pd.DataFrame, economy_code: str) -> pd.DataFrame:
@@ -508,6 +561,9 @@ def write_frontend_static_bundle(
         projected_sales_df = _load_projected_sales_share_long_rows(economy_code)
         if not projected_sales_df.empty:
             long_defaults_df = pd.concat([long_defaults_df, projected_sales_df], ignore_index=True)
+        projected_stock_share_df = _build_projected_stock_share_rows(long_defaults_df, static_contract, economy_code)
+        if not projected_stock_share_df.empty:
+            long_defaults_df = pd.concat([long_defaults_df, projected_stock_share_df], ignore_index=True)
         correction_factor_df = _build_projected_correction_factor_rows(long_defaults_df, economy_code)
         if not correction_factor_df.empty:
             long_defaults_df = pd.concat([long_defaults_df, correction_factor_df], ignore_index=True)
