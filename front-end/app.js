@@ -4951,7 +4951,7 @@ function _setRoadRunStatus(status) {
 function _appendRoadRunLog(text, isStderr = false) {
     if (!DOM.roadRunLogOutput) return;
     const line = document.createElement('span');
-    line.className = isStderr ? 'text-yellow-400' : '';
+    line.className = isStderr ? 'text-red-400' : '';
     line.innerText = text + '\n';
     DOM.roadRunLogOutput.appendChild(line);
     DOM.roadRunLogOutput.scrollTop = DOM.roadRunLogOutput.scrollHeight;
