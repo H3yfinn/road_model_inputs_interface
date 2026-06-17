@@ -3676,11 +3676,11 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 <div class="road-paired-series-grid">
                     ${editorRowsHtml}
-                    <div class="road-series-hint">${ROAD_VARIABLE_HELP.salesShareMix.warning}</div>
-                </div>
-                <div class="road-row-actions road-series-actions">
-                    <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
+                    <div class="road-series-footer">
+                        <div class="road-series-hint">${ROAD_VARIABLE_HELP.salesShareMix.warning}</div>
+                        <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
+                        <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
+                    </div>
                 </div>
             </div>
         `;
@@ -3766,11 +3766,11 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 </div>
                 <div class="road-paired-series-grid">
                     ${editorRowsHtml}
-                    <div class="road-series-hint">${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
-                </div>
-                <div class="road-row-actions road-series-actions">
-                    <button type="button" class="road-reset-button" title="Reset correction factor series to provided defaults" aria-label="Reset correction factor series">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(comment)}">
+                    <div class="road-series-footer">
+                        <div class="road-series-hint">${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
+                        <button type="button" class="road-reset-button" title="Reset correction factor series to provided defaults" aria-label="Reset correction factor series">&#8634;</button>
+                        <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(comment)}">
+                    </div>
                 </div>
             </div>
         `;
@@ -3865,11 +3865,13 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 <div class="road-series-entry">
                     <label>Provided series (${rowRefs.length} values, ${escapeHtml(orderLabel)})</label>
                     <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
-                    <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
+                    <div class="road-series-footer">
+                        <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
+                        <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(seriesComment)}">
+                    </div>
                 </div>
                 <div class="road-row-actions road-series-actions">
                     <div class="road-series-chart-wrap">${buildRoadSeriesSvg(defaultPoints, providedPoints)}</div>
-                    <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(seriesComment)}">
                 </div>
             </div>
         `;

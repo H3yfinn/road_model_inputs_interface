@@ -1261,7 +1261,7 @@ body.road-panel-resizing * {
     display: contents;
 }
 
-.road-paired-series-grid > .road-series-hint {
+.road-paired-series-grid > .road-series-footer {
     grid-column: 1 / -1;
 }
 
@@ -1584,16 +1584,14 @@ body.road-panel-resizing * {
 }
 
 .road-reconciliation-row .road-row-actions,
-.road-transport-params-row .road-row-actions,
-.road-sales-share-mix-row .road-row-actions {
+.road-transport-params-row .road-row-actions {
     align-self: flex-start;
     padding-top: 0.08rem;
     justify-content: flex-start;
 }
 
 .road-reconciliation-row .road-row-actions .road-comment-input,
-.road-transport-params-row .road-row-actions .road-comment-input,
-.road-sales-share-mix-row .road-row-actions .road-comment-input {
+.road-transport-params-row .road-row-actions .road-comment-input {
     max-width: 8rem;
 }
 
@@ -1688,6 +1686,26 @@ body.road-panel-resizing * {
     font-weight: 600;
     line-height: 1.25;
     margin-top: 0.35rem;
+}
+
+.road-series-footer {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+}
+
+.road-series-footer .road-series-hint {
+    flex: 1;
+    margin-top: 0;
+    min-width: 8rem;
+}
+
+.road-series-footer .road-comment-input {
+    flex: 0 0 auto;
+    max-width: 10rem;
+    width: 10rem;
 }
 
 .road-series-actions {
@@ -1817,7 +1835,8 @@ body.road-panel-resizing * {
         grid-template-columns: minmax(240px, 1fr);
     }
 
-    .road-sales-share-mix-row {
+    .road-sales-share-mix-row,
+    .road-correction-factor-mix-row {
         grid-template-columns: minmax(240px, 1fr);
     }
 
