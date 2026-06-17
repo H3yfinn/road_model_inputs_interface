@@ -3563,7 +3563,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 const boundsAttrs = getRoadModule1InputBoundsAttrs(refRow.Variable);
                 return `
                     <div class="road-year-input" data-year="${year}">
-                        ${buildRoadCellLabelHtml(year, `${year} — ${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`, getRoadCellScenarioLabel(refRow, year))}
+                        ${buildRoadCellLabelHtml(year, `${year} — ${isPhevOrErev && sg.subGroup === 'other' ? `Fuel economy of the ICE drivetrain in this EREV/PHEV vehicle. One shared value applies across the 3 fuels the ICE can use (Motor gasoline, Biogasoline, Efuel).` : `${ROAD_VARIABLE_HELP.variables[refRow.Variable] || ROAD_VARIABLE_HELP.variables['Fuel Economy']} One shared value applies across${sg.subGroup === 'all' ? ' all fuels in this drive' : ` ${sg.label.toLowerCase()}`}${childNote}.`}`, getRoadCellScenarioLabel(refRow, year))}
                         <input type="number" step="any" class="road-value-input" ${boundsAttrs} data-default-value="${escapeHtml(formatRoadEditableInputValue(defaultValue))}" value="${escapeHtml(inputValue)}">
                     </div>
                 `;
@@ -5492,8 +5492,14 @@ function previewRoadModule1UploadedRows(uploadRows) {
     ];
     const targetLongKeys = new Set(targetLongRows.map(row => getRoadModule1ComparableKeyFromRow(row)));
     const unmatchedRows = uploadRows.filter(uploadRow => !targetLongKeys.has(getRoadModule1ComparableKeyFromRow(uploadRow)));
-    if (unmatchedRows.length > 0) {
-        const sample = unmatchedRows.slice(0, 5).map(row => getRoadModule1ComparableKeyFromRow(row)).join('\n');
+    const hiddenUploadRows = unmatchedRows.filter(row =>
+        String(row['Shown In Interface'] ?? '').trim().toLowerCase() === 'false'
+    );
+    const trulyUnmatchedRows = unmatchedRows.filter(row =>
+        String(row['Shown In Interface'] ?? '').trim().toLowerCase() !== 'false'
+    );
+    if (trulyUnmatchedRows.length > 0) {
+        const sample = trulyUnmatchedRows.slice(0, 5).map(row => getRoadModule1ComparableKeyFromRow(row)).join('\n');
         throw new Error(`Uploaded file contains keys that are not in the current template. First unmatched keys:\n${sample}`);
     }
 
@@ -5565,6 +5571,7 @@ function previewRoadModule1UploadedRows(uploadRows) {
 
     return {
         targetRows,
+        hiddenUploadRows,
         appliedCount,
         unmatchedCount: 0,
         validationIssueCount,
@@ -5578,6 +5585,12 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.rows = preview.targetRows;
     State.roadModule1.version = version;
     State.roadModule1.economy = economy;
+    if (Array.isArray(preview.hiddenUploadRows) && preview.hiddenUploadRows.length > 0) {
+        const existingHidden = Array.isArray(State.roadModule1.hiddenRows) ? State.roadModule1.hiddenRows : [];
+        const uploadHiddenKeys = new Set(preview.hiddenUploadRows.map(r => getRoadModule1ComparableKeyFromRow(r)));
+        const retained = existingHidden.filter(r => !uploadHiddenKeys.has(getRoadModule1ComparableKeyFromRow(r)));
+        State.roadModule1.hiddenRows = [...retained, ...preview.hiddenUploadRows];
+    }
     syncRoadModule1ScenarioState(State.roadModule1.scenario);
     State.roadModule1.overrides = new Map();
     State.roadModule1.sharedMileageOverrides = new Map();
