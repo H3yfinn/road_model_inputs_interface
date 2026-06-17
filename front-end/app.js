@@ -2869,6 +2869,7 @@ function renderRoadModule1GraphNode(label, node, depth, parentPath = '') {
 function buildRoadModule1GraphEditorHtml(group, depth) {
     const first = group.rows[0];
     const groupUnits = [...new Set(group.rows.map(row => row.Units).filter(Boolean))];
+    const groupScales = [...new Set(group.rows.map(row => row.Scale).filter(s => s && s !== '%'))];
     const groupTitle = group.groupType === 'paired-fuel-share'
         ? 'Gasoline / diesel mix'
         : (group.groupType === 'reconciliation-controls'
@@ -2887,6 +2888,7 @@ function buildRoadModule1GraphEditorHtml(group, depth) {
             <div class="road-graph-editor-header">
                 <span class="road-graph-editor-title">${escapeHtml(groupTitle)}</span>
                 ${groupUnits.length ? `<span class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</span>` : ''}
+                ${groupScales.length ? `<span class="road-scale-pill">${escapeHtml(groupScales.join(', '))}</span>` : ''}
             </div>
             ${buildRoadModule1EditorRowsHtml(group, depth)}
         </section>
@@ -2898,6 +2900,7 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
     const first = groupRows[0];
     const isCompactGroup = group.groupType !== 'age-series' && (groupRows.length === 1 || group.groupType === 'shared-utilisation' || group.groupType === 'shared-mileage' || group.groupType === 'shared-fuel-economy');
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
+    const groupScales = [...new Set(groupRows.map(row => row.Scale).filter(s => s && s !== '%'))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
         : `${groupRows.length} row${groupRows.length === 1 ? '' : 's'}`;
@@ -2922,6 +2925,7 @@ function buildRoadModule1TreeEditorHtml(group, depth) {
                     <div class="road-group-title-row">
                         <div class="road-group-title">${escapeHtml(groupTitle)}</div>
                         ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
+                        ${groupScales.length ? `<div class="road-scale-pill">${escapeHtml(groupScales.join(', '))}</div>` : ''}
                     </div>
                 </div>
             </div>
@@ -3160,9 +3164,10 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
             `;
         }).join('');
         const unitPill = row.Units ? `<span class="road-unit-pill">${escapeHtml(row.Units)}</span>` : '';
+        const scalePill = (row.Scale && row.Scale !== '%') ? `<span class="road-scale-pill">${escapeHtml(row.Scale)}</span>` : '';
         return `
             <div class="road-transport-param-measure" data-param-role="${role}">
-                <div class="road-transport-param-label">${escapeHtml(labelText)}${_paramHelpTip}${unitPill}</div>
+                <div class="road-transport-param-label">${escapeHtml(labelText)}${_paramHelpTip}${unitPill}${scalePill}</div>
                 <div class="road-year-grid">${yearInputs}</div>
             </div>
         `;
@@ -3955,6 +3960,7 @@ function buildRoadModule1ListGroupHtml(group) {
     const first = groupRows[0];
     const isCompactGroup = group.groupType !== 'age-series' && (groupRows.length === 1 || group.groupType === 'shared-utilisation' || group.groupType === 'shared-mileage' || group.groupType === 'shared-fuel-economy');
     const groupUnits = [...new Set(groupRows.map(row => row.Units).filter(Boolean))];
+    const groupScales = [...new Set(groupRows.map(row => row.Scale).filter(s => s && s !== '%'))];
     const groupCountLabel = group.groupType === 'age-series'
         ? `${groupRows.length} point series`
         : (group.groupType === 'shared-mileage' || group.groupType === 'shared-fuel-economy' || group.groupType === 'shared-utilisation')
@@ -3989,6 +3995,7 @@ function buildRoadModule1ListGroupHtml(group) {
                     <div class="road-group-title-row">
                         ${flagIcon}<div class="road-group-title">${escapeHtml(groupTitle)}</div>
                         ${groupUnits.length ? `<div class="road-unit-pill">${escapeHtml(groupUnits.join(', '))}</div>` : ''}
+                        ${groupScales.length ? `<div class="road-scale-pill">${escapeHtml(groupScales.join(', '))}</div>` : ''}
                         ${scenarioBadge}
                     </div>
                 </div>

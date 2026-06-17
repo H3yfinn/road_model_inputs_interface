@@ -799,6 +799,7 @@ body.road-panel-resizing * {
 }
 
 .road-unit-pill,
+.road-scale-pill,
 .road-group-count,
 .road-source-badge {
     display: inline-flex;
@@ -811,6 +812,14 @@ body.road-panel-resizing * {
 .road-unit-pill {
     background: #eff6ff;
     color: #1d4ed8;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+}
+
+.road-scale-pill {
+    background: #fdf4ff;
+    color: #7e22ce;
     font-size: 0.65rem;
     font-weight: 800;
     padding: 0.15rem 0.5rem;
