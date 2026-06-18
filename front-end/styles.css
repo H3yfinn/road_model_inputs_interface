@@ -1245,12 +1245,19 @@ body.road-panel-resizing * {
     border-left-color: #22c55e;
 }
 
-/* Column widths only — shared label/actions alignment lives with
-   .road-reconciliation-row / .road-transport-params-row below, since all
-   three are the same "label · content · actions" row treatment. */
-.road-sales-share-mix-row {
-    grid-template-columns: minmax(230px, 0.7fr) minmax(560px, 1.7fr) minmax(170px, 220px);
-    --road-sales-share-control-height: 3.6rem;
+/* Mix rows (sales-share / correction-factor) are 2-column: a label column
+   that grows modestly, then the paired-series-grid taking all remaining width.
+   The third "actions" column from the base row is unused here — actions live
+   inside the footer inside the grid — so a 3-column spec wastes space.
+   Height and chart size scale with viewport so they fill the available space
+   on larger monitors instead of leaving a sea of empty whitespace. */
+.road-sales-share-mix-row,
+.road-correction-factor-mix-row {
+    grid-template-columns: minmax(200px, clamp(200px, 18vw, 360px)) 1fr;
+    gap: 0.45rem;
+    padding-top: 0.34rem;
+    padding-bottom: 0.34rem;
+    --road-sales-share-control-height: clamp(1.8rem, 1.8vw, 2.4rem);
 }
 
 /* All fuel-type rows share a single parent grid so label / textarea /
@@ -1259,7 +1266,7 @@ body.road-panel-resizing * {
    preventing the old hard-minimum blowout that caused overlap. */
 .road-paired-series-grid {
     display: grid;
-    grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr) minmax(0, 12rem);
+    grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr) minmax(0, clamp(11rem, 13.5vw, 18rem));
     align-items: start;
     gap: 0.32rem 0.42rem;
     min-width: 0;
@@ -1582,8 +1589,7 @@ body.road-panel-resizing * {
 }
 
 .road-reconciliation-row,
-.road-transport-params-row,
-.road-sales-share-mix-row {
+.road-transport-params-row {
     grid-template-columns: minmax(210px, 1fr) minmax(210px, 430px) minmax(170px, 225px);
     gap: 0.45rem;
     padding-top: 0.34rem;
@@ -1592,7 +1598,8 @@ body.road-panel-resizing * {
 
 .road-reconciliation-row .road-row-label,
 .road-transport-params-row .road-row-label,
-.road-sales-share-mix-row .road-row-label {
+.road-sales-share-mix-row .road-row-label,
+.road-correction-factor-mix-row .road-row-label {
     align-self: flex-start;
 }
 
@@ -1691,6 +1698,15 @@ body.road-panel-resizing * {
     min-height: 5.6rem;
     resize: vertical;
     white-space: pre-wrap;
+}
+
+/* Paired-series textareas carry both classes; use two-class specificity to
+   override the 5.6rem min-height above with the viewport-scaled variable. */
+.road-series-input.road-paired-series-input {
+    height: var(--road-sales-share-control-height);
+    min-height: var(--road-sales-share-control-height);
+    resize: none;
+    overflow-y: auto;
 }
 
 .road-series-hint {

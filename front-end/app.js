@@ -1958,6 +1958,18 @@ function buildRoadInfoTooltip(text) {
     return `<button type="button" class="road-info-tip" data-tip="${escapeHtml(text)}" aria-label="More information" tabindex="0">?</button>`;
 }
 
+function buildRoadVarHelpTip(variable, row) {
+    const baseText = ROAD_VARIABLE_HELP.variables[variable] || '';
+    if (!baseText) return '';
+    const units = row?.Units || '';
+    const scale = (row?.Scale && row.Scale !== '%') ? row.Scale : '';
+    let suffix = '';
+    if (units && scale) suffix = ` Unit: ${units}. Scale: ${scale}.`;
+    else if (units) suffix = ` Unit: ${units}.`;
+    else if (scale) suffix = ` Scale: ${scale}.`;
+    return ` ${buildRoadInfoTooltip(baseText + suffix)}`;
+}
+
 function getRoadCellScenarioLabel(row, year) {
     if (!row) return '';
     const numericYear = Number(year);
@@ -3136,7 +3148,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
         const boundsAttrs = getRoadModule1InputBoundsAttrs(row.Variable);
         const _paramVarName = ROAD_VARIABLE_HELP.paramRoles[role];
         const _paramHelpText = _paramVarName ? (ROAD_VARIABLE_HELP.variables[_paramVarName] || '') : '';
-        const _paramHelpTip = _paramHelpText ? ` ${buildRoadInfoTooltip(_paramHelpText)}` : '';
+        const _paramHelpTip = _paramHelpText ? buildRoadVarHelpTip(_paramVarName, row) || ` ${buildRoadInfoTooltip(_paramHelpText)}` : '';
         const yearInputs = yearColumns.map(year => {
             const key = `${rowKey}||Year=${year}`;
             const override = State.roadModule1.overrides.get(key);
@@ -3860,7 +3872,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
         return `
             <div class="road-input-row road-series-row" style="--road-indent:${Math.max(0, getRoadBranchDepth(group.branchPath) - 2 + depth * 0.25) * 0.75}rem" data-default-points="${encodeURIComponent(JSON.stringify(defaultPoints))}" data-row-refs="${encodeURIComponent(JSON.stringify(rowRefs))}" data-key-payload="${encodeURIComponent(JSON.stringify(roadModule1KeyPayload(first)))}">
                 <div class="road-row-label">
-                    <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}${first.review_reason ? ` ${buildRoadInfoTooltip(first.review_reason)}` : ROAD_VARIABLE_HELP.variables[first.Variable] ? ` ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[first.Variable])}` : ''}</div>
+                    <div class="road-row-title" title="${escapeHtml(seriesTitle)}">${escapeHtml(seriesTitle)}${first.review_reason ? ` ${buildRoadInfoTooltip(first.review_reason)}` : buildRoadVarHelpTip(first.Variable, first)}</div>
                     <div class="road-row-meta">${escapeHtml(rowMeta)} | ${escapeHtml(rangeLabel)}</div>
                     <div class="road-series-legend">
                         <span><i class="default"></i>Loaded</span>
@@ -3919,7 +3931,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
             <div class="road-input-row ${hideRowLabel ? 'no-row-label' : ''}${isStockShareRow ? ' road-stock-share-row' : ''}" style="--road-indent:${Math.max(0, getRoadBranchDepth(row['Branch Path']) - 2 + depth * 0.25) * 0.75}rem" data-key="${encodeURIComponent(rowKey)}" data-key-payload="${keyPayload}">
                 ${hideRowLabel ? '' : `
                 <div class="road-row-label">
-                    <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}${row.review_reason ? ` ${buildRoadInfoTooltip(row.review_reason)}` : ROAD_VARIABLE_HELP.variables[row.Variable] ? ` ${buildRoadInfoTooltip(ROAD_VARIABLE_HELP.variables[row.Variable])}` : ''}</div>
+                    <div class="road-row-title" title="${escapeHtml(rowTitle)}">${escapeHtml(rowTitle)}${row.review_reason ? ` ${buildRoadInfoTooltip(row.review_reason)}` : buildRoadVarHelpTip(row.Variable, row)}</div>
                     ${rowMeta ? `<div class="road-row-meta">${escapeHtml(rowMeta)}</div>` : ''}
                 </div>
                 `}

@@ -23,7 +23,7 @@ const ROAD_VARIABLE_HELP = {
             'Energy used to drive a given distance for this vehicle and fuel. Check the unit shown in the row, usually MJ/100 km. Lower values mean better efficiency.',
 
         'Mileage':
-            'Average distance travelled by each vehicle each year, in km per vehicle per year. Higher mileage increases energy use if stock and fuel economy stay the same.',
+            'Average distance travelled by each vehicle each year. Higher mileage increases energy use if stock and fuel economy stay the same.',
 
         'Mileage Correction Factor':
             'Scenario multiplier exported to LEAP and applied there to the post-reconciliation mileage value. Use 1.0 for no change.',
