@@ -796,6 +796,10 @@ body.road-panel-resizing * {
     font-size: 0.8rem;
     font-weight: 800;
     line-height: 1.2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .road-unit-pill,
@@ -853,7 +857,7 @@ body.road-panel-resizing * {
     align-items: center;
     display: grid;
     gap: 0.2rem;
-    grid-template-columns: minmax(240px, 1fr) minmax(0, auto);
+    grid-template-columns: minmax(320px, 1fr) minmax(0, auto);
 }
 
 .road-group-card.is-compact .road-group-count {
@@ -1825,11 +1829,11 @@ body.road-panel-resizing * {
 
 @media (max-width: 1150px) {
     .road-input-row {
-        grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
+        grid-template-columns: minmax(320px, 1fr) minmax(180px, 360px);
     }
 
     .road-input-row.no-row-label {
-        grid-template-columns: minmax(240px, 1fr) minmax(180px, 360px);
+        grid-template-columns: minmax(320px, 1fr) minmax(180px, 360px);
     }
 
     .road-input-row.no-row-label .road-year-grid {
@@ -1841,12 +1845,12 @@ body.road-panel-resizing * {
     }
 
     .road-series-row {
-        grid-template-columns: minmax(240px, 1fr);
+        grid-template-columns: minmax(320px, 1fr);
     }
 
     .road-sales-share-mix-row,
     .road-correction-factor-mix-row {
-        grid-template-columns: minmax(240px, 1fr);
+        grid-template-columns: minmax(320px, 1fr);
     }
 
     .road-paired-series-label {
