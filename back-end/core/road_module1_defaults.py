@@ -4806,15 +4806,23 @@ def _legacy_default_filled_inputs_filename(economy: str) -> str:
     return f"road_module1_default_filled_inputs_{economy}.csv"
 
 
+_default_filled_inputs_cache: dict[tuple[str, str, str], pd.DataFrame] = {}
+
+
 def load_default_filled_inputs(
     economy: str,
     version: str = DEFAULT_VERSION,
     output_root: str | Path = "outputs/road_module1_defaults",
 ) -> pd.DataFrame:
+    cache_key = (economy, version, str(output_root))
+    if cache_key in _default_filled_inputs_cache:
+        return _default_filled_inputs_cache[cache_key]
+
     workbook_path = get_default_input_workbook_path(economy=economy, version=version, output_root=output_root)
     if workbook_path.exists():
-        workbook_df = pd.read_excel(workbook_path, sheet_name="Details")
-        return _normalize_module1_input_columns(workbook_df)
+        df = _normalize_module1_input_columns(pd.read_excel(workbook_path, sheet_name="Details"))
+        _default_filled_inputs_cache[cache_key] = df
+        return df
 
     filepath = get_default_filled_inputs_path(economy=economy, version=version, output_root=output_root)
     legacy_filepath = filepath.with_name(_legacy_default_filled_inputs_filename(economy))
@@ -4833,11 +4841,12 @@ def load_default_filled_inputs(
         )
     df = pd.read_csv(filepath)
     if set(MODULE1_LONG_KEY_COLUMNS + ["Value"]).issubset(df.columns):
-        return _long_defaults_to_ui_wide(
+        df = _long_defaults_to_ui_wide(
             df,
             economy=economy,
             region_name=get_economy_info(economy).name if economy else None,
         )
+    _default_filled_inputs_cache[cache_key] = df
     return df
 
 

@@ -14,6 +14,7 @@ import uvicorn
 from api.routers import router, road_router, data_ingestor
 from api.run_model_router import road_run_router
 from core.logger import get_logger
+from core.road_module1_defaults import list_default_economies, load_default_filled_inputs, DEFAULT_VERSION
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -36,6 +37,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.critical(f"Critical failure during API boot sequence: Database failed to load. Details: {str(e)}", exc_info=True)
         raise e
+
+    logger.info("Pre-loading Road Module 1 defaults for all available economies...")
+    economies = list_default_economies()
+    for econ in economies:
+        try:
+            load_default_filled_inputs(economy=econ["economy"], version=DEFAULT_VERSION)
+        except Exception as e:
+            logger.warning(f"Could not pre-load defaults for {econ['economy']}: {e}")
+    if economies:
+        logger.info(f"Road Module 1 defaults cached for {len(economies)} economies.")
+    else:
+        logger.debug("No Road Module 1 default economies found — skipping pre-load.")
+
     yield
     logger.info("API shutdown sequence initiated: Releasing allocated system resources...")
 
