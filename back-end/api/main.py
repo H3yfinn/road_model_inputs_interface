@@ -58,6 +58,12 @@ app.include_router(router)
 app.include_router(road_router)
 app.include_router(road_run_router)
 
+
+@app.get("/health", include_in_schema=False)
+async def health() -> JSONResponse:
+    """Cheap readiness endpoint for container platforms such as HF Spaces."""
+    return JSONResponse({"status": "ok"})
+
 # --- STATIC FILE SERVING ---
 # _interface_dir works for both layouts:
 #   local:     .../road_model_inputs_interface/back-end/api/main.py  → parent×3
