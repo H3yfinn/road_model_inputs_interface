@@ -74,7 +74,7 @@ const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.j
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
 const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
-const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060];
+const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
 const ROAD_SERIES_RECOMMENDATION = 'For a full path to 2060, it is often easiest to prepare the values in Excel or ask an AI tool to draft a year-by-year series, then paste it here.';
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
     passenger: [
