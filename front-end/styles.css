@@ -797,9 +797,8 @@ body.road-panel-resizing * {
     font-weight: 800;
     line-height: 1.2;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .road-unit-pill,
@@ -1662,6 +1661,48 @@ body.road-panel-resizing * {
 .road-reset-button:hover {
     background: #eff6ff;
     border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.road-add-year-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.road-add-year-input {
+    width: 4.5rem;
+    padding: 0.18rem 0.3rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #334155;
+    background: #fff;
+    -moz-appearance: textfield;
+}
+.road-add-year-input::-webkit-inner-spin-button,
+.road-add-year-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.road-add-year-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+.road-add-year-btn {
+    padding: 0.18rem 0.45rem;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    line-height: 1;
+}
+.road-add-year-btn:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
     color: #1d4ed8;
 }
 
