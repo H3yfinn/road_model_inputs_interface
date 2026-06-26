@@ -532,6 +532,7 @@
 
 #road-left-panel {
     height: 100%;
+    width: clamp(300px, 25vw, 480px);
     max-width: 560px;
     min-width: 60px;
     overflow: hidden;
