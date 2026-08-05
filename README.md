@@ -181,6 +181,8 @@ This repo does not own downstream road simulation logic. Modules 2-7 belong in
 
 - Main Module 1 guide:
   - `docs/new model/multinode_road_module1_repo_guide.md`
+- Hugging Face Space deployment:
+  - `docs/HUGGINGFACE_SPACE_DEPLOYMENT.md`
 - Numeric update method log:
   - `back-end/data/road_model/UPDATE_METHOD.md`
 - Cross-repo docs:
