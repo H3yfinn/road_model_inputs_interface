@@ -166,6 +166,95 @@ git remote set-url hf https://huggingface.co/spaces/<OWNER>/<SPACE>
 git push hf main
 ```
 
+## First-time handoff to a new owner or Space
+
+Use this checklist when the project is transferred to another person, HF
+account, or Space name.
+
+### 1. Confirm the two GitHub repositories
+
+The new maintainer needs access to:
+
+- the interface repository, which becomes the HF Space contents; and
+- the public `leap_road_model` repository, which the Docker build clones.
+
+If the model repository is forked or moved, update
+`LEAP_ROAD_MODEL_REPO` in `Dockerfile`. The current Dockerfile assumes that the
+model repository is public; a private model repository would require a
+different authenticated clone design.
+
+### 2. Create the new Hugging Face Space
+
+In Hugging Face:
+
+1. Create a new Space under the new account or organization.
+2. Choose **Docker** as the SDK.
+3. Use the target Space name in the deployment configuration below.
+4. The Space can start empty or contain an automatically created deployment
+   commit; the orphan-snapshot workflow can replace that history.
+
+### 3. Configure the GitHub Actions secret
+
+Create a Hugging Face user token with Write permission for the new Space, then
+add it to the **interface GitHub repository** as:
+
+```text
+Settings → Secrets and variables → Actions → New repository secret
+Name: HF_TOKEN
+Value: <the token value>
+```
+
+Never commit the token or put it in a permanent remote URL. The token is used
+only by the GitHub Actions deployment job.
+
+### 4. Change the deployment target
+
+Edit `.github/workflows/sync_to_hf.yml` and change this line to the new HF
+owner and Space:
+
+```text
+git remote add hf https://<OWNER>:$HF_TOKEN@huggingface.co/spaces/<OWNER>/<SPACE>
+```
+
+The workflow currently also assumes the deployment branch is `main` and uses
+an orphan commit. Keep the orphan push unless the new Space is deliberately
+managed with a shared Git history.
+
+The `Dockerfile` normally does not need the HF owner/name changed. It only
+needs updating if the `leap_road_model` GitHub repository or branch changes.
+
+### 5. Deploy and verify
+
+Push the configured workflow and interface changes to the interface GitHub
+repository's `main` branch. The workflow will:
+
+1. fetch the current `leap_road_model` HEAD SHA;
+2. write it to `leap_road_model_sha.txt`;
+3. create a clean orphan deployment commit;
+4. remove documentation-only files that HF rejects as binary assets; and
+5. force-push the snapshot to the new Space.
+
+Then open the Space's **Logs** tab and confirm that Docker:
+
+- clones `leap_road_model` successfully;
+- installs both `requirements.txt` files;
+- starts `back-end/run.py`; and
+- reports a healthy `/health` endpoint.
+
+Finally test one economy in the browser, download its Module 1 CSV, and run a
+small model case before treating the new Space as operational.
+
+### Configuration summary
+
+| Item | Where to change it | Purpose |
+|---|---|---|
+| HF destination | `.github/workflows/sync_to_hf.yml` | Account, organization, and Space receiving deployment snapshots |
+| HF write credential | GitHub Actions secret `HF_TOKEN` | Allows the workflow to push to the Space |
+| Model repository | `Dockerfile` → `LEAP_ROAD_MODEL_REPO` | GitHub source cloned into the container |
+| Model branch/ref | `Dockerfile` → `LEAP_ROAD_MODEL_REF` | Model version used by the Docker build |
+| Docker port | `Dockerfile` → `PORT` | Must remain compatible with HF Spaces, normally `7860` |
+| Runtime model path | `Dockerfile` → `LEAP_ROAD_MODEL_DIR` | Location used by the interface backend inside the container |
+
 ## Deployment checklist
 
 - `hf auth login` completed with a Write token.
