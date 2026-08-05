@@ -530,6 +530,150 @@
     background: #eef3f8;
 }
 
+/* =========================================
+   ROAD MODEL GUIDE
+   ========================================= */
+
+.road-guide-launch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 999px;
+    padding: 0.38rem 0.72rem;
+    background: #ffffff;
+    color: #1e3a8a;
+    font-size: 0.76rem;
+    font-weight: 800;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+    cursor: pointer;
+}
+
+.road-guide-launch:hover,
+.road-guide-launch:focus-visible {
+    background: #dbeafe;
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.road-guide-launch span {
+    display: inline-grid;
+    width: 1rem;
+    height: 1rem;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.66rem;
+}
+
+.road-guide-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.62);
+}
+
+.road-guide-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 110;
+    width: min(680px, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    transform: translate(-50%, -50%);
+    padding: 1.5rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    color: #1e293b;
+    box-shadow: 0 22px 70px rgba(15, 23, 42, 0.5);
+}
+
+.road-guide-backdrop[hidden],
+.road-guide-dialog[hidden] {
+    display: none !important;
+}
+
+.road-guide-progress {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#road-guide-close {
+    float: right;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-size: 1.6rem;
+    line-height: 0.8;
+    cursor: pointer;
+}
+
+.road-guide-kicker {
+    margin-top: 1.25rem;
+    color: #2563eb;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+#road-guide-title {
+    margin: 0.35rem 0 0.55rem;
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+#road-guide-copy {
+    margin: 0;
+    color: #475569;
+    font-size: 0.95rem;
+    line-height: 1.65;
+}
+
+.road-guide-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.25rem;
+}
+
+.road-guide-actions button {
+    border: 0;
+    border-radius: 0.375rem;
+    padding: 0.65rem 0.9rem;
+    background: transparent;
+    color: #1e3a8a;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#road-guide-next {
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+.road-guide-highlight {
+    position: relative !important;
+    z-index: 105 !important;
+    box-shadow: 0 0 0 4px #60a5fa, 0 0 0 8px rgba(255, 255, 255, 0.96) !important;
+    border-radius: 0.25rem;
+}
+
+@media (max-width: 640px) {
+    .road-guide-dialog {
+        padding: 1.15rem;
+    }
+
+    #road-guide-title {
+        font-size: 1.3rem;
+    }
+}
+
 #road-left-panel {
     height: 100%;
     width: clamp(300px, 25vw, 480px);

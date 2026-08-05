@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road data preparation model</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css?v=20260618c">
+    <link rel="stylesheet" href="styles.css?v=20260806a">
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans overflow-hidden">
     
-    <header class="bg-blue-900 text-white shadow-md z-20 flex-shrink-0">
-        <div class="px-6 py-2 flex justify-center items-center">
+    <header id="road-app-banner" class="bg-blue-900 text-white shadow-md z-20 flex-shrink-0">
+        <div class="px-6 py-2 flex justify-between items-center">
             <h1 class="text-base font-bold tracking-wide">Road data preparation model</h1>
+            <button id="road-guide-launch" class="road-guide-launch" type="button" aria-haspopup="dialog" aria-controls="road-guide-dialog">
+                <span aria-hidden="true">?</span> Guide
+            </button>
         </div>
     </header>
 
@@ -215,6 +218,22 @@
         </section>
     </main>
 
+    <!-- The guide content is configured in road-model-guide.js. -->
+    <div id="road-guide-backdrop" class="road-guide-backdrop" hidden></div>
+    <aside id="road-guide-dialog" class="road-guide-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="road-guide-title" aria-describedby="road-guide-copy">
+        <div class="road-guide-progress">
+            <span id="road-guide-step">1</span> of <span id="road-guide-total">1</span>
+            <button id="road-guide-close" type="button" aria-label="Close guide">&times;</button>
+        </div>
+        <div class="road-guide-kicker">ROAD DATA PREPARATION GUIDE</div>
+        <h2 id="road-guide-title"></h2>
+        <p id="road-guide-copy"></p>
+        <div class="road-guide-actions">
+            <button id="road-guide-back" type="button">Back</button>
+            <button id="road-guide-next" type="button">Next <span aria-hidden="true">&rarr;</span></button>
+        </div>
+    </aside>
+
     <!-- Custom Confirmation Modal (Glassmorphism design) -->
     <div id="custom-confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
         <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
@@ -300,7 +319,8 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api.js"></script>
 <script src="config/variable-help.js"></script>
-<script src="app.js?v=20260610f"></script>
+<script src="app.js?v=20260806a"></script>
 <script src="road-model-helper.js?v=20260610f"></script>
+<script src="road-model-guide.js?v=20260806a"></script>
 </body>
 </html>
