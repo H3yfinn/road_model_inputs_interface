@@ -1,0 +1,8 @@
+Branch Path,Variable,Scenario,Year,Value,Units,share_decreased_from,note,DO_NOT_USE
+Demand\Passenger road\Buses\BEV,Sales Share,Target,2060,100.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Buses\FCEV,Sales Share,Target,2060,0.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Buses\ICE,Sales Share,Target,2060,0.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2059,100.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2060,100.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2059,0.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2060,0.0,Share,,Survival-based replacement sales share used only where current 19THA sales total is zero; 9th-edition shares retained in earlier years.,

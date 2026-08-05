@@ -1,0 +1,11 @@
+Branch Path,Variable,Scenario,Year,Value,Units,share_decreased_from,note,DO_NOT_USE
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2056,94.55010200909123,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2057,94.16786500428832,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2058,93.90043267536691,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2059,94.10844382916423,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\BEV,Sales Share,Target,2060,96.28664996316266,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2056,5.449897990908771,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2057,5.832134995711684,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2058,6.099567324633082,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2059,5.891556170835778,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,
+Demand\Passenger road\Motorcycles\ICE,Sales Share,Target,2060,3.7133500368373413,Share,,Survival-based replacement sales share used only where current 11MEX sales total is zero; 9th-edition shares retained in earlier years.,

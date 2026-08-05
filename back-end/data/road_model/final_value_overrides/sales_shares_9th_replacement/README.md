@@ -1,10 +1,10 @@
-# PRC replacement-sales sales shares
+# Replacement-sales sales shares
 
-`module1_final_value_overrides_05PRC.csv` is a separate, optional final override package for PRC Target sales shares.
+This folder contains separate, optional final override packages for Target sales shares, one file per economy.
 
-The package keeps the existing 9th-edition-derived interface shares in years where the current source has positive sales. It replaces only the zero-sales years with shares calculated from surviving vehicle cohorts and replacement sales, using the PRC survival and vintage profiles from `leap_transport`.
+Each package keeps the existing 9th-edition-derived interface shares in years where the current source has positive sales. It replaces only zero-sales parent/year combinations with shares calculated from surviving vehicle cohorts and replacement sales, using the corresponding survival and vintage profiles from `leap_transport`. Empty files are retained for economies where no replacement rows are needed.
 
-The file is intentionally kept in this subfolder so it can be updated independently of the general per-economy override file. The static-package builder discovers one-level specialist override folders and overlays these projected rows after the ordinary processed-source rows.
+The files are intentionally kept in this subfolder so they can be updated independently of the ordinary processed-source files. The static-package builder discovers this specialist folder and overlays these projected rows after the ordinary workbook/source rows. The static bundle is the browser/model hand-off, and the generated static files have been updated for all non-empty packages.
 
 Regenerate with:
 
