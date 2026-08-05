@@ -29,6 +29,7 @@ ECONOMY_CODES = [
     for path in sorted((LEAP_TRANSPORT_REPO / "intermediate_data").glob("transport_data_*_Target_2022_2060.pkl"))
     if not path.name.startswith("transport_data_00_")
 ]
+SCENARIOS = ("Target", "Reference")
 
 VEHICLE_TYPE_MAP = {
     "car": ("passenger", "LPVs", "small"),
@@ -59,27 +60,27 @@ def _branch_path(transport_type: str, vehicle_type: str, size: str, drive: str) 
     return rf"Demand\{transport_label}\{vehicle_type}\{drive} {size}"
 
 
-def _allowed_branch_keys(compact_code: str) -> set[tuple[str, str, int]]:
+def _allowed_branch_keys(compact_code: str, scenario: str) -> set[tuple[str, str, int]]:
     source_path = SOURCE_DIR / f"road_module1_source_{compact_code}.csv"
     source = pd.read_csv(source_path)
     source_leaf_rows = source[
         (source["Variable"] == "Sales Share")
-        & (source["Scenario"] == "Target")
+        & (source["Scenario"] == scenario)
         & (source["Branch Path"].str.count(r"\\") >= 3)
     ]
     allowed = set(zip(source_leaf_rows["Branch Path"], source_leaf_rows["Scenario"], source_leaf_rows["Year"]))
 
     candidates = sorted(WORKBOOK_DIR.glob(
-        f"transport_leap_export_combined_{compact_code[:2]}_{compact_code[2:]}_domestic_international_Target_*.xlsx"
+        f"transport_leap_export_combined_{compact_code[:2]}_{compact_code[2:]}_domestic_international_{scenario}_*.xlsx"
     ))
     if candidates:
         workbook_df = pd.read_excel(candidates[-1], sheet_name="FOR_VIEWING", header=2)
         branches = workbook_df[
             (workbook_df["Variable"].fillna("").astype(str).str.strip() == "Sales Share")
-            & (workbook_df["Scenario"].fillna("").astype(str).str.strip() == "Target")
+            & (workbook_df["Scenario"].fillna("").astype(str).str.strip() == scenario)
             & (workbook_df["Branch Path"].fillna("").astype(str).str.count(r"\\") >= 3)
         ]["Branch Path"].dropna().astype(str).unique()
-        allowed.update((branch, "Target", year) for branch in branches for year in range(2023, 2061))
+        allowed.update((branch, scenario, year) for branch in branches for year in range(2023, 2061))
 
     # The static bundle is the actual browser/model hand-off contract.  Do not
     # create specialist rows for workbook branches that the interface has
@@ -89,13 +90,13 @@ def _allowed_branch_keys(compact_code: str) -> set[tuple[str, str, int]]:
         static = pd.read_csv(static_path)
         static_keys = static[
             (static["Variable"] == "Sales Share")
-            & (static["Scenario"] == "Target")
+            & (static["Scenario"] == scenario)
         ]
         allowed = set(zip(static_keys["Branch Path"], static_keys["Scenario"], static_keys["Year"]))
     return allowed
 
 
-def build_override_rows(economy_code: str) -> pd.DataFrame:
+def build_override_rows(economy_code: str, scenario: str) -> pd.DataFrame:
     """Build overrides for one canonical leap_transport economy code."""
     sys.path.insert(0, str(LEAP_TRANSPORT_REPO / "codebase"))
     from functions.sales_curve_estimate import (  # pylint: disable=import-outside-toplevel
@@ -104,15 +105,15 @@ def build_override_rows(economy_code: str) -> pd.DataFrame:
     )
 
     compact_code = _compact_code(economy_code)
-    allowed_branch_keys = _allowed_branch_keys(compact_code)
-    checkpoint = LEAP_TRANSPORT_REPO / f"intermediate_data/transport_data_{economy_code}_Target_2022_2060.pkl"
+    allowed_branch_keys = _allowed_branch_keys(compact_code, scenario)
+    checkpoint = LEAP_TRANSPORT_REPO / f"intermediate_data/transport_data_{economy_code}_{scenario}_2022_2060.pkl"
     survival_path = LEAP_TRANSPORT_REPO / f"data/lifecycle_profiles/vehicle_survival_modified_{economy_code}.xlsx"
     vintage_path = LEAP_TRANSPORT_REPO / f"data/lifecycle_profiles/vintage_modelled_from_survival_{economy_code}.xlsx"
 
     source = pd.read_pickle(checkpoint)
     source = source[
         (source["Economy"] == economy_code)
-        & (source["Scenario"] == "Target")
+        & (source["Scenario"] == scenario)
         & (source["Medium"] == "road")
         & (source["Transport Type"].isin(["passenger", "freight"]))
         & (source["Vehicle Type"].isin(VEHICLE_TYPE_MAP))
@@ -146,7 +147,7 @@ def build_override_rows(economy_code: str) -> pd.DataFrame:
             for drive, value in mapped_replacement.loc[year].items():
                 transport_type, interface_parent, size = VEHICLE_TYPE_MAP[vehicle_type]
                 branch = _branch_path(transport_type, interface_parent, size, drive)
-                if (branch, "Target", int(year)) in allowed_branch_keys:
+                if (branch, scenario, int(year)) in allowed_branch_keys:
                     replacement_detail.append({"parent": parent, "year": int(year), "branch": branch, "value": float(value)})
 
     detail = pd.DataFrame(replacement_detail)
@@ -159,7 +160,7 @@ def build_override_rows(economy_code: str) -> pd.DataFrame:
             continue
         for _, row in group.groupby("branch", as_index=False)["value"].sum().iterrows():
             rows.append({
-                "Branch Path": row["branch"], "Variable": "Sales Share", "Scenario": "Target", "Year": int(year),
+                "Branch Path": row["branch"], "Variable": "Sales Share", "Scenario": scenario, "Year": int(year),
                 "Value": float(row["value"] / supported_total * 100.0), "Units": "Share", "share_decreased_from": "",
                 "note": f"Survival-based replacement sales share used only where current {compact_code} sales total is zero; 9th-edition shares retained in earlier years.",
                 "DO_NOT_USE": "",
@@ -179,7 +180,10 @@ def write_override_files() -> list[Path]:
     outputs = []
     for economy_code in ECONOMY_CODES:
         output_path = OUTPUT_DIR / f"module1_final_value_overrides_{_compact_code(economy_code)}.csv"
-        overrides = build_override_rows(economy_code)
+        overrides = pd.concat(
+            [build_override_rows(economy_code, scenario) for scenario in SCENARIOS],
+            ignore_index=True,
+        )
         overrides.to_csv(output_path, index=False)
         outputs.append(output_path)
         print(f"Wrote {len(overrides):,} rows to {output_path}")

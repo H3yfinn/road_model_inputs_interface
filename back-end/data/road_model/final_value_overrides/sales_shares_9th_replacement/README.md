@@ -1,6 +1,6 @@
 # Replacement-sales sales shares
 
-This folder contains separate, optional final override packages for Target sales shares, one file per economy.
+This folder contains separate, optional final override packages for Target and Reference sales shares, one file per economy.
 
 Each package keeps the existing 9th-edition-derived interface shares in years where the current source has positive sales. It replaces only zero-sales parent/year combinations with shares calculated from surviving vehicle cohorts and replacement sales, using the corresponding survival and vintage profiles from `leap_transport`. Empty files are retained for economies where no replacement rows are needed.
 
