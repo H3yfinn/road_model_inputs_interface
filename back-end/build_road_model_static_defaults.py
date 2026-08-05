@@ -86,6 +86,24 @@ def _load_projected_sales_share_from_processed_source(
         df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
         & pd.to_numeric(df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
     ].copy()
+    specialist_paths = sorted(
+        FINAL_VALUE_OVERRIDE_DIR.glob(f"*/module1_final_value_overrides_{economy_code}.csv")
+    ) if FINAL_VALUE_OVERRIDE_DIR.exists() else []
+    if specialist_paths:
+        specialist_frames = []
+        for specialist_path in specialist_paths:
+            specialist_df = pd.read_csv(specialist_path)
+            specialist_df = specialist_df[
+                specialist_df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
+                & pd.to_numeric(specialist_df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
+            ][["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]].copy()
+            specialist_frames.append(specialist_df)
+        if specialist_frames:
+            future = pd.concat([future, *specialist_frames], ignore_index=True)
+            future = future.drop_duplicates(
+                subset=["Branch Path", "Variable", "Scenario", "Year"],
+                keep="last",
+            )
     if scenario and "Scenario" in future.columns:
         future = future[future["Scenario"].fillna("").astype(str).str.strip().eq(str(scenario))]
     if future.empty:
@@ -234,7 +252,36 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
 
     if not resolved_rows:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
-    return pd.concat(resolved_rows, ignore_index=True)[MODULE1_LONG_COLUMNS].copy()
+    combined = pd.concat(resolved_rows, ignore_index=True)[MODULE1_LONG_COLUMNS].copy()
+
+    # Specialist future-share packages intentionally override workbook rows,
+    # including when a workbook exists for the requested scenario.
+    specialist_paths = sorted(
+        FINAL_VALUE_OVERRIDE_DIR.glob(f"*/module1_final_value_overrides_{economy_code}.csv")
+    ) if FINAL_VALUE_OVERRIDE_DIR.exists() else []
+    specialist_rows: list[pd.DataFrame] = []
+    for specialist_path in specialist_paths:
+        specialist_df = pd.read_csv(specialist_path)
+        specialist_df = specialist_df[
+            specialist_df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
+            & pd.to_numeric(specialist_df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
+        ][["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]].copy()
+        if specialist_df.empty:
+            continue
+        specialist_df.insert(0, "Economy", economy_code)
+        specialist_df["Scale"] = "%"
+        specialist_df["Source"] = specialist_path.name
+        specialist_df["Comment"] = "Projected Sales Share from specialist override package."
+        specialist_df["Input Status"] = "provided"
+        specialist_df["Shown In Interface"] = "True"
+        specialist_rows.append(specialist_df[MODULE1_LONG_COLUMNS])
+    if specialist_rows:
+        combined = pd.concat([combined, *specialist_rows], ignore_index=True)
+        combined = combined.drop_duplicates(
+            subset=["Scenario", "Branch Path", "Variable", "Year"],
+            keep="last",
+        )
+    return combined[MODULE1_LONG_COLUMNS].copy()
 
 
 def _build_projected_stock_share_rows(
@@ -530,7 +577,11 @@ def _round_static_display_values(long_df: pd.DataFrame) -> pd.DataFrame:
 
     rounded = long_df.copy()
     numeric_values = pd.to_numeric(rounded["Value"], errors="coerce")
-    no_round_mask = rounded["Variable"].isin(STATIC_NO_DISPLAY_ROUND_VARIABLES)
+    specialist_sales_share_mask = (
+        rounded["Variable"].eq("Sales Share")
+        & rounded["Source"].fillna("").astype(str).str.contains("module1_final_value_overrides_", regex=False)
+    )
+    no_round_mask = rounded["Variable"].isin(STATIC_NO_DISPLAY_ROUND_VARIABLES) | specialist_sales_share_mask
     list_mask = _is_drive_level_sales_share_row(rounded)
     rounded.loc[numeric_values.notna() & list_mask, "Value"] = numeric_values[list_mask].round(0)
     rounded.loc[numeric_values.notna() & ~list_mask & ~no_round_mask, "Value"] = numeric_values[~list_mask & ~no_round_mask].round(2)
@@ -759,6 +810,9 @@ def _validate_input_schemas(data_dir: Path) -> list[str]:
             *FINAL_VALUE_OVERRIDE_DIR.glob("module1_final_value_override*.csv"),
             *FINAL_VALUE_OVERRIDE_DIR.glob("module1_final_value_override*.xlsx"),
             *FINAL_VALUE_OVERRIDE_DIR.glob("module1_final_value_override*.xls"),
+            *FINAL_VALUE_OVERRIDE_DIR.glob("*/module1_final_value_override*.csv"),
+            *FINAL_VALUE_OVERRIDE_DIR.glob("*/module1_final_value_override*.xlsx"),
+            *FINAL_VALUE_OVERRIDE_DIR.glob("*/module1_final_value_override*.xls"),
         ]
         for path in sorted(set(override_paths)):
             try:
