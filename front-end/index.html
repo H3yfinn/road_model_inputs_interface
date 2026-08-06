@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road data preparation model</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css?v=20260806b">
+    <link rel="stylesheet" href="styles.css?v=20260806c">
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans overflow-hidden">
     
@@ -52,17 +52,18 @@
                         </div>
                     </div>
                     <p class="text-xs text-slate-500 mb-2">Record inputs for your economy. Feel free to leave the provided values as they are. Press Run Road Model whenever you want to see how they affect the output.</p>
-                    <div id="road-reference-links" class="flex items-center gap-2 mb-1">
-                        <a href="/road-model-docs/road_transport_model_overview.md" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
-                            Open road model overview
+                    <div id="road-reference-links" class="road-reference-links" aria-label="Road model reference material">
+                        <a href="/road-model-docs/road_transport_model_overview.md" target="_blank" rel="noopener" class="road-reference-link">
+                            <span class="road-reference-link-title">Overview</span>
+                            <span class="road-reference-link-copy">What the model is for</span>
                         </a>
-                        <span class="text-slate-300 select-none">|</span>
-                        <a href="/road-model-docs/road_transport_model_methodology.md" target="_blank" rel="noopener" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline">
-                            Read methodology
+                        <a href="/road-model-docs/road_transport_model_methodology.md" target="_blank" rel="noopener" class="road-reference-link">
+                            <span class="road-reference-link-title">Methodology</span>
+                            <span class="road-reference-link-copy">Assumptions and calculations</span>
                         </a>
-                        <span class="text-slate-300 select-none">|</span>
-                        <button id="road-variable-map-btn" class="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline" type="button">
-                            Branch and Measure hierarchy
+                        <button id="road-variable-map-btn" class="road-reference-link" type="button">
+                            <span class="road-reference-link-title">Hierarchy</span>
+                            <span class="road-reference-link-copy">Inputs and variables</span>
                         </button>
                     </div>
                     <div class="space-y-3">
@@ -323,6 +324,6 @@
 <script src="config/variable-help.js"></script>
 <script src="app.js?v=20260806a"></script>
 <script src="road-model-helper.js?v=20260610f"></script>
-<script src="road-model-guide.js?v=20260806c"></script>
+<script src="road-model-guide.js?v=20260806d"></script>
 </body>
 </html>

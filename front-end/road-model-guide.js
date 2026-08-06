@@ -17,8 +17,8 @@ const ROAD_MODEL_GUIDE_STEPS = [
     },
     {
         target: '#road-reference-links',
-        title: 'Find more information here',
-        copy: 'Open road model overview explains what the model does. Open methodology guide explains the assumptions and calculation method. Branch and Measure hierarchy shows how the input data is organised.'
+        title: 'Reference material',
+        copy: 'Use these links whenever you need more detail. Overview explains the model’s purpose and role in the Outlook. Methodology explains the assumptions and calculations. Hierarchy shows how the input variables are organised.'
     },
     {
         target: '#road-left-top .pt-4',
