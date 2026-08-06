@@ -69,10 +69,18 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Import the road workbook into LEAP',
-        copy: 'After a run, select Download LEAP Workbook. The two screenshots show the LEAP import choices and the workbook to select. Use the arrows to move through the screenshots without leaving this note.',
+        copy: 'After a run, Download LEAP Workbook. The two screenshots show how to import the workbook in LEAP. Use the arrows to move through the screenshots without leaving this note.',
         gallery: [
-            { image: 'assets/guide/leap-workbook/01-import-options.png', alt: 'LEAP import from Excel options.' },
-            { image: 'assets/guide/leap-workbook/02-import-workbook.png', alt: 'The road model LEAP import workbook selected for import.' }
+            {
+                image: 'assets/guide/leap-workbook/01-import-options.png?v=20260806b',
+                alt: 'LEAP Analysis menu showing Import from Excel Template.',
+                caption: 'In LEAP, open your area and choose Analysis > Import from Excel Template. First click a cell in the Excel workbook you want to import.'
+            },
+            {
+                image: 'assets/guide/leap-workbook/02-import-workbook.png?v=20260806b',
+                alt: 'LEAP import from Excel options.',
+                caption: 'Use these options to make sure the data is imported into the right places.'
+            }
         ]
     },
     {
@@ -153,7 +161,10 @@ function setupRoadModelGuide() {
         if (!galleryItem) return;
         galleryImage.src = galleryItem.image;
         galleryImage.alt = galleryItem.alt || '';
-        galleryCaption.textContent = `${galleryIndex + 1} of ${galleryImages.length}`;
+        const imageNumber = `${galleryIndex + 1} of ${galleryImages.length}`;
+        galleryCaption.textContent = galleryItem.caption
+            ? `${imageNumber} — ${galleryItem.caption}`
+            : imageNumber;
         galleryPrevious.disabled = galleryImages.length < 2;
         galleryNext.disabled = galleryImages.length < 2;
     };
