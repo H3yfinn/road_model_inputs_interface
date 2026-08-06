@@ -4,6 +4,14 @@
 // selectors separated by commas are tried from left to right. Optional image
 // and placeholder fields add a screenshot or a clearly marked future slot.
 
+function getRoadGuideImage(imageId) {
+    const image = typeof ROAD_MODEL_GUIDE_IMAGES === 'undefined'
+        ? ''
+        : ROAD_MODEL_GUIDE_IMAGES[imageId];
+    if (!image) console.warn(`Road guide image is missing: ${imageId}`);
+    return image || '';
+}
+
 const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-app-banner',
@@ -39,7 +47,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
         target: '#road-upload-provided-values',
         title: 'Bring in work prepared elsewhere',
         copy: 'Click Upload Filled CSV to load a CSV you prepared in Excel or another tool. It needs to match this structure, variables and column names or it will not work. You can change the values, sources and comments for the existing rows.',
-        image: 'assets/guide/module1-long-csv-structure.png?v=20260806b',
+        image: getRoadGuideImage('module1_long_csv_structure'),
         imageAlt: 'The filled CSV structure, showing Economy, Scenario, Branch Path, Variable, Year, Value, Scale, Units, Source, Comment, Input Status and Shown In Interface columns.'
     },
     {
@@ -56,14 +64,14 @@ const ROAD_MODEL_GUIDE_STEPS = [
         target: '#road-run-model',
         title: 'Review the model results',
         copy: 'After a run, the results window shows the completed calculation and the files available to use.',
-        image: 'assets/guide/road-model-results.png',
+        image: getRoadGuideImage('road_model_results'),
         imageAlt: 'Road model results window after a completed model run.'
     },
     {
         target: '#road-run-model',
         title: 'Check the results dashboard',
         copy: 'Use Open Dashboard after a run to review charts and tables that summarise the projected fleet, energy use and calibration quality before continuing in LEAP.',
-        image: 'assets/guide/road-model-dashboard.png',
+        image: getRoadGuideImage('road_model_dashboard'),
         imageAlt: 'Road model results dashboard with charts and tables.'
     },
     {
@@ -72,12 +80,12 @@ const ROAD_MODEL_GUIDE_STEPS = [
         copy: 'After a run, Download LEAP Workbook. The two screenshots show how to import the workbook in LEAP. Use the arrows to move through the screenshots without leaving this note.',
         gallery: [
             {
-                image: 'assets/guide/leap-workbook/01-import-options.png?v=20260806b',
+                image: getRoadGuideImage('leap_workbook_import_menu'),
                 alt: 'LEAP Analysis menu showing Import from Excel Template.',
                 caption: 'In LEAP, open your area and choose Analysis > Import from Excel Template. First click a cell in the Excel workbook you want to import.'
             },
             {
-                image: 'assets/guide/leap-workbook/02-import-workbook.png?v=20260806b',
+                image: getRoadGuideImage('leap_workbook_import_options'),
                 alt: 'LEAP import from Excel options.',
                 caption: 'Use these options to make sure the data is imported into the right places.'
             }
@@ -89,14 +97,14 @@ const ROAD_MODEL_GUIDE_STEPS = [
         copy: 'After a run, select Download Lifecycle Profiles. First create named Excel ranges, then create the matching lifecycle profiles in LEAP. Use the arrows to move through the steps without leaving this note.',
         gallery: [
             {
-                image: 'assets/guide/lifecycle-profiles/05-excel-defined-name.png',
+                image: getRoadGuideImage('lifecycle_excel_defined_name'),
                 alt: 'Excel Name Box with a lifecycle profile range name entered.',
                 caption: 'Highlight the lifecycle-profile values and give the range a defined name in Excel, using the Name Box shown in red. Do this for every Vintage Profile and Survival Profile sheet in the workbook.'
             },
             {
                 images: [
-                    { image: 'assets/guide/lifecycle-profiles/06-create-profile.png', alt: 'LEAP dialog for creating a lifecycle profile.' },
-                    { image: 'assets/guide/lifecycle-profiles/07-choose-defined-name.png', alt: 'LEAP dialog for choosing the Excel defined range.' }
+                    { image: getRoadGuideImage('lifecycle_create_profile'), alt: 'LEAP dialog for creating a lifecycle profile.' },
+                    { image: getRoadGuideImage('lifecycle_choose_defined_name'), alt: 'LEAP dialog for choosing the Excel defined range.' }
                 ],
                 caption: 'Create one lifecycle profile for each Vintage Profile and Survival Profile. Name it, then set its Excel range from the defined name you created.'
             }
@@ -108,17 +116,17 @@ const ROAD_MODEL_GUIDE_STEPS = [
         copy: 'For each vehicle type in LEAP, assign the new Vintage Profile and Survival Profile to the related variables. Use the arrows to see each place where the profiles are applied.',
         gallery: [
             {
-                image: 'assets/guide/lifecycle-profiles/08-stock-vintage-profile.png',
+                image: getRoadGuideImage('lifecycle_stock_vintage_profile'),
                 alt: 'LEAP Stock Share view with Stock Vintage Profile values.',
                 caption: 'For each vehicle type, click Stock Share and set every Stock Vintage Profile to your newly created vintage profile.'
             },
             {
-                image: 'assets/guide/lifecycle-profiles/09-sales-survival-profile.png',
+                image: getRoadGuideImage('lifecycle_sales_survival_profile'),
                 alt: 'LEAP Sales view with Survival Profile values.',
                 caption: 'For each vehicle type, click Sales and set every Survival Profile to your newly created survival profile.'
             },
             {
-                image: 'assets/guide/lifecycle-profiles/10-sales-share-survival-profile.png',
+                image: getRoadGuideImage('lifecycle_sales_share_survival_profile'),
                 alt: 'LEAP Sales Share view with Survival Profile values.',
                 caption: 'For each vehicle type, click Sales Share and set every Survival Profile to your newly created survival profile.'
             }
@@ -128,7 +136,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
         target: '#road-run-model',
         title: 'More LEAP guidance',
         copy: 'More information on using the road model in LEAP is in OneDrive: Guides and notes/Transport/Transport guide for LEAP. The table below summarises the safest changes to make in LEAP.',
-        image: 'assets/guide/leap-safe-changes-reference.png',
+        image: getRoadGuideImage('leap_safe_changes_reference'),
         imageAlt: 'Transport guide for LEAP showing the safe LEAP changes section.',
         table: {
             caption: 'Safe changes in projection scenarios — not Current Accounts',

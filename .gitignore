@@ -57,6 +57,10 @@ back-end/data/multinodeenergy_backend/00APEC_2024_low_with_subtotals.csv
 back-end/data/road_model/leap_import_workbooks/
 back-end/data/transport_leap_exports/
 
+# Guide screenshots are local authoring assets. Run scripts/build_road_model_guide_images.py
+# to encode them into the deployable front-end/road-model-guide-images.js bundle.
+front-end/assets/guide/**/*.png
+
 # ===========================
 # Static bundle IS committed — it is the deployed frontend artifact
 # ===========================

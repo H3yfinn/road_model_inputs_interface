@@ -1,6 +1,6 @@
 # Road interface guide overlay
 
-The front-page **Guide** button opens the interactive walkthrough for the Road
+The front-page **Tour** button opens the interactive walkthrough for the Road
 data preparation model. Its content is intentionally maintained as data rather
 than embedded in the page markup.
 
@@ -29,11 +29,15 @@ gallery item when related screenshots should appear side by side. Use `table` wi
 for compact reference tables. Keep the explanation focused on both the
 immediate action and its role in the road-to-LEAP Outlook workflow.
 
-The current LEAP galleries use `front-end/assets/guide/leap-workbook/` and
-`front-end/assets/guide/lifecycle-profiles/`. To update their screenshots,
-replace the image files there and retain their ordered filenames, or update the
+The current guide screenshots are local authoring assets under
+`front-end/assets/guide/`; they are intentionally ignored by Git because the
+Hugging Face deployment rejects binary PNG files. To update screenshots,
+replace the images while retaining their manifest paths, then run
+`scripts/build_road_model_guide_images.py`. Commit the resulting
+`front-end/road-model-guide-images.js` file. Update the manifest and the
 corresponding `gallery` array in `road-model-guide.js` when adding or removing
-steps.
+steps. Also increment the cache suffix on that script's tag in
+`front-end/index.html` so browsers load the updated image bundle.
 
 The interaction code and styling are deliberately generic. A guide update
 normally requires no edits outside the steps array unless a new interface area
