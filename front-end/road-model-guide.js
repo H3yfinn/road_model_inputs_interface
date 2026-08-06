@@ -38,8 +38,8 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-upload-provided-values',
         title: 'Bring in work prepared elsewhere',
-        copy: 'Your file needs to match this structure, variables and column names or it will not work. You can change the values, sources and comments for the existing rows.',
-        image: 'assets/guide/module1-long-csv-structure.png',
+        copy: 'Click Upload Filled CSV to load a CSV you prepared in Excel or another tool. It needs to match this structure, variables and column names or it will not work. You can change the values, sources and comments for the existing rows.',
+        image: 'assets/guide/module1-long-csv-structure.png?v=20260806b',
         imageAlt: 'The filled CSV structure, showing Economy, Scenario, Branch Path, Variable, Year, Value, Scale, Units, Source, Comment, Input Status and Shown In Interface columns.'
     },
     {
