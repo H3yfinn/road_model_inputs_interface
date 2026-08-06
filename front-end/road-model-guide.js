@@ -38,7 +38,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-upload-provided-values',
         title: 'Bring in work prepared elsewhere',
-        copy: 'Upload a filled CSV when values have been prepared in a spreadsheet or another tool. It updates existing row keys only, protecting the shared data structure while allowing your own values, sources and comments.',
+        copy: 'Your file needs to match this structure, variables and column names or it will not work. You can change the values, sources and comments for the existing rows.',
         image: 'assets/guide/module1-long-csv-structure.png',
         imageAlt: 'The filled CSV structure, showing Economy, Scenario, Branch Path, Variable, Year, Value, Scale, Units, Source, Comment, Input Status and Shown In Interface columns.'
     },
@@ -55,14 +55,16 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Review the model results',
-        copy: 'After a run, the results window will show the completed calculation and the files available to use. This step will include a results screenshot when it is ready.',
-        placeholder: 'Results screenshot to be added'
+        copy: 'After a run, the results window shows the completed calculation and the files available to use.',
+        image: 'assets/guide/road-model-results.png',
+        imageAlt: 'Road model results window after a completed model run.'
     },
     {
         target: '#road-run-model',
         title: 'Check the results dashboard',
         copy: 'Use Open Dashboard after a run to review charts and tables that summarise the projected fleet, energy use and calibration quality before continuing in LEAP.',
-        placeholder: 'Dashboard screenshot to be added'
+        image: 'assets/guide/road-model-dashboard.png',
+        imageAlt: 'Road model results dashboard with charts and tables.'
     },
     {
         target: '#road-run-model',
