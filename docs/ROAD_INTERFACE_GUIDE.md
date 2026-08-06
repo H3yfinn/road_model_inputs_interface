@@ -19,8 +19,10 @@ Edit `front-end/road-model-guide.js` and add, remove, or reorder an object in
 
 `target` is a CSS selector for the element to highlight. For resilient steps,
 provide alternatives separated by commas; the first element that exists is
-used. Keep the explanation focused on both the immediate action and its role in
-the road-to-LEAP Outlook workflow.
+used. Add `image` and `imageAlt` for a screenshot stored under
+`front-end/assets/guide/`, or `placeholder` when the screenshot will be added
+later. Keep the explanation focused on both the immediate action and its role
+in the road-to-LEAP Outlook workflow.
 
 The interaction code and styling are deliberately generic. A guide update
 normally requires no edits outside the steps array unless a new interface area

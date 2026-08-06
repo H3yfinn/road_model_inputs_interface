@@ -1,7 +1,8 @@
 // Road data preparation guide.
 // To extend the tour, add a step to ROAD_MODEL_GUIDE_STEPS. Each step needs a
 // title, copy, and a selector for the UI area it should highlight. Multiple
-// selectors separated by commas are tried from left to right.
+// selectors separated by commas are tried from left to right. Optional image
+// and placeholder fields add a screenshot or a clearly marked future slot.
 
 const ROAD_MODEL_GUIDE_STEPS = [
     {
@@ -21,13 +22,13 @@ const ROAD_MODEL_GUIDE_STEPS = [
     },
     {
         target: '#road-left-top .pt-4',
-        title: 'Set up a useful working view',
-        copy: 'Switch between List and Tree views, choose how much detail to show, then filter or sort the input rows. These controls only change what you see; they do not change the model data or results.'
+        title: 'Navigation tools for your work',
+        copy: 'Use List or Tree view, data density, filters and sorting whenever they help you find the variables you are working on. These controls only change what you see; they do not change the model data or results.'
     },
     {
         target: '#road-input-container',
-        title: 'Review and improve the inputs',
-        copy: 'Edit the available values for your economy, adding your source and comment where relevant. This is where local knowledge improves the long-lived road dataset: the same structured rows can be reviewed, updated and reused in later Outlook cycles.'
+        title: 'Focus on the inputs that matter most to you',
+        copy: 'You can leave every starting value as it is: they are based on the previous Outlook and remain the default. Blue flag icons mark key inputs with relatively high uncertainty and impact on results, so they are a good place to focus when you have local evidence or expert judgement to add.'
     },
     {
         target: '#road-helper-wrapper',
@@ -37,17 +38,37 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-upload-provided-values',
         title: 'Bring in work prepared elsewhere',
-        copy: 'Upload a filled CSV when values have been prepared in a spreadsheet or another tool. It can update existing row keys only, which protects the shared data contract while allowing researcher overrides.'
+        copy: 'Upload a filled CSV when values have been prepared in a spreadsheet or another tool. It updates existing row keys only, protecting the shared data structure while allowing your own values, sources and comments.',
+        image: 'assets/guide/module1-long-csv-structure.png',
+        imageAlt: 'The filled CSV structure, showing Economy, Scenario, Branch Path, Variable, Year, Value, Scale, Units, Source, Comment, Input Status and Shown In Interface columns.'
     },
     {
         target: '#road-save-output',
         title: 'Keep a portable working copy',
-        copy: 'Download Filled CSV saves the current package, including the defaults and your overrides. You can use it for review, share it with colleagues, and upload it later to continue the same work.'
+        copy: 'Your progress is saved in this browser when you leave. If you have made a lot of progress you do not want to risk losing to a browser or website problem, download the Filled CSV as a backup. You can upload it later to continue from the same point.'
     },
     {
         target: '#road-run-model',
         title: 'Run the detailed road calculation',
-        copy: 'Run Road Model reconciles the base-year fleet against road energy, projects the fleet and technologies, and prepares a LEAP-ready import workbook. The results dashboard helps you check the calculation before the simpler, economy-wide Outlook modelling continues in LEAP.'
+        copy: 'Run Road Model reconciles the recorded base-year fleet values to ESTO road-energy data, projects the fleet and technologies, and prepares a LEAP-ready import workbook. Reconciliation can make small changes to the values you entered so that the fleet produces the observed ESTO energy total.'
+    },
+    {
+        target: '#road-run-model',
+        title: 'Review the model results',
+        copy: 'After a run, the results window will show the completed calculation and the files available to use. This step will include a results screenshot when it is ready.',
+        placeholder: 'Results screenshot to be added'
+    },
+    {
+        target: '#road-run-model',
+        title: 'Check the results dashboard',
+        copy: 'Use Open Dashboard after a run to review charts and tables that summarise the projected fleet, energy use and calibration quality before continuing in LEAP.',
+        placeholder: 'Dashboard screenshot to be added'
+    },
+    {
+        target: '#road-run-model',
+        title: 'Use the files created by the run',
+        copy: 'Download LEAP Workbook is the road-model import for LEAP. Download Lifecycle Profiles provides lifecycle-emissions profiles. Download Reconciled Inputs lets you bring the adjusted base-year inputs back into this interface. This step will also show how to insert lifecycle results in LEAP.',
+        placeholder: 'Lifecycle-results-in-LEAP screenshot to be added'
     },
     {
         target: '#road-app-banner',
@@ -65,6 +86,8 @@ function setupRoadModelGuide() {
 
     const title = get('#road-guide-title');
     const copy = get('#road-guide-copy');
+    const image = get('#road-guide-image');
+    const placeholder = get('#road-guide-placeholder');
     const stepNumber = get('#road-guide-step');
     const total = get('#road-guide-total');
     const back = get('#road-guide-back');
@@ -85,6 +108,13 @@ function setupRoadModelGuide() {
         clearHighlight();
         title.textContent = step.title;
         copy.textContent = step.copy;
+        image.hidden = !step.image;
+        if (step.image) image.src = step.image;
+        else image.removeAttribute('src');
+        image.alt = step.imageAlt || '';
+        placeholder.hidden = !step.placeholder;
+        placeholder.textContent = step.placeholder || '';
+        dialog.classList.toggle('road-guide-has-image', Boolean(step.image));
         stepNumber.textContent = String(currentStep + 1);
         total.textContent = String(ROAD_MODEL_GUIDE_STEPS.length);
         back.style.visibility = currentStep === 0 ? 'hidden' : 'visible';

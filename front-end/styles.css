@@ -590,6 +590,10 @@
     box-shadow: 0 22px 70px rgba(15, 23, 42, 0.5);
 }
 
+.road-guide-dialog.road-guide-has-image {
+    width: min(1200px, calc(100vw - 2rem));
+}
+
 .road-guide-backdrop[hidden],
 .road-guide-dialog[hidden] {
     display: none !important;
@@ -633,6 +637,32 @@
     color: #475569;
     font-size: 0.95rem;
     line-height: 1.65;
+}
+
+.road-guide-image {
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    margin-top: 1rem;
+    object-fit: contain;
+    object-position: left center;
+    border: 1px solid #bfdbfe;
+    border-radius: 0.375rem;
+    background: #f8fafc;
+}
+
+.road-guide-placeholder {
+    display: grid;
+    width: 100%;
+    min-height: 250px;
+    margin-top: 1rem;
+    place-items: center;
+    border: 2px dashed #93c5fd;
+    border-radius: 0.375rem;
+    background: #eff6ff;
+    color: #475569;
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 .road-guide-actions {
