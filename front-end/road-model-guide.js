@@ -15,9 +15,9 @@ const ROAD_MODEL_GUIDE_STEPS = [
         copy: 'Select the economy you are working on. The interface loads its documented default package, including both Current Accounts base-year rows and the Target projection rows that the road model needs.'
     },
     {
-        target: '#road-variable-map-btn',
-        title: 'Read the method and explore the hierarchy',
-        copy: 'Use the overview and methodology links when you need the full process, and open Branch and Measure hierarchy to see how inputs are organised. These references help keep updates consistent with the shared road data method as the dataset improves.'
+        target: '#road-reference-links',
+        title: 'Find more information here',
+        copy: 'Open road model overview explains what the model does. Open methodology guide explains the assumptions and calculation method. Branch and Measure hierarchy shows how the input data is organised.'
     },
     {
         target: '#road-left-top .pt-4',
