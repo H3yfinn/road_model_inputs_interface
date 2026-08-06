@@ -13,7 +13,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-economy-select',
         title: 'Choose an economy',
-        copy: 'Select the economy you are working on. The interface loads its documented default package, including both Current Accounts base-year rows and the Target projection rows that the road model needs.'
+        copy: 'Select the economy you are working on. You can leave the default values as they are: they are based on previous Outlooks and are automatically reconciled to match the most recent ESTO road-energy year when the model runs.'
     },
     {
         target: '#road-reference-links',
@@ -28,7 +28,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-input-container',
         title: 'Focus on the inputs that matter most to you',
-        copy: 'You can leave every starting value as it is: they are based on the previous Outlook and remain the default. Blue flag icons mark key inputs with relatively high uncertainty and impact on results, so they are a good place to focus when you have local evidence or expert judgement to add.'
+        copy: 'You can leave the defaults as they are. They are based on previous Outlooks and are reconciled to the most recent ESTO road-energy year when the model runs. Blue flag icons mark inputs with relatively high uncertainty and impact on results, so focus there when you have local evidence or expert judgement to add.'
     },
     {
         target: '#road-helper-wrapper',
