@@ -85,17 +85,43 @@ const ROAD_MODEL_GUIDE_STEPS = [
     },
     {
         target: '#road-run-model',
-        title: 'Import lifecycle profiles into LEAP',
-        copy: 'After a run, select Download Lifecycle Profiles. These screenshots show the lifecycle profile range and the related LEAP import settings. Use the arrows to move through the steps without leaving this note.',
+        title: 'Create lifecycle profiles in LEAP',
+        copy: 'After a run, select Download Lifecycle Profiles. First create named Excel ranges, then create the matching lifecycle profiles in LEAP. Use the arrows to move through the steps without leaving this note.',
         gallery: [
-            { image: 'assets/guide/lifecycle-profiles/01-excel-range.png', alt: 'Lifecycle profile Excel range.' },
-            { image: 'assets/guide/lifecycle-profiles/02-leap-import.png', alt: 'LEAP lifecycle profile import screen.' },
-            { image: 'assets/guide/lifecycle-profiles/03-excel-range-name.png', alt: 'Lifecycle profile Excel range name.' },
-            { image: 'assets/guide/lifecycle-profiles/04-settings-3.png', alt: 'LEAP lifecycle import settings step 3.' },
-            { image: 'assets/guide/lifecycle-profiles/05-settings-4.png', alt: 'LEAP lifecycle import settings step 4.' },
-            { image: 'assets/guide/lifecycle-profiles/06-settings-5.png', alt: 'LEAP lifecycle import settings step 5.' },
-            { image: 'assets/guide/lifecycle-profiles/07-settings-6.png', alt: 'LEAP lifecycle import settings step 6.' },
-            { image: 'assets/guide/lifecycle-profiles/08-settings-7.png', alt: 'LEAP lifecycle import settings step 7.' }
+            {
+                image: 'assets/guide/lifecycle-profiles/05-excel-defined-name.png',
+                alt: 'Excel Name Box with a lifecycle profile range name entered.',
+                caption: 'Highlight the lifecycle-profile values and give the range a defined name in Excel, using the Name Box shown in red. Do this for every Vintage Profile and Survival Profile sheet in the workbook.'
+            },
+            {
+                images: [
+                    { image: 'assets/guide/lifecycle-profiles/06-create-profile.png', alt: 'LEAP dialog for creating a lifecycle profile.' },
+                    { image: 'assets/guide/lifecycle-profiles/07-choose-defined-name.png', alt: 'LEAP dialog for choosing the Excel defined range.' }
+                ],
+                caption: 'Create one lifecycle profile for each Vintage Profile and Survival Profile. Name it, then set its Excel range from the defined name you created.'
+            }
+        ]
+    },
+    {
+        target: '#road-run-model',
+        title: 'Apply lifecycle profiles to technology types',
+        copy: 'For each vehicle type in LEAP, assign the new Vintage Profile and Survival Profile to the related variables. Use the arrows to see each place where the profiles are applied.',
+        gallery: [
+            {
+                image: 'assets/guide/lifecycle-profiles/08-stock-vintage-profile.png',
+                alt: 'LEAP Stock Share view with Stock Vintage Profile values.',
+                caption: 'For each vehicle type, click Stock Share and set every Stock Vintage Profile to your newly created vintage profile.'
+            },
+            {
+                image: 'assets/guide/lifecycle-profiles/09-sales-survival-profile.png',
+                alt: 'LEAP Sales view with Survival Profile values.',
+                caption: 'For each vehicle type, click Sales and set every Survival Profile to your newly created survival profile.'
+            },
+            {
+                image: 'assets/guide/lifecycle-profiles/10-sales-share-survival-profile.png',
+                alt: 'LEAP Sales Share view with Survival Profile values.',
+                caption: 'For each vehicle type, click Sales Share and set every Survival Profile to your newly created survival profile.'
+            }
         ]
     },
     {
@@ -136,7 +162,7 @@ function setupRoadModelGuide() {
     const image = get('#road-guide-image');
     const placeholder = get('#road-guide-placeholder');
     const gallery = get('#road-guide-gallery');
-    const galleryImage = get('#road-guide-gallery-image');
+    const galleryImagesContainer = get('#road-guide-gallery-images');
     const galleryCaption = get('#road-guide-gallery-caption');
     const galleryPrevious = get('#road-guide-gallery-previous');
     const galleryNext = get('#road-guide-gallery-next');
@@ -159,8 +185,14 @@ function setupRoadModelGuide() {
     const renderGalleryImage = () => {
         const galleryItem = galleryImages[galleryIndex];
         if (!galleryItem) return;
-        galleryImage.src = galleryItem.image;
-        galleryImage.alt = galleryItem.alt || '';
+        const galleryImageItems = galleryItem.images || [galleryItem];
+        galleryImagesContainer.replaceChildren();
+        galleryImageItems.forEach((galleryImageItem) => {
+            const galleryImage = document.createElement('img');
+            galleryImage.src = galleryImageItem.image;
+            galleryImage.alt = galleryImageItem.alt || '';
+            galleryImagesContainer.appendChild(galleryImage);
+        });
         const imageNumber = `${galleryIndex + 1} of ${galleryImages.length}`;
         galleryCaption.textContent = galleryItem.caption
             ? `${imageNumber} — ${galleryItem.caption}`
@@ -216,8 +248,7 @@ function setupRoadModelGuide() {
         gallery.hidden = !galleryImages.length;
         if (galleryImages.length) renderGalleryImage();
         else {
-            galleryImage.removeAttribute('src');
-            galleryImage.alt = '';
+            galleryImagesContainer.replaceChildren();
             galleryCaption.textContent = '';
         }
         renderTable(step.table);

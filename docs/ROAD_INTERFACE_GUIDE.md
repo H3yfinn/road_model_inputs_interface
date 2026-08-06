@@ -24,7 +24,8 @@ used. Add `image` and `imageAlt` for a screenshot stored under
 later. Use `gallery` with an ordered array of `{ image, alt }` objects when a
 single step needs several screenshots; the user can move through that gallery
 without advancing the tour. Add `caption` to a gallery image when it needs an
-instruction below the screenshot. Use `table` with `caption`, `headers`, and `rows`
+instruction below the screenshot. Add `images: [{ image, alt }, ...]` to one
+gallery item when related screenshots should appear side by side. Use `table` with `caption`, `headers`, and `rows`
 for compact reference tables. Keep the explanation focused on both the
 immediate action and its role in the road-to-LEAP Outlook workflow.
 
