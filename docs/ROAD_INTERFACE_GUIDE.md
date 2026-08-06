@@ -21,8 +21,17 @@ Edit `front-end/road-model-guide.js` and add, remove, or reorder an object in
 provide alternatives separated by commas; the first element that exists is
 used. Add `image` and `imageAlt` for a screenshot stored under
 `front-end/assets/guide/`, or `placeholder` when the screenshot will be added
-later. Keep the explanation focused on both the immediate action and its role
-in the road-to-LEAP Outlook workflow.
+later. Use `gallery` with an ordered array of `{ image, alt }` objects when a
+single step needs several screenshots; the user can move through that gallery
+without advancing the tour. Use `table` with `caption`, `headers`, and `rows`
+for compact reference tables. Keep the explanation focused on both the
+immediate action and its role in the road-to-LEAP Outlook workflow.
+
+The current LEAP galleries use `front-end/assets/guide/leap-workbook/` and
+`front-end/assets/guide/lifecycle-profiles/`. To update their screenshots,
+replace the image files there and retain their ordered filenames, or update the
+corresponding `gallery` array in `road-model-guide.js` when adding or removing
+steps.
 
 The interaction code and styling are deliberately generic. A guide update
 normally requires no edits outside the steps array unless a new interface area
