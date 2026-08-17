@@ -116,7 +116,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Apply lifecycle profiles to technology types',
-        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. The Sales variable no longer needs a lifecycle profile. Use the arrows to see the freight and passenger examples.',
+        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. Mileage and Fuel Economy also require a Degradation Profile: use Constant and confirm it is 100 at every vehicle age. The Sales variable itself does not need a lifecycle profile. Use the arrows to see each setting.',
         gallery: [
             {
                 image: getRoadGuideImage('lifecycle_stock_vintage_profile'),
@@ -132,6 +132,11 @@ const ROAD_MODEL_GUIDE_STEPS = [
                 image: getRoadGuideImage('lifecycle_passenger_sales_share_survival_profile'),
                 alt: 'LEAP passenger Sales Share view with the passenger vehicle survival profile selected.',
                 caption: 'For passenger vehicle branches, open Sales Share and set Survival Profile to Passenger_vehicle_survival. No profile is required in Sales.'
+            },
+            {
+                image: getRoadGuideImage('lifecycle_mileage_fuel_economy_constant_profile'),
+                alt: 'LEAP warning that Mileage is missing a lifecycle profile, with Mileage and Fuel Economy highlighted.',
+                caption: 'Mileage and Fuel Economy both require a Degradation Profile. Select Constant and confirm its value is 100 at every vehicle age. If Constant does not exist, create it first with 100 for every age.'
             }
         ]
     },

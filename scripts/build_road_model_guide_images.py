@@ -31,6 +31,7 @@ GUIDE_IMAGE_MANIFEST = {
     "lifecycle_stock_vintage_profile": "lifecycle-profiles/08-stock-vintage-profile.png",
     "lifecycle_freight_sales_share_survival_profile": "lifecycle-profiles/09-freight-sales-share-survival-profile.png",
     "lifecycle_passenger_sales_share_survival_profile": "lifecycle-profiles/10-passenger-sales-share-survival-profile.png",
+    "lifecycle_mileage_fuel_economy_constant_profile": "lifecycle-profiles/11-mileage-fuel-economy-constant-profile.png",
 }
 
 
