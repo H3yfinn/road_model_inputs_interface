@@ -110,13 +110,18 @@ const ROAD_MODEL_GUIDE_STEPS = [
                 image: getRoadGuideImage('lifecycle_choose_defined_name'),
                 alt: 'LEAP Excel Range dialog with the matching lifecycle workbook named range selected.',
                 caption: 'Click Import, then choose that same name in Excel Range. Because the workbook is open and the web app created the range for you, you only need to select the profile sheet name.'
+            },
+            {
+                image: getRoadGuideImage('lifecycle_constant_excel_range'),
+                alt: 'LEAP Constant lifecycle profile with the Constant Excel named range selected for import.',
+                caption: 'For the degradation profile, add a LEAP profile named Constant, click Import, choose the workbook range Constant, and select OK. Its preview should remain at 100 for every vehicle age.'
             }
         ]
     },
     {
         target: '#road-run-model',
         title: 'Apply lifecycle profiles to technology types',
-        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. Mileage and Fuel Economy also require a Degradation Profile: create it in LEAP from the workbook\'s ready-made Constant range, then assign Constant to both variables. The Sales variable itself does not need a lifecycle profile. Use the arrows to see each setting.',
+        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. For Mileage and Fuel Economy, assign the ready-made Constant degradation profile to every displayed fuel row. The Sales variable itself does not need a lifecycle profile. Use the arrows to see each setting.',
         gallery: [
             {
                 image: getRoadGuideImage('lifecycle_stock_vintage_profile'),
@@ -134,9 +139,14 @@ const ROAD_MODEL_GUIDE_STEPS = [
                 caption: 'For passenger vehicle branches, open Sales Share and set Survival Profile to Passenger_vehicle_survival. No profile is required in Sales.'
             },
             {
-                image: getRoadGuideImage('lifecycle_mileage_fuel_economy_constant_profile'),
-                alt: 'LEAP warning that Mileage is missing a lifecycle profile, with Mileage and Fuel Economy highlighted.',
-                caption: 'Mileage and Fuel Economy both require a Degradation Profile. In LEAP, add a profile named Constant and select the workbook range Constant; the web app has already filled it with 100 at every vehicle age. Then assign Constant to both variables.'
+                image: getRoadGuideImage('lifecycle_mileage_constant_profile'),
+                alt: 'LEAP Mileage variable with Constant selected as the Degradation Profile for each fuel row.',
+                caption: 'Open Mileage in Current Accounts and set Degradation Profile to Constant for every displayed fuel row. Use Ctrl+D to copy the setting down where appropriate, then check that no row is blank.'
+            },
+            {
+                image: getRoadGuideImage('lifecycle_fuel_economy_constant_profile'),
+                alt: 'LEAP Fuel Economy variable with Constant selected as the Degradation Profile for each fuel row.',
+                caption: 'Open Fuel Economy and set Degradation Profile to Constant for every displayed fuel row as well. Check all fuels, including rows near the bottom of the list.'
             }
         ]
     },
