@@ -25,6 +25,7 @@ GUIDE_IMAGE_MANIFEST = {
     "leap_safe_changes_reference": "leap-safe-changes-reference.png",
     "leap_workbook_import_menu": "leap-workbook/01-import-options.png",
     "leap_workbook_import_options": "leap-workbook/02-import-workbook.png",
+    "lifecycle_open_profiles": "lifecycle-profiles/15-open-lifecycle-profiles.png",
     "lifecycle_workbook_named_ranges": "lifecycle-profiles/05-workbook-named-ranges.png",
     "lifecycle_create_profile": "lifecycle-profiles/06-create-profile.png",
     "lifecycle_choose_defined_name": "lifecycle-profiles/07-choose-defined-name.png",

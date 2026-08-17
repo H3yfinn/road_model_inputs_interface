@@ -97,6 +97,11 @@ const ROAD_MODEL_GUIDE_STEPS = [
         copy: 'After a run, select Download Lifecycle Profiles and open the workbook in Excel. Keep it open while you work in LEAP. The web app has already created every profile sheet and matching named Excel range, including Constant with a value of 100 at every vehicle age, so no range setup or profile-value entry is required in Excel. Use the arrows to move through the steps without leaving this note.',
         gallery: [
             {
+                image: getRoadGuideImage('lifecycle_open_profiles'),
+                alt: 'LEAP General menu with Lifecycle Profiles highlighted.',
+                caption: 'In LEAP, open the General menu and select Lifecycle Profiles. You can also use Alt+F11.'
+            },
+            {
                 image: getRoadGuideImage('lifecycle_workbook_named_ranges'),
                 alt: 'Downloaded lifecycle workbook open in Excel with profile sheet names and matching named ranges.',
                 caption: 'Open the downloaded workbook and keep it open. The web app has already created each named range. Every range has the same name as its profile sheet, including Constant and Freight_vehicle_survival.'
