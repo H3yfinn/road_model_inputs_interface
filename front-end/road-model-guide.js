@@ -94,19 +94,17 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Create lifecycle profiles in LEAP',
-        copy: 'After a run, select Download Lifecycle Profiles. First create named Excel ranges, then create the matching lifecycle profiles in LEAP. Use the arrows to move through the steps without leaving this note.',
+        copy: 'After a run, select Download Lifecycle Profiles. Each worksheet already has a matching named Excel range over its profile values, so you can use the worksheet name directly in LEAP. Use the arrows to move through the steps without leaving this note.',
         gallery: [
             {
-                image: getRoadGuideImage('lifecycle_excel_defined_name'),
-                alt: 'Excel Name Box with a lifecycle profile range name entered.',
-                caption: 'Highlight the lifecycle-profile values and give the range a defined name in Excel, using the Name Box shown in red. Do this for every Vintage Profile and Survival Profile sheet in the workbook.'
+                image: getRoadGuideImage('lifecycle_create_profile'),
+                alt: 'LEAP New Profile dialog with the lifecycle workbook worksheet name entered.',
+                caption: 'Create one lifecycle profile for each worksheet. Enter the worksheet name exactly as shown in Excel, for example Freight_vehicle_survival.'
             },
             {
-                images: [
-                    { image: getRoadGuideImage('lifecycle_create_profile'), alt: 'LEAP dialog for creating a lifecycle profile.' },
-                    { image: getRoadGuideImage('lifecycle_choose_defined_name'), alt: 'LEAP dialog for choosing the Excel defined range.' }
-                ],
-                caption: 'Create one lifecycle profile for each Vintage Profile and Survival Profile. Name it, then set its Excel range from the defined name you created.'
+                image: getRoadGuideImage('lifecycle_choose_defined_name'),
+                alt: 'LEAP Excel Range dialog with the lifecycle workbook worksheet name entered.',
+                caption: 'In Excel Range, enter that same worksheet name. The downloaded workbook already contains the matching named range, so no range setup is needed in Excel.'
             }
         ]
     },
