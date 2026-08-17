@@ -116,22 +116,22 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Apply lifecycle profiles to technology types',
-        copy: 'For each vehicle type in LEAP, assign the new Vintage Profile and Survival Profile to the related variables. Use the arrows to see each place where the profiles are applied.',
+        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. The Sales variable no longer needs a lifecycle profile. Use the arrows to see the freight and passenger examples.',
         gallery: [
             {
                 image: getRoadGuideImage('lifecycle_stock_vintage_profile'),
-                alt: 'LEAP Stock Share view with Stock Vintage Profile values.',
-                caption: 'For each vehicle type, click Stock Share and set every Stock Vintage Profile to your newly created vintage profile.'
+                alt: 'LEAP Stock Share view with the freight stock vintage profile selected.',
+                caption: 'Open Stock Share and set Stock Vintage Profile to the matching freight or passenger vintage profile.'
             },
             {
-                image: getRoadGuideImage('lifecycle_sales_survival_profile'),
-                alt: 'LEAP Sales view with Survival Profile values.',
-                caption: 'For each vehicle type, click Sales and set every Survival Profile to your newly created survival profile.'
+                image: getRoadGuideImage('lifecycle_freight_sales_share_survival_profile'),
+                alt: 'LEAP freight Sales Share view with the freight vehicle survival profile selected.',
+                caption: 'For freight vehicle branches, open Sales Share and set Survival Profile to Freight_vehicle_survival.'
             },
             {
-                image: getRoadGuideImage('lifecycle_sales_share_survival_profile'),
-                alt: 'LEAP Sales Share view with Survival Profile values.',
-                caption: 'For each vehicle type, click Sales Share and set every Survival Profile to your newly created survival profile.'
+                image: getRoadGuideImage('lifecycle_passenger_sales_share_survival_profile'),
+                alt: 'LEAP passenger Sales Share view with the passenger vehicle survival profile selected.',
+                caption: 'For passenger vehicle branches, open Sales Share and set Survival Profile to Passenger_vehicle_survival. No profile is required in Sales.'
             }
         ]
     },

@@ -29,8 +29,8 @@ GUIDE_IMAGE_MANIFEST = {
     "lifecycle_create_profile": "lifecycle-profiles/06-create-profile.png",
     "lifecycle_choose_defined_name": "lifecycle-profiles/07-choose-defined-name.png",
     "lifecycle_stock_vintage_profile": "lifecycle-profiles/08-stock-vintage-profile.png",
-    "lifecycle_sales_survival_profile": "lifecycle-profiles/09-sales-survival-profile.png",
-    "lifecycle_sales_share_survival_profile": "lifecycle-profiles/10-sales-share-survival-profile.png",
+    "lifecycle_freight_sales_share_survival_profile": "lifecycle-profiles/09-freight-sales-share-survival-profile.png",
+    "lifecycle_passenger_sales_share_survival_profile": "lifecycle-profiles/10-passenger-sales-share-survival-profile.png",
 }
 
 
