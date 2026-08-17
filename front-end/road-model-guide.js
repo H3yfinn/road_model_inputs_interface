@@ -94,12 +94,12 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Create lifecycle profiles in LEAP',
-        copy: 'After a run, select Download Lifecycle Profiles and open the workbook in Excel. Keep it open while you work in LEAP. The web app has already created a named Excel range for every profile sheet, using the same name as the sheet, so no range setup is required in Excel. Use the arrows to move through the steps without leaving this note.',
+        copy: 'After a run, select Download Lifecycle Profiles and open the workbook in Excel. Keep it open while you work in LEAP. The web app has already created every profile sheet and matching named Excel range, including Constant with a value of 100 at every vehicle age, so no range setup or profile-value entry is required in Excel. Use the arrows to move through the steps without leaving this note.',
         gallery: [
             {
                 image: getRoadGuideImage('lifecycle_workbook_named_ranges'),
                 alt: 'Downloaded lifecycle workbook open in Excel with profile sheet names and matching named ranges.',
-                caption: 'Open the downloaded workbook and keep it open. The web app has already created each named range. Every range has the same name as its profile sheet, such as Freight_vehicle_survival.'
+                caption: 'Open the downloaded workbook and keep it open. The web app has already created each named range. Every range has the same name as its profile sheet, including Constant and Freight_vehicle_survival.'
             },
             {
                 image: getRoadGuideImage('lifecycle_create_profile'),
@@ -116,7 +116,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
     {
         target: '#road-run-model',
         title: 'Apply lifecycle profiles to technology types',
-        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. Mileage and Fuel Economy also require a Degradation Profile: use Constant and confirm it is 100 at every vehicle age. The Sales variable itself does not need a lifecycle profile. Use the arrows to see each setting.',
+        copy: 'In Current Accounts, assign the matching Vintage Profile in Stock Share and the matching Survival Profile in Sales Share. Mileage and Fuel Economy also require a Degradation Profile: create it in LEAP from the workbook\'s ready-made Constant range, then assign Constant to both variables. The Sales variable itself does not need a lifecycle profile. Use the arrows to see each setting.',
         gallery: [
             {
                 image: getRoadGuideImage('lifecycle_stock_vintage_profile'),
@@ -136,7 +136,7 @@ const ROAD_MODEL_GUIDE_STEPS = [
             {
                 image: getRoadGuideImage('lifecycle_mileage_fuel_economy_constant_profile'),
                 alt: 'LEAP warning that Mileage is missing a lifecycle profile, with Mileage and Fuel Economy highlighted.',
-                caption: 'Mileage and Fuel Economy both require a Degradation Profile. Select Constant and confirm its value is 100 at every vehicle age. If Constant does not exist, create it first with 100 for every age.'
+                caption: 'Mileage and Fuel Economy both require a Degradation Profile. In LEAP, add a profile named Constant and select the workbook range Constant; the web app has already filled it with 100 at every vehicle age. Then assign Constant to both variables.'
             }
         ]
     },
