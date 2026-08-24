@@ -7,3 +7,5 @@ openpyxl
 pydantic
 python-multipart
 httpx  # required for FastAPI TestClient in tests
+google-api-python-client  # optional runtime integration for immutable researcher-submission archive
+google-auth

@@ -28,6 +28,7 @@ const State = {
         sharedMileageOverrides: new Map(),
         sharedFuelEconomyOverrides: new Map(),
         sharedUtilisationOverrides: new Map(),
+        submissionHasChanges: false,
         turnoverConfig: {
             passenger: { lower: '', upper: '', fitMode: 'auto' },
             freight:   { lower: '', upper: '', fitMode: 'auto' }
@@ -197,6 +198,7 @@ const DOM = {
     roadDensityLess: document.getElementById('road-density-less'),
     roadSaveOutput: document.getElementById('road-save-output'),
     roadRunModel: document.getElementById('road-run-model'),
+    roadResearcherSubmissionNotice: document.getElementById('road-researcher-submission-notice'),
     roadClearDraft: document.getElementById('road-clear-draft'),
     roadSaveStatus: document.getElementById('road-save-status'),
     roadRunLogModal: document.getElementById('road-run-log-modal'),
@@ -1383,6 +1385,31 @@ function updateRoadModule1OverrideCount() {
     DOM.roadRowStats.textContent = stats.customised === 0
         ? `${stats.total} values`
         : `${stats.customised} of ${stats.total} values customised`;
+    updateRoadResearcherSubmissionNotice();
+}
+
+function hasRoadResearcherChanges() {
+    return Boolean(State.roadModule1.submissionHasChanges) || getRoadModule1OverrideCount() > 0;
+}
+
+function getRoadResearcherSessionIdentity() {
+    const storageKey = 'road-module1-researcher-session-id';
+    try {
+        let sessionId = sessionStorage.getItem(storageKey);
+        if (!sessionId) {
+            sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}`;
+            sessionStorage.setItem(storageKey, sessionId);
+        }
+        return sessionId;
+    } catch {
+        return '';
+    }
+}
+
+function updateRoadResearcherSubmissionNotice() {
+    if (DOM.roadResearcherSubmissionNotice) {
+        DOM.roadResearcherSubmissionNotice.classList.toggle('hidden', !hasRoadResearcherChanges());
+    }
 }
 
 async function loadRoadModule1Defaults() {
@@ -1410,6 +1437,7 @@ async function loadRoadModule1Defaults() {
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
+        State.roadModule1.submissionHasChanges = false;
         State.roadModule1.stockShareExtraYears = new Set();
         populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         const draft = readRoadModule1Draft(version, economy);
@@ -1499,6 +1527,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
         State.roadModule1.sharedMileageOverrides = new Map();
         State.roadModule1.sharedFuelEconomyOverrides = new Map();
         State.roadModule1.sharedUtilisationOverrides = new Map();
+        State.roadModule1.submissionHasChanges = false;
         State.roadModule1.stockShareExtraYears = new Set();
         populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
         clearRoadModule1Draft(version, economy);
@@ -5103,7 +5132,10 @@ async function runRoadModel() {
                 rows: completedLongRows,
                 scenarios: projectionScenarios,
                 enable_visualisations: true,
-                turnover_config: buildRoadTurnoverConfigPayload(completedRows)
+                turnover_config: buildRoadTurnoverConfigPayload(completedRows),
+                has_researcher_changes: hasRoadResearcherChanges(),
+                researcher_identity: getRoadResearcherSessionIdentity(),
+                original_filename: `browser_${State.roadModule1.economy}_${State.roadModule1.version}.csv`
             })
         });
 
@@ -5121,6 +5153,9 @@ async function runRoadModel() {
         runId = data.run_id;
         economyCanonical = data.economy_canonical;
         _appendRoadRunLog(`Module 1 CSV saved. Starting road_workflow for ${economyCanonical}…`);
+        if (data.archive?.attempted) {
+            _appendRoadRunLog(data.archive.success ? 'Researcher submission archive saved successfully.' : `Researcher submission archive failed: ${data.archive.message}`, !data.archive.success);
+        }
     } catch (err) {
         _appendRoadRunLog(`Cannot reach backend at ${ROAD_MODEL_API_BASE}.`, true);
         _appendRoadRunLog('Start the backend server: cd back-end && python run.py', true);
@@ -5689,6 +5724,7 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
     State.roadModule1.sharedMileageOverrides = new Map();
     State.roadModule1.sharedFuelEconomyOverrides = new Map();
     State.roadModule1.sharedUtilisationOverrides = new Map();
+    State.roadModule1.submissionHasChanges = preview.changedCells > 0;
     populateRoadModule1StructuredFilters(getRoadRowsForCurrentView());
     clearRoadModule1Draft(version, economy);
     DOM.roadSaveOutput.disabled = false;
@@ -5699,6 +5735,7 @@ function commitRoadModule1UploadPreview(preview, version, economy, fileName) {
         `${preview.validationIssueCount.toLocaleString('en-US')} value checks were flagged and skipped.`
     ].join('\n');
     renderRoadModule1Inputs();
+    updateRoadResearcherSubmissionNotice();
     const hasIssues = preview.unmatchedCount > 0 || preview.validationIssueCount > 0;
     const summaryParts = [`Applied ${preview.appliedCount.toLocaleString('en-US')} values.`];
     if (preview.unmatchedCount > 0) summaryParts.push(`${preview.unmatchedCount.toLocaleString('en-US')} unmatched rows`);

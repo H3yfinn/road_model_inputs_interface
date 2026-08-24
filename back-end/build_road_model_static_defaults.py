@@ -923,7 +923,7 @@ def _validate_static_contract_output(
     print(f"Static contract check passed: generated rows match {STATIC_CONTRACT_CSV_PATH.name}.")
 
 
-def main() -> None:
+def main(version: str = DEFAULT_VERSION) -> None:
     data_dir = ROAD_MODEL_DATA_DIR
     missing = _validate_required_inputs(data_dir)
     if missing:
@@ -941,6 +941,7 @@ def main() -> None:
 
     generated = write_all_economy_packages(
         output_root=OUTPUT_ROOT,
+        version=version,
         scenarios=list(DEFAULT_SCENARIOS),
         years=list(DEFAULT_YEARS),
         require_default_input_workbook=False,
@@ -950,7 +951,7 @@ def main() -> None:
     static_summary = write_frontend_static_bundle(
         output_root=OUTPUT_ROOT,
         static_root=FRONTEND_STATIC_BUNDLE_ROOT,
-        version=DEFAULT_VERSION,
+        version=version,
     )
 
     print(f"Generated defaults for {len(generated)} economies.")

@@ -4503,12 +4503,13 @@ def _raise_if_placeholder_defaults_remain(default_filled_df: pd.DataFrame, econo
 def write_economy_package(
     economy: EconomyInfo,
     output_root: Path,
+    version: str = DEFAULT_VERSION,
     scenarios: Iterable[str] = DEFAULT_SCENARIOS,
     years: Iterable[int] = DEFAULT_YEARS,
     default_input_df: pd.DataFrame | None = None,
     enforce_source_backed_values: bool = True,
 ) -> dict[str, Path]:
-    economy_dir = output_root / DEFAULT_VERSION / economy.code
+    economy_dir = output_root / version / economy.code
     economy_dir.mkdir(parents=True, exist_ok=True)
 
     processed_source_filled = load_processed_source_inputs(economy=economy, scenarios=scenarios)
@@ -4611,6 +4612,7 @@ def write_economy_package(
         if _col in default_filled.columns:
             default_filled[_col] = default_filled[_col].fillna(_fill)
     default_filled, final_value_override_report = apply_final_value_overrides_with_report(default_filled, economy)
+    default_filled["default_version"] = version
     # Temporary policy: deactivate researcher-review prioritization globally so
     # all rows are presented equally for manual review.
     default_filled["researcher_review_recommended"] = False
@@ -4704,6 +4706,7 @@ def write_economy_package(
 
 def write_all_economy_packages(
     output_root: str | Path = "outputs/road_module1_defaults",
+    version: str = DEFAULT_VERSION,
     scenarios: Iterable[str] = DEFAULT_SCENARIOS,
     years: Iterable[int] = DEFAULT_YEARS,
     default_input_workbook_path: str | Path = ROAD_MODEL_DEFAULT_INPUT_WORKBOOK_PATH,
@@ -4711,7 +4714,7 @@ def write_all_economy_packages(
     enforce_source_backed_values: bool = True,
 ) -> dict[str, dict[str, Path]]:
     output_root = Path(output_root)
-    version_root = output_root / DEFAULT_VERSION
+    version_root = output_root / version
     version_root.mkdir(parents=True, exist_ok=True)
     default_input_df = load_default_input_workbook(
         workbook_path=default_input_workbook_path,
@@ -4743,6 +4746,7 @@ def write_all_economy_packages(
         all_paths[economy.code] = write_economy_package(
             economy=economy,
             output_root=output_root,
+            version=version,
             scenarios=scenarios,
             years=years,
             default_input_df=default_input_df,
@@ -4758,7 +4762,7 @@ def write_all_economy_packages(
                 continue
             manifest_rows.append(
                 {
-                    "default_version": DEFAULT_VERSION,
+                    "default_version": version,
                     "economy": economy_code,
                     "file_type": file_type,
                     "path": str(path),

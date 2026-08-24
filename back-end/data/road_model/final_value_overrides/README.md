@@ -59,3 +59,13 @@ outputs in the economy output folder:
 
 Open the HTML file in a browser to see simple before/after bar charts for each
 direct override and any share-balancing adjustment.
+
+## Researcher submission candidates
+
+`back-end/scripts/review_researcher_submission.py` writes a candidate override
+CSV after a reviewer compares an archived submission with its exact baseline.
+The candidate's `Value` is converted back to the internal units this override
+engine expects. Review it (including `share_decreased_from` for share rows),
+copy it into a deliberately named reviewed folder only after approval, then run
+the normal build and inspect the generated override report. The review script
+does not activate or copy any override automatically.

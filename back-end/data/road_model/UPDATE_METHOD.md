@@ -322,3 +322,15 @@ source, final override, or static hand-off contract changes.
 - Validation checks run:
 - Notes/limitations:
 ```
+
+## Researcher submission review workflow
+
+- Date: 2026-08-24
+- Author: Codex
+- Change summary: Added immutable researcher-submission archiving and a separate review workflow.
+- Source inputs: An archived complete canonical Module 1 CSV and its metadata record, plus the exact static/default package version named in that record.
+- Update method: Use `back-end/scripts/review_researcher_submission.py` from a notebook/VS Code interactive session. It normalizes canonical long or legacy wide CSVs, writes a per-row changed/added/removed review report, an internal-unit final-override candidate, and a source-promotion plan. Reviewers choose and apply a source owner manually; this tool deliberately does not edit source folders or generated versions.
+- Recategorizations or mappings: Compact economy codes are normalized to canonical underscore codes. Legacy wide Stock/Mileage values use their scale labels to convert internal values to website/display values before comparison.
+- Output files changed: `outputs/researcher_submission_reviews/` only, unless a reviewer separately approves and places an override/source update.
+- Validation checks run: Automated canonical, legacy-wide, scale, duplicate, diff, override-unit, and mocked archive tests.
+- Notes/limitations: Drive writes require `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` and `GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE`; Drive is intentionally not a source of truth and was locally mocked during initial validation.

@@ -32,6 +32,12 @@ def test_canonical_economy_preserves_existing_underscore():
     assert _to_canonical_economy("12_NZ") == "12_NZ"
 
 
+def test_baseline_static_csv_path_uses_compact_static_economy_code(tmp_path, monkeypatch):
+    import api.run_model_router as router_mod
+    monkeypatch.setattr(router_mod, "_STATIC_BUNDLE_DIR", tmp_path)
+    assert router_mod._baseline_static_csv_path("20_USA", "v_test") == tmp_path / "v_test" / "20USA.csv"
+
+
 # ---------------------------------------------------------------------------
 # _write_module1_csv
 # ---------------------------------------------------------------------------
@@ -77,6 +83,31 @@ def test_write_module1_csv_normalises_economy_code(tmp_path, monkeypatch):
 
     assert "20_USA" in str(path)
     assert path.exists()
+
+
+def test_run_endpoint_archiving_failure_does_not_block_model_start(tmp_path, client, monkeypatch):
+    """Drive is optional to the run: its failure is returned, never raised."""
+    import api.run_model_router as router_mod
+
+    workflow = tmp_path / "road_workflow.py"
+    workflow.write_text("", encoding="utf-8")
+    monkeypatch.setattr(router_mod, "_ROAD_WORKFLOW", workflow)
+    monkeypatch.setattr(router_mod, "_MODULE1_INPUT_DIR", tmp_path / "module1")
+    monkeypatch.setattr(router_mod, "_configured_scenario_labels", lambda: set())
+    monkeypatch.setattr(router_mod, "archive_submission_to_drive", lambda **_: {"attempted": True, "success": False, "message": "local mock Drive failure"})
+
+    async def fake_process(*args, **kwargs):
+        class Process:
+            pid = 123
+        return Process()
+
+    monkeypatch.setattr(router_mod.asyncio, "create_subprocess_exec", fake_process)
+    response = client.post("/api/v1/road-module1/run-model", json={
+        "economy": "20USA", "version": "v_test", "rows": [{"Economy": "20USA", "Scenario": "Target", "Branch Path": "x", "Variable": "Stock", "Year": 2022, "Value": 1}],
+        "has_researcher_changes": True,
+    })
+    assert response.status_code == 200
+    assert response.json()["archive"]["success"] is False
 
 
 def test_normalise_projection_scenarios_prefers_requested_values():

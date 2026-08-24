@@ -25,6 +25,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.logger import get_logger
+from core.researcher_submission_review import archive_submission_to_drive
 
 logger = get_logger(__name__)
 
@@ -44,6 +45,7 @@ _ROAD_MODEL_REPO = Path(
 _ROAD_WORKFLOW = _ROAD_MODEL_REPO / "codebase" / "road_workflow.py"
 _MODULE1_INPUT_DIR = _ROAD_MODEL_REPO / "input_data" / "module1_defaults"
 _ROAD_SCENARIOS_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "scenarios.yaml"
+_STATIC_BUNDLE_DIR = _INTERFACE_DIR / "front-end" / "road-module1-static"
 
 # In-memory registry of active subprocess handles keyed by run_id.
 _active_runs: dict[str, tuple[asyncio.subprocess.Process, str, bool]] = {}
@@ -80,6 +82,12 @@ def _to_canonical_economy(economy: str) -> str:
         return economy
     match = re.match(r"^(\d+)([A-Za-z].*)$", economy)
     return f"{match.group(1)}_{match.group(2)}" if match else economy
+
+
+def _baseline_static_csv_path(economy: str, version: str) -> Path:
+    """Locate the immutable browser baseline used by this run, when available."""
+    compact_economy = _to_canonical_economy(economy).replace("_", "")
+    return _STATIC_BUNDLE_DIR / version / f"{compact_economy}.csv"
 
 
 def _configured_scenario_labels() -> set[str]:
@@ -293,6 +301,9 @@ class RunModelRequest(BaseModel):
     scenarios: list[str] | None = None
     enable_visualisations: bool = True
     turnover_config: dict[str, Any] | None = None
+    has_researcher_changes: bool = False
+    researcher_identity: str = ""
+    original_filename: str = ""
 
 
 class RunModelResponse(BaseModel):
@@ -300,6 +311,7 @@ class RunModelResponse(BaseModel):
     status: str
     economy_canonical: str
     module1_csv_path: str
+    archive: dict[str, Any]
 
 
 # --------------------------------------------------------------------------- #
@@ -335,6 +347,23 @@ async def start_road_model_run(payload: RunModelRequest):
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
+    run_id = str(uuid.uuid4())
+    archive_result: dict[str, Any] = {"attempted": False, "success": None, "message": "No researcher changes detected; submission was not archived."}
+    if payload.has_researcher_changes:
+        archive_result = archive_submission_to_drive(
+            rows=payload.rows,
+            economy=economy_canonical,
+            version=payload.version,
+            run_id=run_id,
+            researcher_identity=payload.researcher_identity,
+            original_filename=payload.original_filename,
+            baseline_path=_baseline_static_csv_path(payload.economy, payload.version),
+        )
+        if archive_result.get("success"):
+            logger.info(f"Researcher submission archived before road run: {archive_result.get('submission_id')}")
+        else:
+            logger.warning(f"Researcher submission was not archived: {archive_result.get('message')}")
+
     lifecycle_factors_path: Path | None = None
     if payload.turnover_config:
         try:
@@ -359,7 +388,6 @@ async def start_road_model_run(payload: RunModelRequest):
     if lifecycle_factors_path and lifecycle_factors_path.exists():
         cmd.extend(["--lifecycle-factors-path", str(lifecycle_factors_path)])
 
-    run_id = str(uuid.uuid4())
     try:
         process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -380,6 +408,7 @@ async def start_road_model_run(payload: RunModelRequest):
         status="started",
         economy_canonical=economy_canonical,
         module1_csv_path=str(csv_path),
+        archive=archive_result,
     )
 
 
