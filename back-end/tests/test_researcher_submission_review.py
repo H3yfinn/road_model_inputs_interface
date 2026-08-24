@@ -95,3 +95,14 @@ def test_approved_source_promotion_requests_a_new_immutable_version(monkeypatch)
     assert called == ["v2026_08_24_researcher_reviewed"]
     with pytest.raises(ValueError, match="new immutable"):
         review_script.build_approved_source_version("v_existing")
+
+
+def test_drive_archive_reports_missing_hf_or_local_credentials(monkeypatch):
+    from core.researcher_submission_review import archive_submission_to_drive
+
+    monkeypatch.setenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "folder-id")
+    monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", raising=False)
+    monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", raising=False)
+    result = archive_submission_to_drive(rows=[], economy="20USA", version="v_test", run_id="run")
+    assert result["success"] is False
+    assert "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON" in result["message"]

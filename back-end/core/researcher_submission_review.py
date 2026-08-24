@@ -197,14 +197,20 @@ def archive_submission_to_drive(
     if not root_folder:
         return {"attempted": True, "success": False, "message": "Drive archive is not configured (ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID)."}
     credential_file = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", "")
-    if not credential_file:
-        return {"attempted": True, "success": False, "message": "Drive archive is not configured (GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE)."}
+    credential_json = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", "")
+    if not credential_file and not credential_json:
+        return {"attempted": True, "success": False, "message": "Drive archive is not configured (GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE)."}
     try:
         from google.oauth2.service_account import Credentials
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaIoBaseUpload
 
-        credentials = Credentials.from_service_account_file(credential_file, scopes=["https://www.googleapis.com/auth/drive"])
+        if credential_json:
+            credentials = Credentials.from_service_account_info(
+                json.loads(credential_json), scopes=["https://www.googleapis.com/auth/drive"],
+            )
+        else:
+            credentials = Credentials.from_service_account_file(credential_file, scopes=["https://www.googleapis.com/auth/drive"])
         service = build("drive", "v3", credentials=credentials, cache_discovery=False)
         canonical_economy = canonical_economy_code(economy)
         query = f"name = '{canonical_economy}' and '{root_folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"

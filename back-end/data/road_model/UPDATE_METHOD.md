@@ -333,4 +333,4 @@ source, final override, or static hand-off contract changes.
 - Recategorizations or mappings: Compact economy codes are normalized to canonical underscore codes. Legacy wide Stock/Mileage values use their scale labels to convert internal values to website/display values before comparison.
 - Output files changed: `outputs/researcher_submission_reviews/` only, unless a reviewer separately approves and places an override/source update.
 - Validation checks run: Automated canonical, legacy-wide, scale, duplicate, diff, override-unit, and mocked archive tests.
-- Notes/limitations: Drive writes require `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` and `GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE`; Drive is intentionally not a source of truth and was locally mocked during initial validation.
+- Notes/limitations: Drive writes require `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` and either `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` (recommended for Hugging Face Secrets) or `GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE` (local backend). Drive is intentionally not a source of truth and was locally mocked during initial validation.
