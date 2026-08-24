@@ -334,3 +334,6 @@ source, final override, or static hand-off contract changes.
 - Output files changed: `outputs/researcher_submission_reviews/` only, unless a reviewer separately approves and places an override/source update.
 - Validation checks run: Automated canonical, legacy-wide, scale, duplicate, diff, override-unit, and mocked archive tests.
 - Notes/limitations: Drive writes require `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` and either `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` (recommended for Hugging Face Secrets) or `GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE` (local backend). Drive is intentionally not a source of truth and was locally mocked during initial validation.
+
+Deployment details and the archive service-account access boundary are recorded
+in `docs/researcher_submission_drive_archive.md`.
