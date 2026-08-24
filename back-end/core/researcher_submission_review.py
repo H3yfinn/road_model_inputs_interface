@@ -214,8 +214,14 @@ def archive_submission_to_drive(
         service = build("drive", "v3", credentials=credentials, cache_discovery=False)
         canonical_economy = canonical_economy_code(economy)
         query = f"name = '{canonical_economy}' and '{root_folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        matches = service.files().list(q=query, fields="files(id,name)", pageSize=1).execute().get("files", [])
-        economy_folder = matches[0]["id"] if matches else service.files().create(body={"name": canonical_economy, "mimeType": "application/vnd.google-apps.folder", "parents": [root_folder]}, fields="id").execute()["id"]
+        matches = service.files().list(
+            q=query, fields="files(id,name)", pageSize=1,
+            supportsAllDrives=True, includeItemsFromAllDrives=True,
+        ).execute().get("files", [])
+        economy_folder = matches[0]["id"] if matches else service.files().create(
+            body={"name": canonical_economy, "mimeType": "application/vnd.google-apps.folder", "parents": [root_folder]},
+            fields="id", supportsAllDrives=True,
+        ).execute()["id"]
         timestamp = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds").replace(":", "-")
         submission_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
         csv_name = f"{submission_id}_module1_{version}.csv"
@@ -230,8 +236,8 @@ def archive_submission_to_drive(
             "baseline_filename": baseline_file.name if baseline_file and baseline_file.exists() else "",
             "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest() if baseline_bytes else "",
         }
-        csv_file = service.files().create(body={"name": csv_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(csv_payload), mimetype="text/csv", resumable=False), fields="id,webViewLink").execute()
-        metadata_file = service.files().create(body={"name": f"{submission_id}_metadata.json", "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False), fields="id,webViewLink").execute()
+        csv_file = service.files().create(body={"name": csv_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(csv_payload), mimetype="text/csv", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
+        metadata_file = service.files().create(body={"name": f"{submission_id}_metadata.json", "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
         return {"attempted": True, "success": True, "message": "Submission archived to Google Drive.", "submission_id": submission_id, "csv_file_id": csv_file["id"], "metadata_file_id": metadata_file["id"]}
     except Exception as exc:  # Archive failures must never prevent a model run.
         return {"attempted": True, "success": False, "message": f"Drive archive failed: {exc}"}
