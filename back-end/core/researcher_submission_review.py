@@ -192,9 +192,9 @@ DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
 
 def create_my_drive_archive_folder(
     *, refresh_token: str, client_id: str, client_secret: str,
-    folder_name: str = "Road model researcher submissions",
+    folder_name: str = "Road model researcher submissions", existing_folder_id: str = "",
 ) -> str:
-    """Create the one app-owned My Drive archive folder during OAuth setup."""
+    """Create the archive root or verify and retain it during an OAuth reconnection."""
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
 
@@ -209,6 +209,13 @@ def create_my_drive_archive_folder(
         scopes=[DRIVE_FILE_SCOPE],
     )
     service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+    if existing_folder_id:
+        existing = service.files().get(
+            fileId=existing_folder_id, fields="id,mimeType",
+        ).execute()
+        if existing.get("mimeType") != "application/vnd.google-apps.folder":
+            raise ValueError("Configured Drive archive ID is not a folder.")
+        return str(existing["id"])
     created = service.files().create(
         body={"name": folder_name, "mimeType": "application/vnd.google-apps.folder"},
         fields="id",

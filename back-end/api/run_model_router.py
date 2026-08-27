@@ -448,6 +448,7 @@ async def complete_google_oauth_setup(request: Request, code: str = "", state: s
             refresh_token=refresh_token,
             client_id=client_id,
             client_secret=client_secret,
+            existing_folder_id=os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "").strip(),
         )
     except Exception as exc:
         logger.warning(f"Google OAuth archive setup failed: {exc}")

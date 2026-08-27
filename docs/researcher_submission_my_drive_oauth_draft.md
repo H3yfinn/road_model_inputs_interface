@@ -127,16 +127,19 @@ https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth
 
    Enter the setup token. The page redirects to Google; approve the
    `drive.file` consent using the My Drive account that should own archives.
-4. The callback creates an app-owned `Road model researcher submissions`
-   folder in that account’s My Drive. It stages the refresh token and folder ID
-   in server memory for 15 minutes only.
+4. On the first connection, the callback creates an app-owned `Road model
+   researcher submissions` folder in that account’s My Drive. On a deliberate
+   reconnection, it verifies and keeps using the existing configured folder.
+   It stages the refresh token and folder ID in server memory for 15 minutes
+   only.
 5. On the callback page, click **Reveal one-time secrets**. It shows the two
    values once in the same browser session, then removes them from server
    memory.
-6. Immediately add the shown `GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN` and
-   `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` as Hugging Face **Secrets** and
-   restart/redeploy the Space. Remove `GOOGLE_OAUTH_SETUP_TOKEN` afterwards;
-   it is only needed for first-time setup or a deliberate reconnection.
+6. Immediately replace `GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN` with the shown
+   value. Keep `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` unchanged unless this
+   is the first connection. Restart/redeploy the Space. Remove
+   `GOOGLE_OAUTH_SETUP_TOKEN` afterwards; it is only needed for first-time
+   setup or a deliberate reconnection.
 
 ## Verified deployment test
 

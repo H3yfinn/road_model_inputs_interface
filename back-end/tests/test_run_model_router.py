@@ -197,8 +197,13 @@ def test_google_oauth_setup_stages_one_time_credentials(client, monkeypatch):
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "client-id")
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "client-secret")
     monkeypatch.setenv("GOOGLE_OAUTH_REDIRECT_URI", "https://example.test/callback")
+    monkeypatch.setenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "existing-folder-id")
     monkeypatch.setattr(router_mod, "_exchange_google_oauth_code", lambda **_: "refresh-token")
-    monkeypatch.setattr(router_mod, "create_my_drive_archive_folder", lambda **_: "folder-id")
+    folder_arguments = {}
+    def fake_archive_folder(**kwargs):
+        folder_arguments.update(kwargs)
+        return "existing-folder-id"
+    monkeypatch.setattr(router_mod, "create_my_drive_archive_folder", fake_archive_folder)
 
     start = client.get(
         "/api/v1/road-module1/google-oauth/start",
@@ -213,6 +218,7 @@ def test_google_oauth_setup_stages_one_time_credentials(client, monkeypatch):
     callback = client.get(f"/api/v1/road-module1/google-oauth/callback?code=one-time-code&state={state}")
     assert callback.status_code == 200
     assert "Google Drive connected" in callback.text
+    assert folder_arguments["existing_folder_id"] == "existing-folder-id"
 
     pending = client.post(
         "/api/v1/road-module1/google-oauth/pending-credentials",
@@ -221,7 +227,7 @@ def test_google_oauth_setup_stages_one_time_credentials(client, monkeypatch):
     )
     assert pending.status_code == 200
     assert "refresh-token" in pending.text
-    assert "folder-id" in pending.text
+    assert "existing-folder-id" in pending.text
 
     consumed = client.post(
         "/api/v1/road-module1/google-oauth/pending-credentials",
