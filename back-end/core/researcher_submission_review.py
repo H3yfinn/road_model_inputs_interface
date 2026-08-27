@@ -187,6 +187,77 @@ def _csv_bytes(rows: list[dict[str, Any]]) -> bytes:
     return buffer.getvalue().encode("utf-8")
 
 
+DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+
+
+def create_my_drive_archive_folder(
+    *, refresh_token: str, client_id: str, client_secret: str,
+    folder_name: str = "Road model researcher submissions",
+) -> str:
+    """Create the one app-owned My Drive archive folder during OAuth setup."""
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+
+    if not all([refresh_token, client_id, client_secret]):
+        raise ValueError("OAuth Drive credentials are incomplete.")
+    credentials = Credentials(
+        token=None,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=[DRIVE_FILE_SCOPE],
+    )
+    service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+    created = service.files().create(
+        body={"name": folder_name, "mimeType": "application/vnd.google-apps.folder"},
+        fields="id",
+    ).execute()
+    return str(created["id"])
+
+
+def _build_drive_service():
+    """Return Drive API client, preferring the scoped My Drive OAuth route."""
+    oauth_refresh_token = os.getenv("GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN", "")
+    oauth_client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
+    oauth_client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "")
+    if oauth_refresh_token or oauth_client_id or oauth_client_secret:
+        if not all([oauth_refresh_token, oauth_client_id, oauth_client_secret]):
+            raise ValueError("OAuth Drive archive credentials are incomplete.")
+        from google.oauth2.credentials import Credentials
+
+        credentials = Credentials(
+            token=None,
+            refresh_token=oauth_refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=oauth_client_id,
+            client_secret=oauth_client_secret,
+            scopes=[DRIVE_FILE_SCOPE],
+        )
+        from googleapiclient.discovery import build
+        return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+    credential_file = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", "")
+    credential_json = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", "")
+    if not credential_file and not credential_json:
+        raise ValueError(
+            "Drive archive is not configured (OAuth secrets or "
+            "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON/GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE)."
+        )
+    from google.oauth2.service_account import Credentials
+
+    if credential_json:
+        credentials = Credentials.from_service_account_info(
+            json.loads(credential_json), scopes=["https://www.googleapis.com/auth/drive"],
+        )
+    else:
+        credentials = Credentials.from_service_account_file(
+            credential_file, scopes=["https://www.googleapis.com/auth/drive"],
+        )
+    from googleapiclient.discovery import build
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
 def archive_submission_to_drive(
     *, rows: list[dict[str, Any]], economy: str, version: str, run_id: str,
     researcher_identity: str = "", original_filename: str = "", drive_folder_id: str | None = None,
@@ -196,22 +267,10 @@ def archive_submission_to_drive(
     root_folder = drive_folder_id or os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "")
     if not root_folder:
         return {"attempted": True, "success": False, "message": "Drive archive is not configured (ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID)."}
-    credential_file = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", "")
-    credential_json = os.getenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", "")
-    if not credential_file and not credential_json:
-        return {"attempted": True, "success": False, "message": "Drive archive is not configured (GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE)."}
     try:
-        from google.oauth2.service_account import Credentials
-        from googleapiclient.discovery import build
+        service = _build_drive_service()
         from googleapiclient.http import MediaIoBaseUpload
 
-        if credential_json:
-            credentials = Credentials.from_service_account_info(
-                json.loads(credential_json), scopes=["https://www.googleapis.com/auth/drive"],
-            )
-        else:
-            credentials = Credentials.from_service_account_file(credential_file, scopes=["https://www.googleapis.com/auth/drive"])
-        service = build("drive", "v3", credentials=credentials, cache_discovery=False)
         canonical_economy = canonical_economy_code(economy)
         query = f"name = '{canonical_economy}' and '{root_folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         matches = service.files().list(

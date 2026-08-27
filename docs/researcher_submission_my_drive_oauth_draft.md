@@ -1,9 +1,8 @@
 # Draft: My Drive OAuth Archive Setup
 
-> Status: design/runbook only. The current production archive uses a service
-> account and does **not** implement this OAuth route yet. Keep the existing
-> Shared Drive documentation unchanged until this route has been implemented and
-> tested successfully.
+> Status: implementation is present but not yet deployed or connected to a
+> real OAuth client. Keep the existing Shared Drive documentation unchanged
+> until this route has been deployed and tested successfully.
 
 This alternative lets the Road Model archive researcher submissions into a
 folder in **Finn's My Drive**. Archive files are owned by the signed-in Google
@@ -106,24 +105,48 @@ Add these as **Secrets**, not Variables:
 | `GOOGLE_OAUTH_CLIENT_ID` | OAuth web-client ID from Google Cloud |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | OAuth web-client secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | The exact callback URL above |
+| `GOOGLE_OAUTH_SETUP_TOKEN` | A newly generated, long random admin-only setup password |
 | `GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN` | Generated once by the authorised archive-account flow |
-| `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` | Folder selected by Google Picker during setup |
+| `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` | App-created My Drive archive folder ID returned by setup |
 
-The refresh token is as sensitive as a long-lived password for the granted
-scope. Never paste it into Git, browser JavaScript, chat, or a public HF
-Variable.
+The setup token and refresh token are as sensitive as passwords. Never paste
+either into Git, browser JavaScript, chat, or a public HF Variable.
+
+## One-time deployment setup (after the OAuth client exists)
+
+1. Add the three client settings and a new random `GOOGLE_OAUTH_SETUP_TOKEN`
+   as Hugging Face **Secrets**. Do not add a refresh token or folder ID yet.
+2. Set `GOOGLE_OAUTH_REDIRECT_URI` to the exact callback configured on the
+   OAuth client. Deploy the app.
+3. Open this one-time admin page in the deployed Space:
+
+```text
+https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth/setup
+```
+
+   Enter the setup token. The page redirects to Google; approve the
+   `drive.file` consent using the My Drive account that should own archives.
+4. The callback creates an app-owned `Road model researcher submissions`
+   folder in that account’s My Drive. It stages the refresh token and folder ID
+   in server memory for 15 minutes only.
+5. On the callback page, click **Reveal one-time secrets**. It shows the two
+   values once in the same browser session, then removes them from server
+   memory.
+6. Immediately add the shown `GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN` and
+   `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` as Hugging Face **Secrets** and
+   restart/redeploy the Space. Remove `GOOGLE_OAUTH_SETUP_TOKEN` afterwards;
+   it is only needed for first-time setup or a deliberate reconnection.
 
 ## Implementation requirements (do not skip)
 
-1. Add `/google-oauth/start` and `/google-oauth/callback` backend routes using
-   authorization-code flow with PKCE and a state value validated server-side.
-2. Add an admin-only first-run page/action that opens Google Picker and selects
-   the single archive folder. Do not accept arbitrary folder IDs from ordinary
-   model-run requests.
-3. Exchange the authorization code server-side and store only the resulting
-   refresh token in HF Secrets.
-4. Use `drive.file` for all Drive API calls.
-5. Verify the selected folder is accessible, then write only into that folder's
+1. Keep the `/google-oauth/start` and `/google-oauth/callback` authorization
+   flow protected by the one-time setup token and state value.
+2. Keep the backend-created archive root folder as the sole permitted parent;
+   do not accept arbitrary folder IDs from ordinary model-run requests.
+3. Exchange the authorization code server-side and make the resulting refresh
+   token available only once to an authorised setup administrator.
+4. Use `drive.file` for all OAuth Drive API calls.
+5. Verify the created folder is accessible, then write only into that folder's
    economy subfolders.
 6. Keep the archive failure non-blocking: a Drive error must still allow the
    model run to start.

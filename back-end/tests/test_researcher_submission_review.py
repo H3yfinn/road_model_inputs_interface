@@ -103,6 +103,9 @@ def test_drive_archive_reports_missing_hf_or_local_credentials(monkeypatch):
     monkeypatch.setenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "folder-id")
     monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", raising=False)
     monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", raising=False)
+    monkeypatch.delenv("GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN", raising=False)
+    monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_SECRET", raising=False)
     result = archive_submission_to_drive(rows=[], economy="20USA", version="v_test", run_id="run")
     assert result["success"] is False
     assert "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON" in result["message"]

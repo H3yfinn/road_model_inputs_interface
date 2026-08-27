@@ -15,17 +15,25 @@ import csv
 import json
 import os
 import re
+import secrets
 import sys
+import time
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+import httpx
+from fastapi import APIRouter, Form, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from core.logger import get_logger
-from core.researcher_submission_review import archive_submission_to_drive
+from core.researcher_submission_review import (
+    DRIVE_FILE_SCOPE,
+    archive_submission_to_drive,
+    create_my_drive_archive_folder,
+)
 
 logger = get_logger(__name__)
 
@@ -49,6 +57,8 @@ _STATIC_BUNDLE_DIR = _INTERFACE_DIR / "front-end" / "road-module1-static"
 
 # In-memory registry of active subprocess handles keyed by run_id.
 _active_runs: dict[str, tuple[asyncio.subprocess.Process, str, bool]] = {}
+_oauth_setup_sessions: dict[str, dict[str, Any]] = {}
+_OAUTH_SETUP_SESSION_SECONDS = 15 * 60
 
 
 # --------------------------------------------------------------------------- #
@@ -209,6 +219,75 @@ def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -
     return dest_file
 
 
+def _oauth_configuration() -> tuple[str, str, str]:
+    """Return required OAuth settings without ever logging their values."""
+    client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+    client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
+    redirect_uri = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
+    if not all([client_id, client_secret, redirect_uri]):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "OAuth setup is not configured. Set GOOGLE_OAUTH_CLIENT_ID, "
+                "GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_OAUTH_REDIRECT_URI as Secrets."
+            ),
+        )
+    return client_id, client_secret, redirect_uri
+
+
+def _require_oauth_setup_token(provided_token: str | None) -> None:
+    configured_token = os.getenv("GOOGLE_OAUTH_SETUP_TOKEN", "")
+    if not configured_token:
+        raise HTTPException(status_code=503, detail="OAuth setup is disabled (GOOGLE_OAUTH_SETUP_TOKEN is not configured).")
+    if not provided_token or not secrets.compare_digest(provided_token, configured_token):
+        raise HTTPException(status_code=403, detail="OAuth setup token is invalid.")
+
+
+def _prune_oauth_setup_sessions() -> None:
+    now = time.monotonic()
+    for state, session in list(_oauth_setup_sessions.items()):
+        if float(session["expires_at"]) < now:
+            _oauth_setup_sessions.pop(state, None)
+
+
+def _exchange_google_oauth_code(*, code: str, client_id: str, client_secret: str, redirect_uri: str) -> str:
+    """Exchange a one-time authorization code without writing credentials to disk."""
+    response = httpx.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+    refresh_token = str(response.json().get("refresh_token") or "")
+    if not refresh_token:
+        raise ValueError("Google did not return a refresh token. Revoke the prior grant and retry with consent.")
+    return refresh_token
+
+
+def _google_oauth_redirect() -> RedirectResponse:
+    """Create state, store it server-side, and redirect an authenticated admin to Google."""
+    client_id, _, redirect_uri = _oauth_configuration()
+    _prune_oauth_setup_sessions()
+    state = secrets.token_urlsafe(32)
+    _oauth_setup_sessions[state] = {"expires_at": time.monotonic() + _OAUTH_SETUP_SESSION_SECONDS}
+    query = urlencode({
+        "client_id": client_id, "redirect_uri": redirect_uri, "response_type": "code",
+        "scope": DRIVE_FILE_SCOPE, "access_type": "offline", "prompt": "consent", "state": state,
+    })
+    response = RedirectResponse(f"https://accounts.google.com/o/oauth2/v2/auth?{query}", status_code=302)
+    response.set_cookie(
+        "road_model_oauth_setup_state", state, max_age=_OAUTH_SETUP_SESSION_SECONDS,
+        secure=True, httponly=True, samesite="lax",
+    )
+    return response
+
+
 async def _sse_generator(run_id: str):
     """
     Async generator that yields SSE-formatted events from a running subprocess.
@@ -317,6 +396,95 @@ class RunModelResponse(BaseModel):
 # --------------------------------------------------------------------------- #
 # Endpoints                                                                    #
 # --------------------------------------------------------------------------- #
+
+@road_run_router.get("/google-oauth/start", include_in_schema=False)
+async def start_google_oauth_setup(
+    x_road_model_oauth_setup_token: str | None = Header(default=None),
+):
+    """Begin the one-time, admin-protected My Drive archive authorisation."""
+    _require_oauth_setup_token(x_road_model_oauth_setup_token)
+    return _google_oauth_redirect()
+
+
+@road_run_router.get("/google-oauth/setup", include_in_schema=False)
+async def google_oauth_setup_page():
+    """Serve the small one-time admin page without exposing any credentials."""
+    return HTMLResponse(
+        "<h1>Connect Google Drive archive</h1>"
+        "<p>Enter the temporary OAuth setup token. This page is only for the archive administrator.</p>"
+        "<form method='post'><label>Setup token <input type='password' name='setup_token' required autofocus></label>"
+        "<button type='submit'>Continue to Google</button></form>"
+    )
+
+
+@road_run_router.post("/google-oauth/setup", include_in_schema=False)
+async def begin_google_oauth_setup_from_page(setup_token: str = Form(...)):
+    """Validate the setup token submitted by the one-time admin page."""
+    _require_oauth_setup_token(setup_token)
+    return _google_oauth_redirect()
+
+
+@road_run_router.get("/google-oauth/callback", include_in_schema=False)
+async def complete_google_oauth_setup(request: Request, code: str = "", state: str = "", error: str = ""):
+    """Receive Google's redirect and stage one-time credentials for an admin to save."""
+    _prune_oauth_setup_sessions()
+    session = _oauth_setup_sessions.get(state)
+    if not session:
+        raise HTTPException(status_code=400, detail="OAuth setup session is missing or has expired. Start again.")
+    if not secrets.compare_digest(request.cookies.get("road_model_oauth_setup_state", ""), state):
+        raise HTTPException(status_code=403, detail="OAuth setup browser session is missing. Start again.")
+    if error:
+        _oauth_setup_sessions.pop(state, None)
+        raise HTTPException(status_code=400, detail=f"Google OAuth was not approved: {error}")
+    if not code:
+        raise HTTPException(status_code=400, detail="Google OAuth callback did not contain an authorization code.")
+
+    client_id, client_secret, redirect_uri = _oauth_configuration()
+    try:
+        refresh_token = _exchange_google_oauth_code(
+            code=code, client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri,
+        )
+        folder_id = create_my_drive_archive_folder(
+            refresh_token=refresh_token,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+    except Exception as exc:
+        logger.warning(f"Google OAuth archive setup failed: {exc}")
+        raise HTTPException(status_code=502, detail="Google OAuth setup failed. Check server logs without exposing credentials.") from exc
+
+    session.update({"refresh_token": refresh_token, "folder_id": folder_id, "completed": True})
+    return HTMLResponse(
+        "<h1>Google Drive connected</h1>"
+        "<p>The archive folder was created. Click once to reveal the two values that must be "
+        "saved as Hugging Face Secrets.</p>"
+        f"<form method='post' action='/api/v1/road-module1/google-oauth/pending-credentials'>"
+        f"<input type='hidden' name='state' value='{state}'>"
+        "<button type='submit'>Reveal one-time secrets</button></form>"
+    )
+
+
+@road_run_router.post("/google-oauth/pending-credentials", include_in_schema=False)
+async def get_pending_google_oauth_credentials(
+    request: Request,
+    state: str = Form(...),
+    x_road_model_oauth_setup_token: str | None = Header(default=None),
+):
+    """Return one-time credentials to the authorised admin, then discard them from memory."""
+    _prune_oauth_setup_sessions()
+    session = _oauth_setup_sessions.get(state)
+    if not session or not session.get("completed"):
+        raise HTTPException(status_code=404, detail="Completed OAuth setup credentials were not found.")
+    cookie_state = request.cookies.get("road_model_oauth_setup_state", "")
+    if not secrets.compare_digest(cookie_state, state):
+        _require_oauth_setup_token(x_road_model_oauth_setup_token)
+    _oauth_setup_sessions.pop(state, None)
+    return HTMLResponse(
+        "<h1>Save these as Hugging Face Secrets now</h1>"
+        f"<p><strong>GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN</strong></p><pre>{session['refresh_token']}</pre>"
+        f"<p><strong>ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID</strong></p><pre>{session['folder_id']}</pre>"
+        "<p>These values have now been removed from the server. Do not share this page.</p>"
+    )
 
 @road_run_router.post("/run-model", response_model=RunModelResponse)
 async def start_road_model_run(payload: RunModelRequest):

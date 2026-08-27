@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -164,7 +165,7 @@ def client():
     from fastapi.testclient import TestClient
     from api.main import app
 
-    with TestClient(app, raise_server_exceptions=True) as c:
+    with TestClient(app, raise_server_exceptions=True, base_url="https://testserver") as c:
         yield c
 
     routers_mod.data_ingestor.load_data = original
@@ -185,6 +186,49 @@ def test_run_model_503_when_workflow_missing(tmp_path, client, monkeypatch):
 def test_stream_404_unknown_run_id(client):
     response = client.get("/api/v1/road-module1/run-model-stream?run_id=not-a-real-id")
     assert response.status_code == 404
+
+
+def test_google_oauth_setup_stages_one_time_credentials(client, monkeypatch):
+    """The setup token gates both OAuth start and one-time credential retrieval."""
+    import api.run_model_router as router_mod
+
+    router_mod._oauth_setup_sessions.clear()
+    monkeypatch.setenv("GOOGLE_OAUTH_SETUP_TOKEN", "setup-token")
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "client-id")
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("GOOGLE_OAUTH_REDIRECT_URI", "https://example.test/callback")
+    monkeypatch.setattr(router_mod, "_exchange_google_oauth_code", lambda **_: "refresh-token")
+    monkeypatch.setattr(router_mod, "create_my_drive_archive_folder", lambda **_: "folder-id")
+
+    start = client.get(
+        "/api/v1/road-module1/google-oauth/start",
+        headers={"X-Road-Model-OAuth-Setup-Token": "setup-token"},
+        follow_redirects=False,
+    )
+    assert start.status_code == 302
+    query = parse_qs(urlparse(start.headers["location"]).query)
+    assert query["scope"] == ["https://www.googleapis.com/auth/drive.file"]
+    state = query["state"][0]
+
+    callback = client.get(f"/api/v1/road-module1/google-oauth/callback?code=one-time-code&state={state}")
+    assert callback.status_code == 200
+    assert "Google Drive connected" in callback.text
+
+    pending = client.post(
+        "/api/v1/road-module1/google-oauth/pending-credentials",
+        data={"state": state},
+        headers={"X-Road-Model-OAuth-Setup-Token": "setup-token"},
+    )
+    assert pending.status_code == 200
+    assert "refresh-token" in pending.text
+    assert "folder-id" in pending.text
+
+    consumed = client.post(
+        "/api/v1/road-module1/google-oauth/pending-credentials",
+        data={"state": state},
+        headers={"X-Road-Model-OAuth-Setup-Token": "setup-token"},
+    )
+    assert consumed.status_code == 404
 
 
 def test_road_model_docs_served_from_model_repo(client):
