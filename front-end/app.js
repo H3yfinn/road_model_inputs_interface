@@ -75,6 +75,7 @@ const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.j
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
 const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
+const ROAD_RESEARCHER_ARCHIVE_ACKNOWLEDGEMENT_KEY = 'road-module1-archive-acknowledged';
 const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
 const ROAD_SERIES_RECOMMENDATION = 'For a full path to 2060, it is often easiest to prepare the values in Excel or ask an AI tool to draft a year-by-year series, then paste it here.';
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
@@ -1410,6 +1411,28 @@ function updateRoadResearcherSubmissionNotice() {
     if (DOM.roadResearcherSubmissionNotice) {
         DOM.roadResearcherSubmissionNotice.classList.toggle('hidden', !hasRoadResearcherChanges());
     }
+}
+
+async function acknowledgeRoadResearcherArchiveForSession() {
+    if (!hasRoadResearcherChanges()) return true;
+    try {
+        if (sessionStorage.getItem(ROAD_RESEARCHER_ARCHIVE_ACKNOWLEDGEMENT_KEY) === 'true') return true;
+    } catch {
+        // Continue with the acknowledgement prompt when browser storage is unavailable.
+    }
+
+    const acknowledged = await showCustomConfirm(
+        'Before you run',
+        'Your changed inputs and comments will be saved to the shared researcher-submissions archive so they can be reviewed for future model updates.\n\nPlease do not include confidential or personal information.',
+        { confirmText: 'I understand — continue', cancelText: 'Cancel' },
+    );
+    if (!acknowledged) return false;
+    try {
+        sessionStorage.setItem(ROAD_RESEARCHER_ARCHIVE_ACKNOWLEDGEMENT_KEY, 'true');
+    } catch {
+        // The current run can continue even if the browser cannot retain the acknowledgement.
+    }
+    return true;
 }
 
 async function loadRoadModule1Defaults() {
@@ -5088,6 +5111,11 @@ async function runRoadModel() {
     const domEconomy = DOM.roadEconomySelect?.value;
     if (domEconomy && domEconomy !== State.roadModule1.economy) {
         showCustomToast(`Economy selection changed to ${domEconomy} — wait for data to finish loading before running.`, "warning");
+        return;
+    }
+
+    if (!await acknowledgeRoadResearcherArchiveForSession()) {
+        showCustomToast('Run cancelled. Your changed values were not sent.', 'info');
         return;
     }
 

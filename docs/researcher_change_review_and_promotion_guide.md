@@ -73,6 +73,9 @@ When a researcher changes any existing Module 1 input — for example `Stock`,
 `Mileage`, `Fuel Economy`, a sales share, or a reconciliation weight — and
 clicks **Run Road Model**:
 
+- once per browser session, the website explains that changed inputs and
+  comments will be saved to the shared archive and asks the researcher to
+  acknowledge this before the run continues;
 - the website submits the complete canonical-long Module 1 CSV, not only the
   changed rows;
 - the model run starts from that submitted package; and
