@@ -369,7 +369,25 @@ The Drive archive is not wiped automatically. It is an audit trail for what a
 researcher ran, so cleanup should normally happen as a deliberate batch task at
 the end of an iteration or edition—not immediately after each economy run.
 
-### Routine cleanup procedure
+### Normal workflow: leave the archive intact
+
+Most users have **Anyone with the link → Viewer** access. They can open and
+download files, but cannot move, delete, upload, or change sharing permissions.
+That is intentional: the archive is owned by the Drive account that created it.
+
+Researchers and colleagues should therefore not try to clean up the archive.
+They should use the batch-review tool in section 3A. It reads only submissions
+not already recorded in that batch folder's `batch_review_checkpoint.json`,
+then records every downloaded submission in `batch_review_manifest.csv`. This
+lets later batches find the new submissions without needing to delete older
+audit records.
+
+If someone believes test files or old submissions should be removed, they
+should contact the Drive owner/model manager/developer with the economy,
+submission ID, and reason. Only that owner (or a person explicitly given Editor
+access) can perform cleanup.
+
+### Owner-only cleanup procedure
 
 1. Decide the retention boundary first, for example “remove test submissions
    from this iteration after the approved defaults version has been deployed.”
@@ -384,6 +402,24 @@ the end of an iteration or edition—not immediately after each economy run.
    the model manager/developer has checked the selected submissions.
 6. Record the cleanup date, selected economy/submission IDs, reason, and person
    who performed it in the iteration notes or `UPDATE_METHOD.md`.
+
+### Metadata and records for a long-lived archive
+
+Every submission is deliberately stored as a paired CSV and metadata JSON. The
+metadata records a unique `submission_id`, economy, timestamp, defaults version,
+model-run ID, original submission identifier, row count, CSV checksum, and the
+baseline filename and checksum. The shared ID is the authoritative way to match
+the CSV with its metadata, even when the archive contains thousands of files.
+
+For each review batch, retain these locally with the iteration records:
+
+- `batch_review_manifest.csv` — the inventory of newly processed submissions;
+- `batch_review_rows.csv` — the decision-ready comparison rows;
+- `batch_review_checkpoint.json` — the exact submission IDs already processed;
+- the commit/version that eventually incorporated any approved changes.
+
+Never rename just one file in a CSV/metadata pair. If a file name must change,
+rename both consistently and preserve the `submission_id` inside the metadata.
 
 ### Important boundaries
 

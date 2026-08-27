@@ -291,19 +291,22 @@ def archive_submission_to_drive(
         timestamp = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds").replace(":", "-")
         submission_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
         csv_name = f"{submission_id}_module1_{version}.csv"
+        metadata_name = f"{submission_id}_metadata.json"
         csv_payload = _csv_bytes(rows)
         baseline_file = Path(baseline_path) if baseline_path else None
         baseline_bytes = baseline_file.read_bytes() if baseline_file and baseline_file.exists() else b""
         metadata = {
+            "archive_format_version": "1.0",
             "submission_id": submission_id, "economy": canonical_economy, "timestamp": datetime.now(timezone.utc).astimezone().isoformat(),
             "module1_defaults_version": version, "researcher_or_session_identity": researcher_identity,
             "model_run_id": run_id, "original_filename_or_submission_identifier": original_filename or submission_id,
+            "archive_csv_filename": csv_name, "archive_metadata_filename": metadata_name,
             "row_count": len(rows), "csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
             "baseline_filename": baseline_file.name if baseline_file and baseline_file.exists() else "",
             "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest() if baseline_bytes else "",
         }
         csv_file = service.files().create(body={"name": csv_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(csv_payload), mimetype="text/csv", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
-        metadata_file = service.files().create(body={"name": f"{submission_id}_metadata.json", "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
+        metadata_file = service.files().create(body={"name": metadata_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
         return {"attempted": True, "success": True, "message": "Submission archived to Google Drive.", "submission_id": submission_id, "csv_file_id": csv_file["id"], "metadata_file_id": metadata_file["id"]}
     except Exception as exc:  # Archive failures must never prevent a model run.
         return {"attempted": True, "success": False, "message": f"Drive archive failed: {exc}"}
