@@ -85,7 +85,8 @@ folder is intentionally shared as **Anyone with the link → Viewer**.
 
 ## 2. Obtain the submission and correct baseline
 
-1. In Google Drive, open `Road model researcher submissions/<economy>/`.
+1. Open the shared [Road model researcher submissions archive](https://drive.google.com/drive/folders/1Dwl1PMh3WMR3CjLtbGVLC4HmxFPO--RX),
+   then open the required `<economy>/` folder.
 2. Download the submission CSV and matching metadata JSON to a local review
    folder. Do not edit the downloaded submission CSV.
 3. Open the metadata JSON and record:
