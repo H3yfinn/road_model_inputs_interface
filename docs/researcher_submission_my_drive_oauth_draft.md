@@ -34,27 +34,68 @@ The app must also enforce its own folder allow-list:
 
 1. Use the existing Google Cloud project `clean-athlete-351101`.
 2. Leave **Google Drive API** enabled.
-3. Go to **APIs & Services → OAuth consent screen**.
-4. Choose the appropriate audience:
+3. In the left navigation, use **Google Auth Platform**. The current console
+   separates the OAuth setup into **Branding**, **Audience**, **Data Access**,
+   and **Clients** (rather than the older single “OAuth consent screen” page).
+4. In **Branding**, enter:
+   - App name: `APERC Road Model Archive`;
+   - User support email: `finn.maunsell@gmail.com`;
+   - Developer contact email: `finn.maunsell@gmail.com`.
+
+   A logo, homepage, privacy-policy URL, terms-of-service URL, and authorised
+   domains are not needed for the initial Testing setup. Save the page. The
+   developer-contact field is separate from the support email and is required
+   even when both addresses are the same.
+5. In **Audience**, choose the appropriate audience:
    - `External` for a personal Gmail account or early testing;
    - `Internal` only if every researcher uses the same Google Workspace.
-5. Fill in the app name, support email, and developer contact email.
-6. Add your Google account as a **Test user** while the app is in Testing.
-7. Add only the `drive.file` scope above.
-8. Go to **Credentials → Create credentials → OAuth client ID → Web application**.
-9. Name it `Road model researcher archive (HF)`.
-10. Add this authorised redirect URI (the route will be implemented before use):
+
+   Keep the app in **Testing** until the implementation is ready. Add
+   `finn.maunsell@gmail.com` as a **Test user**: this is required for the
+   initial authorisation of the archive-owning My Drive account. It does not
+   mean every later road-model user needs a Google or Cloud account.
+6. In **Data Access**, choose **Add or remove scopes** and add only the
+   `drive.file` scope above. The scope is required whether the app is in
+   Testing or Production.
+7. In **Clients**, choose **Create client**, select **Web application**, and
+   name it `Road model researcher archive (HF)`. The legacy route is
+   **APIs & Services → Credentials**.
+8. You may create the client now, but do not add a redirect URI until the
+   callback route has been implemented and its host has been confirmed. The
+   intended callback is:
 
 ```text
 https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth/callback
 ```
 
-11. Download/copy the OAuth client ID and client secret. Do not commit them.
+   Google may require the callback’s domain to be pre-registered under
+   **Branding → Authorised domains**, and may require proof that the project
+   owns that domain. If it will not accept the Hugging Face Space domain, use a
+   project-controlled custom domain for the callback instead; do not work
+   around this with a broader Drive permission.
+9. After the client is created, copy the OAuth client ID and client secret.
+   Do not commit them.
 
 Google may show an “unverified app” warning during Testing. Only the configured
-test users should use that temporary flow. Do not publish the consent screen
-until the workflow has been tested and the required verification status is
-understood.
+test user should use that temporary flow. Testing refresh tokens expire after
+seven days for Drive access, so do not leave the production archive in Testing.
+After the workflow is tested, move it to Production and re-authorise the
+archive account. The narrow `drive.file` scope is non-sensitive, but production
+requirements should be checked in the console at that time.
+
+### Long-term access and colleagues
+
+The deployed backend will use one authorised archive-owner account to write
+all submissions. Researchers and former colleagues do not need the archive
+owner’s Google account, a Google Cloud account, or access to the OAuth client
+or Hugging Face Secrets to run the road model.
+
+To download archives, share the archive folder with each colleague’s own Google
+account as a Viewer. They need their own Google account only for that private
+folder access. An “Anyone with the link” folder is possible but is not suitable
+for researcher submissions. The archive owner account must remain active and
+retain Drive storage; a team-owned account or Shared Drive is the more durable
+long-term option.
 
 ## Hugging Face Secrets to add after implementation
 
