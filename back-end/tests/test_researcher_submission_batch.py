@@ -51,9 +51,11 @@ def _metadata(
 def _descriptor(
     tmp_path: Path, submission_id: str, submitted_value: float,
     baseline_path: Path, *, baseline_checksum: str | None = None,
+    timestamp: str = "2026-08-27T10:00:00+09:00",
 ) -> dict[str, object]:
     csv_payload = _csv_bytes([_row(submitted_value)])
     metadata = _metadata(submission_id, csv_payload, baseline_path.read_bytes())
+    metadata["timestamp"] = timestamp
     if baseline_checksum is not None:
         metadata["baseline_sha256"] = baseline_checksum
     download_dir = tmp_path / "downloads" / "20_USA"
@@ -73,8 +75,8 @@ def _descriptor(
 
 def test_batch_classification_exposes_all_reasons_and_safe_duplicates():
     changes = pd.DataFrame([
-        {**_row(3.0), "Submission ID": "one", "Archive CSV": "one.csv", "Baseline Value": 2.0, "Submitted Value": 3.0, "Delta": 1.0, "Action": "changed", "Baseline Version": "v1"},
-        {**_row(4.0), "Submission ID": "two", "Archive CSV": "two.csv", "Baseline Value": 2.5, "Submitted Value": 4.0, "Delta": 1.5, "Action": "changed", "Baseline Version": "v2"},
+        {**_row(3.0), "Submission ID": "one", "Submission Timestamp": "2026-08-26T10:00:00+09:00", "Archive CSV": "one.csv", "Baseline Value": 2.0, "Submitted Value": 3.0, "Delta": 1.0, "Action": "changed", "Baseline Version": "v1"},
+        {**_row(4.0), "Submission ID": "two", "Submission Timestamp": "2026-08-27T10:00:00+09:00", "Archive CSV": "two.csv", "Baseline Value": 2.5, "Submitted Value": 4.0, "Delta": 1.5, "Action": "changed", "Baseline Version": "v2"},
         {**_row(7.0, Variable="New item"), "Submission ID": "three", "Archive CSV": "three.csv", "Baseline Value": pd.NA, "Submitted Value": 7.0, "Delta": pd.NA, "Action": "added", "Baseline Version": "v1"},
         {**_row(5.0, Variable="Duplicate"), "Submission ID": "four", "Archive CSV": "four.csv", "Baseline Value": 2.0, "Submitted Value": 5.0, "Delta": 3.0, "Action": "changed", "Baseline Version": "v1"},
         {**_row(5.0, Variable="Duplicate"), "Submission ID": "five", "Archive CSV": "five.csv", "Baseline Value": 2.0, "Submitted Value": 5.0, "Delta": 3.0, "Action": "changed", "Baseline Version": "v1"},
@@ -87,6 +89,9 @@ def test_batch_classification_exposes_all_reasons_and_safe_duplicates():
     assert set(stock["Batch Status"]) == {"multiple_review_reasons"}
     assert set(stock["Review Reasons"]) == {"baseline_version_mismatch;conflicting_proposed_values"}
     assert not stock["Safe Replacement"].any()
+    latest_stock = stock.loc[stock["Latest Proposal"].eq(True)].iloc[0]
+    assert latest_stock["Submission ID"] == "two"
+    assert latest_stock["Proposal Recency Rank"] == 1
     added = classified[classified["Variable"].eq("New item")].iloc[0]
     assert added["Batch Status"] == "new_or_removed_row_requires_source_review"
     duplicate = classified[classified["Variable"].eq("Duplicate")]
@@ -95,6 +100,24 @@ def test_batch_classification_exposes_all_reasons_and_safe_duplicates():
     versioned = classified[classified["Variable"].eq("Versioned")]
     assert set(versioned["Batch Status"]) == {"baseline_version_mismatch_requires_review"}
     assert set(versioned["Review Reasons"]) == {"baseline_version_mismatch"}
+
+
+def test_decision_sheet_is_compact_one_row_per_key_and_newest_first():
+    changes = pd.DataFrame([
+        {**_row(3.0, Comment="Older source"), "Submission ID": "old", "Submission Timestamp": "2026-08-26T10:00:00+09:00", "Archive CSV": "old.csv", "Baseline Value": 2.0, "Submitted Value": 3.0, "Delta": 1.0, "Action": "changed", "Baseline Version": "v1"},
+        {**_row(4.0, Comment="Dataset 2026, table 4; updated evidence"), "Submission ID": "new", "Submission Timestamp": "2026-08-27T10:00:00+09:00", "Archive CSV": "new.csv", "Baseline Value": 2.0, "Submitted Value": 4.0, "Delta": 2.0, "Action": "changed", "Baseline Version": "v1"},
+    ])
+
+    decisions = batch._build_decision_sheet(batch._classify_batch_rows(changes))
+
+    assert list(decisions.columns) == batch.DECISION_COLUMNS
+    assert len(decisions) == 1
+    decision = decisions.iloc[0]
+    assert decision["Chosen Value"] == ""
+    assert decision["Latest Proposed Value"] == "4"
+    assert decision["All Proposed Values (newest first)"] == "4; 3"
+    assert decision["Latest Source / Reason"] == "Dataset 2026, table 4; updated evidence"
+    assert "not automatically preferred" in decision["Review Guidance"]
 
 
 def test_validate_archive_pair_checks_checksum_filenames_ids_and_row_count():
@@ -172,6 +195,9 @@ def test_batch_review_processes_valid_and_quarantines_bad_baseline(tmp_path, mon
     review = pd.read_csv(artefacts["review_rows"])
     assert review.loc[0, "Batch Status"] == "replacement_candidate"
     assert pd.read_csv(artefacts["override_candidates"][0]).loc[0, "Value"] == 3_000_000.0
+    decisions = pd.read_csv(artefacts["decisions"], keep_default_na=False)
+    assert list(decisions.columns) == batch.DECISION_COLUMNS
+    assert decisions.loc[0, "Latest Proposed Value"] == 3
     quarantine = pd.read_csv(artefacts["quarantine"])
     assert "baseline SHA-256" in quarantine.loc[0, "Failure Reason"]
     checkpoint = json.loads(Path(artefacts["checkpoint"]).read_text(encoding="utf-8"))
@@ -189,8 +215,20 @@ def test_zero_new_submissions_is_clear_and_writes_header_only_outputs(tmp_path, 
     )
     assert artefacts["message"].startswith("No new archived submissions")
     assert list(pd.read_csv(artefacts["review_rows"]).columns) == batch.REVIEW_COLUMNS
+    assert list(pd.read_csv(artefacts["decisions"]).columns) == batch.DECISION_COLUMNS
     assert list(pd.read_csv(artefacts["manifest"]).columns) == batch.MANIFEST_COLUMNS
     assert list(pd.read_csv(artefacts["quarantine"]).columns) == batch.FAILURE_COLUMNS
+
+
+def test_batch_uses_configured_drive_folder_without_notebook_edit(monkeypatch, tmp_path):
+    captured_queries = []
+    monkeypatch.setenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "configured-folder-id")
+    monkeypatch.setattr(batch, "_list_drive_files", lambda _service, query: captured_queries.append(query) or [])
+
+    result = batch.download_new_archived_submissions(output_dir=tmp_path, service=object())
+
+    assert result == {"submissions": [], "failures": []}
+    assert "'configured-folder-id' in parents" in captured_queries[0]
 
 
 def test_formula_like_reviewer_text_is_written_inert(tmp_path):

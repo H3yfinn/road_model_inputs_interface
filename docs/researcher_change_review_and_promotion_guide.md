@@ -138,12 +138,14 @@ active overrides, or the website.
 Run it only on the model manager/developer's secure local machine, where the
 existing Drive OAuth credentials are available as environment variables. Do not
 put those credentials in a notebook, a CSV, or Git. In a Jupyter notebook or
-VS Code interactive cell:
+VS Code interactive cell, the normal review is one call. It reads the archive
+folder ID from `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID`, uses the repository's
+static bundles, and keeps its checkpoint in the stable default output folder:
 
 ```python
 #%%
-from pathlib import Path
 import sys
+from pathlib import Path
 
 REPO_DIR = Path(r"C:\Users\Work\github\road_model_inputs_interface")
 BACKEND_DIR = REPO_DIR / "back-end"
@@ -152,25 +154,22 @@ sys.path.insert(0, str(BACKEND_DIR / "scripts"))
 
 from review_researcher_submission_batch import review_new_archived_submissions
 
-OUTPUT_DIR = Path(r"C:\review\2026_08_27_iteration_batch")
-STATIC_BUNDLE_DIR = REPO_DIR / "front-end" / "road-module1-static"
-DRIVE_FOLDER_ID = "the configured Road model researcher submissions folder ID"
-
-artefacts = review_new_archived_submissions(
-    output_dir=OUTPUT_DIR,
-    static_bundle_dir=STATIC_BUNDLE_DIR,
-    drive_folder_id=DRIVE_FOLDER_ID,
-)
+artefacts = review_new_archived_submissions()
 artefacts
 #%%
 ```
+
+Pass `output_dir=Path(...)` only when a different secure local review folder is
+needed. Keep using the same output folder during an iteration so the locked
+checkpoint prevents repeat work.
 
 The output folder contains:
 
 | File | Meaning |
 |---|---|
-| `batch_review_manifest.csv` | Each reviewed or quarantined submission, archive file IDs/checksums, baseline identity, row counts, outcome, and failure reason |
-| `batch_review_rows.csv` | The consolidated review dataset, including `Batch Status`, cumulative `Review Reasons`, proposal counts, and `Safe Replacement` |
+| `batch_review_decisions.csv` | **Open this first.** One row per model key and only 14 plainly named columns: a blank `Chosen Value`, baseline, newest proposal and time, all distinct proposals newest-first, latest source/reason note, proposal count, and direct review guidance |
+| `batch_review_rows.csv` | Supporting audit detail, one row per proposal, including submission identity, explicit recency rank, `Batch Status`, cumulative `Review Reasons`, and `Safe Replacement` |
+| `batch_review_manifest.csv` | Submission-level audit: timestamp/run/researcher-or-session identity, archive file IDs/checksums, baseline identity, row counts, outcome, and failure reason |
 | `batch_review_quarantine.csv` | Invalid, incomplete, or baseline-unverifiable submissions, with file IDs, reason, and quarantine fingerprint |
 | `module1_final_value_overrides_<economy>_candidate.csv` | A candidate replacement dataset for that economy, in raw/internal units. It is not live and must still be approved. |
 | `batch_review_checkpoint.json` | The atomically replaced, file-locked record of successful submission IDs plus quarantined file fingerprints |
@@ -192,6 +191,13 @@ The output folder contains:
 key replacements with no blocking reason are marked `Safe Replacement=True`
 and included in a candidate. Identical duplicates remain visible in review rows
 but are deduplicated in the candidate.
+
+The decision sheet intentionally shows the newest proposal first and records
+its timestamp, but does **not** imply that newest means correct. Enter a value in
+`Chosen Value` only after checking the source/reason. For conflicts, baseline
+mismatches, additions, or removals, follow `Review Guidance` and open
+`batch_review_rows.csv` only for the extra evidence needed. This keeps the
+ordinary selection task small without discarding the full audit trail.
 
 A malformed pair does not abort later valid submissions. It is written to the
 quarantine report and recorded by Drive/file fingerprint, not in
@@ -452,7 +458,8 @@ follow pagination tokens so thousands of archived submissions remain usable.
 For each review batch, retain these locally with the iteration records:
 
 - `batch_review_manifest.csv` — the inventory of newly processed submissions;
-- `batch_review_rows.csv` — the decision-ready comparison rows;
+- `batch_review_decisions.csv` — the compact, one-row-per-key decision sheet;
+- `batch_review_rows.csv` — the proposal-level audit detail;
 - `batch_review_quarantine.csv` — invalid pair/baseline evidence and reasons;
 - `batch_review_checkpoint.json` — successful IDs and quarantined fingerprints;
 - the commit/version that eventually incorporated any approved changes.

@@ -50,9 +50,10 @@ CSV_SUFFIX_RE = re.compile(
 )
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 MANIFEST_COLUMNS = [
-    "Submission ID", "Economy", "Baseline Version", "Archive CSV",
+    "Submission ID", "Submission Timestamp", "Model Run ID", "Researcher / Session Identity",
+    "Economy", "Baseline Version", "Archive CSV",
     "Archive metadata", "Archive CSV File ID", "Archive Metadata File ID",
-    "Archive CSV SHA256", "Baseline Filename", "Baseline SHA256",
+    "Archive CSV SHA256", "Metadata SHA256", "Baseline Filename", "Baseline SHA256",
     "Row Count", "Changed Rows", "Outcome", "Failure Reason",
 ]
 FAILURE_COLUMNS = [
@@ -61,11 +62,21 @@ FAILURE_COLUMNS = [
     "Quarantine Fingerprint",
 ]
 REVIEW_COLUMNS = [
-    "Submission ID", "Baseline Version", "Archive CSV", *KEY_COLUMNS,
+    "Submission ID", "Submission Timestamp", "Model Run ID", "Researcher / Session Identity",
+    "Baseline Version", "Archive CSV", *KEY_COLUMNS,
     "Baseline Value", "Submitted Value", "Delta", "Action", "Scale",
     "Units", "Comment", "Batch Status", "Review Reasons", "Safe Replacement",
     "Proposal Count", "Distinct Proposed Values", "Baseline Versions",
+    "Proposal Recency Rank", "Latest Proposal",
 ]
+DECISION_COLUMNS = [
+    "Chosen Value", "Economy", "Scenario", "Variable", "Branch Path", "Year",
+    "Units", "Baseline Value", "Latest Proposed Value", "Latest Proposal Time",
+    "All Proposed Values (newest first)", "Latest Source / Reason",
+    "Proposal Count", "Review Guidance",
+]
+DEFAULT_OUTPUT_DIR = BACKEND_DIR.parent / "outputs" / "researcher_submission_batch_reviews"
+DEFAULT_STATIC_BUNDLE_DIR = BACKEND_DIR.parent / "front-end" / "road-module1-static"
 
 
 def _utc_now() -> str:
@@ -74,6 +85,15 @@ def _utc_now() -> str:
 
 def _sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _configured_drive_folder_id(drive_folder_id: str | None) -> str:
+    value = str(drive_folder_id or os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "")).strip()
+    if not value:
+        raise ValueError(
+            "Drive archive folder is not configured; set ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID."
+        )
+    return validate_identifier(value, "Drive archive folder ID")
 
 
 def _list_drive_files(service: Any, query: str) -> list[dict[str, Any]]:
@@ -313,7 +333,7 @@ def _validate_metadata_pair(
 
 
 def download_new_archived_submissions(
-    *, output_dir: Path, drive_folder_id: str, service: Any | None = None,
+    *, output_dir: Path, drive_folder_id: str | None = None, service: Any | None = None,
     checkpoint_filename: str = "batch_review_checkpoint.json",
 ) -> dict[str, list[dict[str, Any]]]:
     """Validate and download unseen pairs; isolate malformed pairs as failures."""
@@ -324,10 +344,11 @@ def download_new_archived_submissions(
         str(item.get("fingerprint", ""))
         for item in checkpoint.get("quarantined_files", []) if isinstance(item, dict)
     }
+    configured_drive_folder_id = _configured_drive_folder_id(drive_folder_id)
     drive_service = service or _build_drive_service()
     economy_folders = _list_drive_files(
         drive_service,
-        f"'{drive_folder_id}' in parents and mimeType = '{FOLDER_MIME_TYPE}' and trashed = false",
+        f"'{configured_drive_folder_id}' in parents and mimeType = '{FOLDER_MIME_TYPE}' and trashed = false",
     )
     downloaded: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
@@ -424,6 +445,17 @@ def _classify_batch_rows(changes: pd.DataFrame) -> pd.DataFrame:
     group_columns = ["Economy", *KEY_COLUMNS[1:]]
     for _, group in changes.groupby(group_columns, dropna=False, sort=False):
         group = group.copy()
+        if "Submission Timestamp" not in group:
+            group["Submission Timestamp"] = ""
+        timestamp_sort = pd.to_datetime(group["Submission Timestamp"], utc=True, errors="coerce")
+        group = (
+            group.assign(_timestamp_sort=timestamp_sort, _original_order=range(len(group)))
+            .sort_values(
+                ["_timestamp_sort", "_original_order"],
+                ascending=[False, True], na_position="last", kind="stable",
+            )
+            .drop(columns=["_timestamp_sort", "_original_order"])
+        )
         actions = set(group["Action"].astype(str))
         proposed_values = pd.to_numeric(group["Submitted Value"], errors="coerce").dropna().round(10).unique()
         baseline_versions = sorted(set(group["Baseline Version"].astype(str)))
@@ -463,20 +495,93 @@ def _classify_batch_rows(changes: pd.DataFrame) -> pd.DataFrame:
         group["Proposal Count"] = len(group)
         group["Distinct Proposed Values"] = len(proposed_values)
         group["Baseline Versions"] = ";".join(baseline_versions)
+        group["Proposal Recency Rank"] = range(1, len(group) + 1)
+        group["Latest Proposal"] = group["Proposal Recency Rank"].eq(1)
         rows.append(group)
     return pd.concat(rows, ignore_index=True).reindex(columns=REVIEW_COLUMNS)
+
+
+def _display_review_value(value: Any, action: str = "") -> str:
+    if action == "removed":
+        return "[row removed]"
+    if pd.isna(value):
+        return ""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return format(numeric, ".12g")
+
+
+def _review_guidance(status: str) -> str:
+    guidance = {
+        "replacement_candidate": "Check the evidence, then enter the accepted value in Chosen Value.",
+        "same_replacement_proposed_multiple_times": "The same value was proposed more than once; review it once, then enter the accepted value.",
+        "conflicting_replacement_values": "Values conflict. The newest is shown first but is not automatically preferred; use the audit rows to compare notes, then choose.",
+        "baseline_version_mismatch_requires_review": "Proposals used different baselines. Resolve the baseline difference in the audit rows before choosing a value.",
+        "new_or_removed_row_requires_source_review": "A row was added or removed. Review the source/contract change; do not promote it as a simple override.",
+        "multiple_review_reasons": "Several issues apply. Open the audit rows and resolve every listed reason before choosing a value.",
+        "requires_manual_review": "Open the audit rows and review this key manually before choosing a value.",
+    }
+    return guidance.get(status, guidance["requires_manual_review"])
+
+
+def _build_decision_sheet(classified: pd.DataFrame) -> pd.DataFrame:
+    """Return one compact, newest-first reviewer row per model key."""
+    if classified.empty:
+        return pd.DataFrame(columns=DECISION_COLUMNS)
+    rows: list[dict[str, Any]] = []
+    group_columns = ["Economy", *KEY_COLUMNS[1:]]
+    for _, group in classified.groupby(group_columns, dropna=False, sort=False):
+        ordered = group.sort_values("Proposal Recency Rank", kind="stable")
+        latest = ordered.iloc[0]
+        proposals: list[str] = []
+        for _, proposal in ordered.iterrows():
+            displayed = _display_review_value(proposal["Submitted Value"], str(proposal["Action"]))
+            if displayed not in proposals:
+                proposals.append(displayed)
+        rows.append({
+            "Chosen Value": "",
+            "Economy": latest["Economy"],
+            "Scenario": latest["Scenario"],
+            "Variable": latest["Variable"],
+            "Branch Path": latest["Branch Path"],
+            "Year": latest["Year"],
+            "Units": latest["Units"],
+            "Baseline Value": _display_review_value(latest["Baseline Value"]),
+            "Latest Proposed Value": _display_review_value(
+                latest["Submitted Value"], str(latest["Action"]),
+            ),
+            "Latest Proposal Time": latest.get("Submission Timestamp", ""),
+            "All Proposed Values (newest first)": "; ".join(proposals),
+            "Latest Source / Reason": latest.get("Comment", ""),
+            "Proposal Count": int(latest["Proposal Count"]),
+            "Review Guidance": _review_guidance(str(latest["Batch Status"])),
+        })
+    return (
+        pd.DataFrame(rows, columns=DECISION_COLUMNS)
+        .sort_values(["Economy", "Scenario", "Variable", "Branch Path", "Year"], kind="stable")
+        .reset_index(drop=True)
+    )
 
 
 def _manifest_row(item: dict[str, Any], changed_rows: int) -> dict[str, Any]:
     metadata = item["metadata"]
     return {
-        "Submission ID": item["submission_id"], "Economy": item["economy"],
+        "Submission ID": item["submission_id"],
+        "Submission Timestamp": metadata["timestamp"],
+        "Model Run ID": metadata["model_run_id"],
+        "Researcher / Session Identity": metadata.get("researcher_or_session_identity", ""),
+        "Economy": item["economy"],
         "Baseline Version": metadata["module1_defaults_version"],
         "Archive CSV": item["csv_path"].name,
         "Archive metadata": item["metadata_path"].name,
         "Archive CSV File ID": item.get("csv_item", {}).get("id", metadata.get("archive_csv_file_id", "")),
         "Archive Metadata File ID": item.get("metadata_item", {}).get("id", metadata.get("archive_metadata_file_id", "")),
         "Archive CSV SHA256": metadata["csv_sha256"],
+        "Metadata SHA256": metadata.get(
+            "metadata_sha256", _sha256(item["metadata_path"].read_bytes()),
+        ),
         "Baseline Filename": metadata["baseline_filename"],
         "Baseline SHA256": metadata["baseline_sha256"],
         "Row Count": metadata["row_count"], "Changed Rows": changed_rows,
@@ -485,7 +590,9 @@ def _manifest_row(item: dict[str, Any], changed_rows: int) -> dict[str, Any]:
 
 
 def review_new_archived_submissions(
-    *, output_dir: Path, static_bundle_dir: Path, drive_folder_id: str,
+    *, output_dir: Path = DEFAULT_OUTPUT_DIR,
+    static_bundle_dir: Path = DEFAULT_STATIC_BUNDLE_DIR,
+    drive_folder_id: str | None = None,
     service: Any | None = None,
 ) -> dict[str, Any]:
     """Write a resilient validated review batch and checkpoint successful/quarantined files."""
@@ -525,8 +632,11 @@ def review_new_archived_submissions(
                     normalise_module1_csv(baseline_path, legacy_values_are_internal=False),
                 )
                 review.insert(0, "Submission ID", item["submission_id"])
-                review.insert(1, "Baseline Version", version)
-                review.insert(2, "Archive CSV", item["csv_path"].name)
+                review.insert(1, "Submission Timestamp", metadata["timestamp"])
+                review.insert(2, "Model Run ID", metadata["model_run_id"])
+                review.insert(3, "Researcher / Session Identity", metadata.get("researcher_or_session_identity", ""))
+                review.insert(4, "Baseline Version", version)
+                review.insert(5, "Archive CSV", item["csv_path"].name)
                 change_frames.append(review)
                 manifest_rows.append(_manifest_row(item, len(review)))
                 successful_ids.add(item["submission_id"])
@@ -539,24 +649,30 @@ def review_new_archived_submissions(
 
         changes = pd.concat(change_frames, ignore_index=True) if change_frames else pd.DataFrame()
         classified = _classify_batch_rows(changes)
+        decisions = _build_decision_sheet(classified)
         failure_frame = pd.DataFrame(failures, columns=FAILURE_COLUMNS)
         for failure in failures:
             manifest_rows.append({
-                "Submission ID": failure["Submission ID"], "Economy": failure["Economy Folder"],
+                "Submission ID": failure["Submission ID"],
+                "Submission Timestamp": "", "Model Run ID": "", "Researcher / Session Identity": "",
+                "Economy": failure["Economy Folder"],
                 "Baseline Version": "", "Archive CSV": failure["Archive CSV"],
                 "Archive metadata": failure["Archive metadata"],
                 "Archive CSV File ID": failure["Archive CSV File ID"],
                 "Archive Metadata File ID": failure["Archive Metadata File ID"],
-                "Archive CSV SHA256": "", "Baseline Filename": "", "Baseline SHA256": "",
+                "Archive CSV SHA256": "", "Metadata SHA256": "",
+                "Baseline Filename": "", "Baseline SHA256": "",
                 "Row Count": "", "Changed Rows": "", "Outcome": "quarantined",
                 "Failure Reason": failure["Failure Reason"],
             })
         manifest = pd.DataFrame(manifest_rows, columns=MANIFEST_COLUMNS)
 
         review_path = path_within(output_dir, "batch_review_rows.csv")
+        decision_path = path_within(output_dir, "batch_review_decisions.csv")
         manifest_path = path_within(output_dir, "batch_review_manifest.csv")
         quarantine_path = path_within(output_dir, "batch_review_quarantine.csv")
         write_reviewer_csv(classified, review_path)
+        write_reviewer_csv(decisions, decision_path)
         write_reviewer_csv(manifest, manifest_path)
         write_reviewer_csv(failure_frame, quarantine_path)
 
@@ -566,7 +682,7 @@ def review_new_archived_submissions(
             for economy, economy_rows in candidate_rows.groupby("Economy", sort=True):
                 unique_rows = economy_rows.drop_duplicates(subset=KEY_COLUMNS, keep="first")
                 overrides = build_final_value_overrides(
-                    unique_rows, note_prefix="Approved batch researcher submission",
+                    unique_rows, note_prefix="Candidate batch researcher submission",
                 )
                 candidate_path = path_within(
                     output_dir,
@@ -597,11 +713,17 @@ def review_new_archived_submissions(
         })
 
     if downloaded or failures:
-        message = f"Reviewed {len(successful_ids)} submission(s); quarantined {len(failures)} invalid submission(s)."
+        message = (
+            f"Reviewed {len(successful_ids)} submission(s); quarantined {len(failures)} "
+            "invalid submission(s). Open batch_review_decisions.csv first."
+        )
     else:
-        message = "No new archived submissions were found; review outputs contain headers only."
+        message = (
+            "No new archived submissions were found. The decision, audit, manifest, and "
+            "quarantine CSVs contain headers only; there is nothing to review."
+        )
     return {
-        "manifest": manifest_path, "review_rows": review_path,
+        "manifest": manifest_path, "decisions": decision_path, "review_rows": review_path,
         "quarantine": quarantine_path, "checkpoint": checkpoint_path,
         "override_candidates": candidate_paths, "message": message,
         "reviewed_submission_count": len(successful_ids),
@@ -609,16 +731,9 @@ def review_new_archived_submissions(
     }
 
 
-# --- Edit these values in a Jupyter/VS Code interactive cell before running. ---
+# --- Set RUN_BATCH_REVIEW=True in a Jupyter/VS Code cell, then run this file. ---
 RUN_BATCH_REVIEW = False
-OUTPUT_DIR = Path("outputs/researcher_submission_batch_reviews")
-STATIC_BUNDLE_DIR = BACKEND_DIR.parent / "front-end" / "road-module1-static"
-DRIVE_FOLDER_ID = ""
 
 if __name__ == "__main__" and RUN_BATCH_REVIEW:
-    print(review_new_archived_submissions(
-        output_dir=OUTPUT_DIR,
-        static_bundle_dir=STATIC_BUNDLE_DIR,
-        drive_folder_id=DRIVE_FOLDER_ID,
-    ))
+    print(review_new_archived_submissions())
 #%%
