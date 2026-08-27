@@ -300,12 +300,49 @@ Push the commit to `main`. The existing deployment workflow updates the Hugging
 Face Space. After deployment, reload the website and confirm the new version is
 shown in its data/version information.
 
+## 9. Archive retention and safe cleanup
+
+The Drive archive is not wiped automatically. It is an audit trail for what a
+researcher ran, so cleanup should normally happen as a deliberate batch task at
+the end of an iteration or edition—not immediately after each economy run.
+
+### Routine cleanup procedure
+
+1. Decide the retention boundary first, for example “remove test submissions
+   from this iteration after the approved defaults version has been deployed.”
+2. Confirm that every submission being removed has either been rejected,
+   incorporated into a reviewed version, or retained elsewhere for a specific
+   audit reason.
+3. Open the shared [Road model researcher submissions archive](https://drive.google.com/drive/folders/1Dwl1PMh3WMR3CjLtbGVLC4HmxFPO--RX)
+   and work economy by economy.
+4. Delete a submission's CSV and matching metadata JSON **together**. Match
+   them using their common timestamp/submission-ID prefix.
+5. Move files to Google Drive Trash first. Do not permanently empty Trash until
+   the model manager/developer has checked the selected submissions.
+6. Record the cleanup date, selected economy/submission IDs, reason, and person
+   who performed it in the iteration notes or `UPDATE_METHOD.md`.
+
+### Important boundaries
+
+- Do not delete the `Road model researcher submissions` root folder. Its ID is
+  saved in Hugging Face as `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID`; deleting
+  it breaks future archiving.
+- Deleting an economy subfolder is recoverable from Trash, and the application
+  can create it again on a future submission, but it removes that economy's
+  archive history. Prefer deleting selected submission pairs instead.
+- Removing a file from Drive prevents future link-based downloads, but cannot
+  retrieve copies that someone may already have downloaded.
+- The shared-link setting is intentionally broad. If the archive ever begins to
+  contain sensitive information, change its sharing policy before continuing to
+  use it rather than relying on later cleanup.
+
 ## What is deliberately not automatic
 
 - An archive does not change defaults.
 - The review script does not copy a candidate into source data.
 - The build does not replace an older version.
 - The website does not become a source-data editor.
+- Archive deletion is never triggered by a model run, review, build, or deploy.
 
 Those controls are intentional: they keep a researcher experiment, a reviewed
 assumption, and a published default distinguishable years later.
