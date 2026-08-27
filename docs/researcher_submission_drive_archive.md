@@ -15,6 +15,8 @@ never overwritten.
 
 The configuration and one-time connection procedure are the canonical runbook:
 [`researcher_submission_my_drive_oauth_draft.md`](researcher_submission_my_drive_oauth_draft.md).
+For reviewing and promoting a submission into a future default, use
+[`researcher_change_review_and_promotion_guide.md`](researcher_change_review_and_promotion_guide.md).
 
 ## Expected result and troubleshooting
 
