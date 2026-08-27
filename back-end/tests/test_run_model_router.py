@@ -39,6 +39,13 @@ def test_baseline_static_csv_path_uses_compact_static_economy_code(tmp_path, mon
     assert router_mod._baseline_static_csv_path("20_USA", "v_test") == tmp_path / "v_test" / "20USA.csv"
 
 
+@pytest.mark.parametrize("economy", ["../../tmp", "20_USA/escape", "USA", "20_USAA"])
+def test_canonical_economy_rejects_unsafe_or_unknown_shapes(economy):
+    from api.run_model_router import _to_canonical_economy
+    with pytest.raises(ValueError, match="Invalid economy code"):
+        _to_canonical_economy(economy)
+
+
 # ---------------------------------------------------------------------------
 # _write_module1_csv
 # ---------------------------------------------------------------------------
@@ -86,6 +93,13 @@ def test_write_module1_csv_normalises_economy_code(tmp_path, monkeypatch):
     assert path.exists()
 
 
+def test_write_module1_csv_rejects_version_path_traversal(tmp_path, monkeypatch):
+    import api.run_model_router as router_mod
+    monkeypatch.setattr(router_mod, "_MODULE1_INPUT_DIR", tmp_path)
+    with pytest.raises(ValueError, match="Invalid Module 1 defaults version"):
+        router_mod._write_module1_csv([{"Year": 2022, "Value": 1}], "20USA", "../escape")
+
+
 def test_run_endpoint_archiving_failure_does_not_block_model_start(tmp_path, client, monkeypatch):
     """Drive is optional to the run: its failure is returned, never raised."""
     import api.run_model_router as router_mod
@@ -109,6 +123,20 @@ def test_run_endpoint_archiving_failure_does_not_block_model_start(tmp_path, cli
     })
     assert response.status_code == 200
     assert response.json()["archive"]["success"] is False
+
+
+def test_run_endpoint_rejects_unsafe_economy_and_version(tmp_path, client, monkeypatch):
+    import api.run_model_router as router_mod
+    workflow = tmp_path / "road_workflow.py"
+    workflow.write_text("", encoding="utf-8")
+    monkeypatch.setattr(router_mod, "_ROAD_WORKFLOW", workflow)
+
+    for economy, version in [("../../tmp", "v1"), ("20USA", "../v1")]:
+        response = client.post("/api/v1/road-module1/run-model", json={
+            "economy": economy, "version": version,
+            "rows": [{"Economy": "20USA", "Year": 2022, "Value": 1}],
+        })
+        assert response.status_code == 422
 
 
 def test_normalise_projection_scenarios_prefers_requested_values():

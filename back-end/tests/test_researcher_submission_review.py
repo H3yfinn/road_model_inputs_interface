@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
+import sys
+import types
+
 import pandas as pd
 import pytest
 
 from core.researcher_submission_review import (
     build_final_value_overrides,
+    canonical_archive_rows,
     compare_submission_to_baseline,
     normalise_module1_rows,
+    validate_version,
 )
 
 
@@ -32,6 +38,28 @@ def test_conflicting_duplicate_is_rejected():
     conflicting.loc[:, "Value"] = 3.0
     with pytest.raises(ValueError, match="Conflicting duplicate"):
         normalise_module1_rows(pd.concat([rows, conflicting]), legacy_values_are_internal=False)
+
+
+def test_archive_rows_require_canonical_long_numeric_values_and_one_economy():
+    canonical = canonical_archive_rows(_canonical_rows().to_dict("records"), "20USA")
+    assert list(canonical.columns) == [
+        "Economy", "Scenario", "Branch Path", "Variable", "Year", "Value",
+        "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface",
+    ]
+    assert set(canonical["Economy"]) == {"20_USA"}
+
+    with pytest.raises(ValueError, match="canonical-long"):
+        canonical_archive_rows([{"Economy": "20USA", "2022": 1}], "20USA")
+    with pytest.raises(ValueError, match="non-numeric Value"):
+        canonical_archive_rows([{**_canonical_rows().iloc[0].to_dict(), "Value": "=1+1"}], "20USA")
+    with pytest.raises(ValueError, match="do not match"):
+        canonical_archive_rows([{**_canonical_rows().iloc[0].to_dict(), "Economy": "12NZ"}], "20USA")
+
+
+@pytest.mark.parametrize("value", ["../v1", "v1/escape", "v1\\escape", "", "."])
+def test_version_rejects_unsafe_path_components(value):
+    with pytest.raises(ValueError, match="Invalid Module 1 defaults version"):
+        validate_version(value)
 
 
 def test_legacy_wide_values_convert_from_internal_units_to_display_units():
@@ -115,3 +143,95 @@ def test_drive_archive_reports_missing_hf_or_local_credentials(monkeypatch):
     result = archive_submission_to_drive(rows=[], economy="20USA", version="v_test", run_id="run")
     assert result["success"] is False
     assert "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON" in result["message"]
+
+
+def test_drive_archive_stages_then_publishes_validated_pair(tmp_path, monkeypatch):
+    from core import researcher_submission_review as review
+
+    baseline = tmp_path / "20USA.csv"
+    baseline.write_text("baseline", encoding="utf-8")
+
+    class Request:
+        def __init__(self, result):
+            self.result = result
+        def execute(self):
+            return self.result
+
+    class Files:
+        def __init__(self):
+            self.creates = []
+            self.updates = []
+            self.deleted = []
+        def list(self, **kwargs):
+            return Request({"files": [{"id": "economy-folder", "name": "20_USA"}]})
+        def create(self, **kwargs):
+            self.creates.append(kwargs)
+            file_id = f"file-{len(self.creates)}"
+            return Request({"id": file_id, "webViewLink": f"https://example/{file_id}"})
+        def update(self, **kwargs):
+            self.updates.append(kwargs)
+            return Request({"id": kwargs["fileId"]})
+        def delete(self, **kwargs):
+            self.deleted.append(kwargs["fileId"])
+            return Request({})
+
+    class Service:
+        def __init__(self):
+            self.file_api = Files()
+        def files(self):
+            return self.file_api
+
+    service = Service()
+    monkeypatch.setattr(review, "_build_drive_service", lambda: service)
+    http_module = types.ModuleType("googleapiclient.http")
+    class FakeMediaUpload:
+        def __init__(self, stream, **kwargs):
+            self.payload = stream.read()
+        def size(self):
+            return len(self.payload)
+        def getbytes(self, begin, length):
+            return self.payload[begin:begin + length]
+    http_module.MediaIoBaseUpload = FakeMediaUpload
+    api_module = types.ModuleType("googleapiclient")
+    api_module.http = http_module
+    monkeypatch.setitem(sys.modules, "googleapiclient", api_module)
+    monkeypatch.setitem(sys.modules, "googleapiclient.http", http_module)
+    result = review.archive_submission_to_drive(
+        rows=_canonical_rows().to_dict("records"), economy="20USA", version="v1",
+        run_id="run-1", drive_folder_id="root-folder", baseline_path=baseline,
+    )
+
+    assert result["success"] is True, result
+    assert all(".pending-" in call["body"]["name"] for call in service.file_api.creates)
+    published_names = [call.get("body", {}).get("name") for call in service.file_api.updates]
+    assert any(name and name.endswith("_module1_v1.csv") for name in published_names)
+    assert any(name and name.endswith("_metadata.json") for name in published_names)
+    metadata_update = next(call for call in service.file_api.updates if "media_body" in call)
+    media = metadata_update["media_body"]
+    payload = json.loads(media.getbytes(0, media.size()).decode("utf-8"))
+    assert payload["pair_state"] == "complete"
+    assert payload["archive_csv_file_id"] == "file-1"
+    assert payload["archive_metadata_file_id"] == "file-2"
+    assert payload["row_count"] == len(_canonical_rows())
+    assert payload["canonical_long_columns"] == list(canonical_archive_rows(_canonical_rows().to_dict("records"), "20USA").columns)
+
+
+def test_link_access_is_created_as_viewer_and_rejects_public_writer():
+    from core.researcher_submission_review import _ensure_link_viewer_permission
+
+    calls = []
+    class Request:
+        def execute(self):
+            return {"id": "permission"}
+    class Permissions:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return Request()
+    class Service:
+        def permissions(self):
+            return Permissions()
+
+    _ensure_link_viewer_permission(Service(), "folder", [])
+    assert calls[0]["body"] == {"type": "anyone", "role": "reader"}
+    with pytest.raises(ValueError, match="non-viewer"):
+        _ensure_link_viewer_permission(Service(), "folder", [{"type": "anyone", "role": "writer"}])

@@ -35,15 +35,43 @@ SCALE_MULTIPLIERS = {
     "million": 1_000_000.0, "millions": 1_000_000.0,
     "billion": 1_000_000_000.0, "billions": 1_000_000_000.0,
 }
+ECONOMY_CODE_RE = re.compile(r"^(?P<number>\d{2})_?(?P<letters>[A-Za-z]{2,3})$")
+VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$")
 
 
 def canonical_economy_code(value: object) -> str:
     """Normalise compact economy codes, e.g. 20USA -> 20_USA."""
     text = str(value or "").strip()
-    if "_" in text:
-        return text
-    match = re.fullmatch(r"(\d+)([A-Za-z].*)", text)
-    return f"{match.group(1)}_{match.group(2)}" if match else text
+    match = ECONOMY_CODE_RE.fullmatch(text)
+    if not match:
+        raise ValueError(f"Invalid economy code: {text!r}.")
+    return f"{match.group('number')}_{match.group('letters').upper()}"
+
+
+def validate_version(value: object) -> str:
+    """Return a version that is safe to use as one path/filename component."""
+    text = str(value or "").strip()
+    if not VERSION_RE.fullmatch(text) or text in {".", ".."}:
+        raise ValueError(f"Invalid Module 1 defaults version: {text!r}.")
+    return text
+
+
+def validate_identifier(value: object, field_name: str) -> str:
+    """Validate an audit identifier without allowing path separators/control text."""
+    text = str(value or "").strip()
+    if not IDENTIFIER_RE.fullmatch(text) or text in {".", ".."}:
+        raise ValueError(f"Invalid {field_name}: {text!r}.")
+    return text
+
+
+def path_within(root: str | Path, *parts: str) -> Path:
+    """Build a descendant path and reject traversal outside its configured root."""
+    root_path = Path(root).resolve()
+    candidate = root_path.joinpath(*parts).resolve()
+    if candidate != root_path and root_path not in candidate.parents:
+        raise ValueError(f"Derived path escapes configured directory: {candidate}")
+    return candidate
 
 
 def _scale_multiplier(value: object) -> float:
@@ -113,6 +141,26 @@ def normalise_module1_rows(
     return _collapse_duplicate_keys(df[LONG_COLUMNS].copy())
 
 
+def canonical_archive_rows(rows: list[dict[str, Any]], expected_economy: str) -> pd.DataFrame:
+    """Validate request rows and return a complete canonical-long archive table."""
+    if not rows:
+        raise ValueError("A changed submission cannot be archived without Module 1 rows.")
+    raw = pd.DataFrame(rows)
+    headers = {str(column).strip().lower() for column in raw.columns}
+    if not {"year", "value"}.issubset(headers):
+        raise ValueError("Changed submissions must use canonical-long Year/Value rows.")
+    canonical = normalise_module1_rows(raw, legacy_values_are_internal=False)
+    if canonical.empty:
+        raise ValueError("A changed submission cannot archive an empty Module 1 table.")
+    if canonical["Value"].isna().any():
+        raise ValueError("Module 1 archive rows contain a non-numeric Value.")
+    economy = canonical_economy_code(expected_economy)
+    found = set(canonical["Economy"])
+    if found != {economy}:
+        raise ValueError(f"Archive row economies {sorted(found)} do not match request economy {economy}.")
+    return canonical[LONG_COLUMNS].copy()
+
+
 def normalise_module1_csv(path: str | Path, *, legacy_values_are_internal: bool | None = None) -> pd.DataFrame:
     """Read a CSV and infer whether values are canonical display or legacy internal."""
     raw = pd.read_csv(path)
@@ -179,15 +227,30 @@ def build_source_promotion_plan(review: pd.DataFrame, baseline_version: str, sub
     return plan
 
 
-def _csv_bytes(rows: list[dict[str, Any]]) -> bytes:
+def _csv_bytes(rows: pd.DataFrame | list[dict[str, Any]]) -> bytes:
     buffer = io.StringIO(newline="")
     writer = csv.DictWriter(buffer, fieldnames=LONG_COLUMNS, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(rows)
+    records = rows.to_dict(orient="records") if isinstance(rows, pd.DataFrame) else rows
+    writer.writerows(records)
     return buffer.getvalue().encode("utf-8")
 
 
 DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+
+
+def _ensure_link_viewer_permission(service: Any, folder_id: str, permissions: list[dict[str, Any]]) -> None:
+    """Ensure anonymous/link access is viewer-only, matching the documented archive policy."""
+    anyone_permissions = [item for item in permissions if item.get("type") == "anyone"]
+    if any(item.get("role") != "reader" for item in anyone_permissions):
+        raise ValueError("Archive folder has non-viewer public/link access; correct it before connecting.")
+    if not anyone_permissions:
+        service.permissions().create(
+            fileId=folder_id,
+            body={"type": "anyone", "role": "reader"},
+            fields="id,type,role",
+            supportsAllDrives=True,
+        ).execute()
 
 
 def create_my_drive_archive_folder(
@@ -211,15 +274,17 @@ def create_my_drive_archive_folder(
     service = build("drive", "v3", credentials=credentials, cache_discovery=False)
     if existing_folder_id:
         existing = service.files().get(
-            fileId=existing_folder_id, fields="id,mimeType",
+            fileId=existing_folder_id, fields="id,mimeType,permissions(id,type,role)",
         ).execute()
         if existing.get("mimeType") != "application/vnd.google-apps.folder":
             raise ValueError("Configured Drive archive ID is not a folder.")
+        _ensure_link_viewer_permission(service, str(existing["id"]), existing.get("permissions", []))
         return str(existing["id"])
     created = service.files().create(
         body={"name": folder_name, "mimeType": "application/vnd.google-apps.folder"},
         fields="id",
     ).execute()
+    _ensure_link_viewer_permission(service, str(created["id"]), [])
     return str(created["id"])
 
 
@@ -255,11 +320,11 @@ def _build_drive_service():
 
     if credential_json:
         credentials = Credentials.from_service_account_info(
-            json.loads(credential_json), scopes=["https://www.googleapis.com/auth/drive"],
+            json.loads(credential_json), scopes=[DRIVE_FILE_SCOPE],
         )
     else:
         credentials = Credentials.from_service_account_file(
-            credential_file, scopes=["https://www.googleapis.com/auth/drive"],
+            credential_file, scopes=[DRIVE_FILE_SCOPE],
         )
     from googleapiclient.discovery import build
     return build("drive", "v3", credentials=credentials, cache_discovery=False)
@@ -270,7 +335,7 @@ def archive_submission_to_drive(
     researcher_identity: str = "", original_filename: str = "", drive_folder_id: str | None = None,
     baseline_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Write immutable CSV + metadata to Drive. Missing credentials returns a clear failure result."""
+    """Publish a validated immutable CSV/metadata pair to Drive."""
     root_folder = drive_folder_id or os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "")
     if not root_folder:
         return {"attempted": True, "success": False, "message": "Drive archive is not configured (ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID)."}
@@ -279,6 +344,9 @@ def archive_submission_to_drive(
         from googleapiclient.http import MediaIoBaseUpload
 
         canonical_economy = canonical_economy_code(economy)
+        version = validate_version(version)
+        run_id = validate_identifier(run_id, "model run ID")
+        canonical_rows = canonical_archive_rows(rows, canonical_economy)
         query = f"name = '{canonical_economy}' and '{root_folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         matches = service.files().list(
             q=query, fields="files(id,name)", pageSize=1,
@@ -292,21 +360,55 @@ def archive_submission_to_drive(
         submission_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
         csv_name = f"{submission_id}_module1_{version}.csv"
         metadata_name = f"{submission_id}_metadata.json"
-        csv_payload = _csv_bytes(rows)
+        csv_payload = _csv_bytes(canonical_rows)
         baseline_file = Path(baseline_path) if baseline_path else None
         baseline_bytes = baseline_file.read_bytes() if baseline_file and baseline_file.exists() else b""
         metadata = {
-            "archive_format_version": "1.0",
+            "archive_format_version": "2.0",
             "submission_id": submission_id, "economy": canonical_economy, "timestamp": datetime.now(timezone.utc).astimezone().isoformat(),
             "module1_defaults_version": version, "researcher_or_session_identity": researcher_identity,
             "model_run_id": run_id, "original_filename_or_submission_identifier": original_filename or submission_id,
             "archive_csv_filename": csv_name, "archive_metadata_filename": metadata_name,
-            "row_count": len(rows), "csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
+            "row_count": len(canonical_rows), "csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
             "baseline_filename": baseline_file.name if baseline_file and baseline_file.exists() else "",
             "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest() if baseline_bytes else "",
+            "canonical_long_columns": LONG_COLUMNS,
+            "pair_state": "complete",
         }
-        csv_file = service.files().create(body={"name": csv_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(csv_payload), mimetype="text/csv", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
-        metadata_file = service.files().create(body={"name": metadata_name, "parents": [economy_folder]}, media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False), fields="id,webViewLink", supportsAllDrives=True).execute()
+        staged_suffix = f".pending-{uuid.uuid4().hex}"
+        created_ids: list[str] = []
+        try:
+            csv_file = service.files().create(
+                body={"name": csv_name + staged_suffix, "parents": [economy_folder]},
+                media_body=MediaIoBaseUpload(io.BytesIO(csv_payload), mimetype="text/csv", resumable=False),
+                fields="id,webViewLink", supportsAllDrives=True,
+            ).execute()
+            created_ids.append(str(csv_file["id"]))
+            staging_metadata = {**metadata, "pair_state": "staging", "archive_csv_file_id": csv_file["id"]}
+            metadata_file = service.files().create(
+                body={"name": metadata_name + staged_suffix, "parents": [economy_folder]},
+                media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(staging_metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False),
+                fields="id,webViewLink", supportsAllDrives=True,
+            ).execute()
+            created_ids.append(str(metadata_file["id"]))
+            metadata.update({
+                "archive_csv_file_id": str(csv_file["id"]),
+                "archive_metadata_file_id": str(metadata_file["id"]),
+            })
+            service.files().update(
+                fileId=metadata_file["id"],
+                media_body=MediaIoBaseUpload(io.BytesIO(json.dumps(metadata, indent=2).encode("utf-8")), mimetype="application/json", resumable=False),
+                fields="id", supportsAllDrives=True,
+            ).execute()
+            service.files().update(fileId=csv_file["id"], body={"name": csv_name}, fields="id,name", supportsAllDrives=True).execute()
+            service.files().update(fileId=metadata_file["id"], body={"name": metadata_name}, fields="id,name", supportsAllDrives=True).execute()
+        except Exception:
+            for file_id in reversed(created_ids):
+                try:
+                    service.files().delete(fileId=file_id, supportsAllDrives=True).execute()
+                except Exception:
+                    pass
+            raise
         return {"attempted": True, "success": True, "message": "Submission archived to Google Drive.", "submission_id": submission_id, "csv_file_id": csv_file["id"], "metadata_file_id": metadata_file["id"]}
     except Exception as exc:  # Archive failures must never prevent a model run.
         return {"attempted": True, "success": False, "message": f"Drive archive failed: {exc}"}

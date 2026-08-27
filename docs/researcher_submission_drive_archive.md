@@ -16,7 +16,11 @@ The deployed archive uses OAuth with the narrow `drive.file` permission. It
 creates an app-owned `Road model researcher submissions` folder in Finn's My
 Drive, then creates economy subfolders and writes one complete canonical-long
 CSV plus one metadata JSON file for each changed submission. Existing files are
-never overwritten.
+never overwritten. Economy/version inputs are validated before any filesystem
+or Drive path is constructed. Archive files are uploaded under non-reviewable
+staging names, completed with their mutual Drive file IDs and checksums, and
+only then published under the documented pair filenames. Failed publication
+attempts make a best-effort cleanup of only the files created by that attempt.
 
 The configuration and one-time connection procedure are the canonical runbook:
 [`researcher_submission_my_drive_oauth_draft.md`](researcher_submission_my_drive_oauth_draft.md).
@@ -46,6 +50,11 @@ Common errors:
 - Never paste OAuth client secrets, setup tokens, or refresh tokens into chat,
   browser code, Git, or a public Space Variable.
 - Use HF **Secrets**, not Variables, for all OAuth values.
+- Both OAuth and legacy service-account connections use the narrow
+  `drive.file` scope; broad whole-Drive scope is not requested.
+- One-time setup creates or verifies **Anyone with the link → Viewer** access.
+  It refuses a folder with public/link writer access instead of silently
+  accepting broader ordinary-user permissions.
 - The archive folder is intentionally **Anyone with the link → Viewer**.
   Anyone who obtains that link can theoretically download submissions; this is
   accepted because these submissions are not treated as sensitive or especially

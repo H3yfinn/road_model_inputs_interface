@@ -32,7 +32,10 @@ from core.logger import get_logger
 from core.researcher_submission_review import (
     DRIVE_FILE_SCOPE,
     archive_submission_to_drive,
+    canonical_economy_code,
     create_my_drive_archive_folder,
+    path_within,
+    validate_version,
 )
 
 logger = get_logger(__name__)
@@ -88,16 +91,13 @@ def _find_latest_dashboard_index(economy_canonical: str) -> tuple[Path | None, s
 
 def _to_canonical_economy(economy: str) -> str:
     """Convert no-underscore economy code to canonical form: '20USA' → '20_USA'."""
-    if "_" in economy:
-        return economy
-    match = re.match(r"^(\d+)([A-Za-z].*)$", economy)
-    return f"{match.group(1)}_{match.group(2)}" if match else economy
+    return canonical_economy_code(economy)
 
 
 def _baseline_static_csv_path(economy: str, version: str) -> Path:
     """Locate the immutable browser baseline used by this run, when available."""
     compact_economy = _to_canonical_economy(economy).replace("_", "")
-    return _STATIC_BUNDLE_DIR / version / f"{compact_economy}.csv"
+    return path_within(_STATIC_BUNDLE_DIR, validate_version(version), f"{compact_economy}.csv")
 
 
 def _configured_scenario_labels() -> set[str]:
@@ -201,7 +201,8 @@ def _write_lifecycle_factors_csv(turnover_config: dict[str, Any], dest_dir: Path
 def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -> Path:
     """Write completed Module 1 rows as CSV into leap_road_model's input_data directory."""
     economy_canonical = _to_canonical_economy(economy)
-    dest_dir = _MODULE1_INPUT_DIR / version / economy_canonical
+    version = validate_version(version)
+    dest_dir = path_within(_MODULE1_INPUT_DIR, version, economy_canonical)
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     dest_file = dest_dir / f"road_module1_values_{economy_canonical}.csv"
@@ -504,7 +505,11 @@ async def start_road_model_run(payload: RunModelRequest):
             ),
         )
 
-    economy_canonical = _to_canonical_economy(payload.economy)
+    try:
+        economy_canonical = _to_canonical_economy(payload.economy)
+        version = validate_version(payload.version)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         projection_scenarios = _normalise_projection_scenarios(payload.rows, payload.scenarios)
         _validate_projection_scenarios(projection_scenarios)
@@ -512,7 +517,7 @@ async def start_road_model_run(payload: RunModelRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
-        csv_path = _write_module1_csv(payload.rows, payload.economy, payload.version)
+        csv_path = _write_module1_csv(payload.rows, payload.economy, version)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
@@ -522,11 +527,11 @@ async def start_road_model_run(payload: RunModelRequest):
         archive_result = archive_submission_to_drive(
             rows=payload.rows,
             economy=economy_canonical,
-            version=payload.version,
+            version=version,
             run_id=run_id,
             researcher_identity=payload.researcher_identity,
             original_filename=payload.original_filename,
-            baseline_path=_baseline_static_csv_path(payload.economy, payload.version),
+            baseline_path=_baseline_static_csv_path(payload.economy, version),
         )
         if archive_result.get("success"):
             logger.info(f"Researcher submission archived before road run: {archive_result.get('submission_id')}")
@@ -536,7 +541,7 @@ async def start_road_model_run(payload: RunModelRequest):
     lifecycle_factors_path: Path | None = None
     if payload.turnover_config:
         try:
-            dest_dir = _MODULE1_INPUT_DIR / payload.version / economy_canonical
+            dest_dir = path_within(_MODULE1_INPUT_DIR, version, economy_canonical)
             lifecycle_factors_path = _write_lifecycle_factors_csv(payload.turnover_config, dest_dir)
         except Exception as exc:
             logger.warning(f"Failed to write lifecycle factors override: {exc}")
@@ -548,7 +553,7 @@ async def start_road_model_run(payload: RunModelRequest):
         "--module1-defaults-dir",
         str(_MODULE1_INPUT_DIR),
         "--module1-defaults-version",
-        payload.version,
+        version,
         "--scenarios",
         *projection_scenarios,
     ]

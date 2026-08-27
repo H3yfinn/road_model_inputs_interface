@@ -33,6 +33,11 @@ The app also enforces its own folder allow-list:
   that folder;
 - it must reject any other parent-folder ID supplied by a request.
 
+The setup flow also creates the documented link permission as `reader` or
+verifies that an existing folder already has viewer-only link access. It stops
+if the folder has an `anyone` writer permission. No undocumented manual sharing
+step or broad Drive scope is required.
+
 ## Google Cloud setup (do this before implementation)
 
 1. Use the existing Google Cloud project `clean-athlete-351101`.
@@ -155,6 +160,8 @@ https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth
 4. On the first connection, the callback creates an app-owned `Road model
    researcher submissions` folder in that account’s My Drive. On a deliberate
    reconnection, it verifies and keeps using the existing configured folder.
+   The setup also creates/verifies **Anyone with the link → Viewer** access and
+   refuses public/link writer access.
    It stages the refresh token and folder ID in server memory for 15 minutes
    only.
 5. On the callback page, click **Reveal one-time secrets**. It shows the two
