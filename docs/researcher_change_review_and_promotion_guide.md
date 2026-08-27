@@ -7,7 +7,7 @@ and the team wants to consider making that change a future website default. It
 keeps three things separate:
 
 1. **Researcher submission** — an immutable record of what was run.
-2. **Reviewer decision** — a human decision about whether the change is sound.
+2. **Model-manager decision** — a human decision about whether the change is sound.
 3. **New defaults version** — a newly built package that becomes the website
    default only after approval and deployment.
 
@@ -25,9 +25,10 @@ The recommended sequence is:
 
 1. Researchers submit and test changes for all relevant economies during the
    iteration.
-2. Reviewers collect the archive records, group comparable changes, and resolve
+2. The model manager/developer collects the archive records, groups comparable changes, and resolves
    cross-economy consistency issues together.
-3. Source owners apply the approved set of changes together.
+3. The model manager/developer applies the approved set of changes together in
+   the correct source location.
 4. Build, validate, commit, and deploy one new dated defaults version for that
    reviewed batch.
 
@@ -42,9 +43,9 @@ cannot wait for the normal batch.
 researcher changes a website value
   -> runs the model
   -> complete submission CSV + metadata JSON go to Google Drive
-  -> reviewer downloads the CSV and compares it with its recorded baseline
-  -> reviewer approves, rejects, or requests changes
-  -> approved change is put in the correct source owner
+  -> model manager/developer downloads the CSV and compares it with its recorded baseline
+  -> model manager/developer approves, rejects, or requests changes
+  -> approved change is put in the correct source location
   -> build a new dated immutable version
   -> deploy that version
   -> researchers see the approved value as the new website default
@@ -58,9 +59,7 @@ overwrite a previous version to promote a change.
 | Role | What they do | What they must not do |
 |---|---|---|
 | Researcher | Edits existing values/comments, runs the model, checks results | Adds new row keys or edits source/default files directly |
-| Reviewer | Compares the archive to the named baseline and decides whether it is suitable | Treats an archive as automatically approved |
-| Source owner | Updates the appropriate documented source/override and rebuilds a new version | Rebuilds an existing version in place |
-| Deployment owner | Commits and deploys the reviewed version | Exposes OAuth or Drive secrets |
+| Model manager/developer | Reviews submissions, chooses the correct source location, applies approved changes, builds a new version, and deploys it | Treats an archive as automatically approved, rebuilds an existing version in place, or exposes OAuth/Drive secrets |
 
 ## 1. Researcher submission and archive
 
@@ -155,8 +154,8 @@ The output folder contains:
 | File | Meaning |
 |---|---|
 | `*_review.csv` | Every changed, added, or removed row relative to the baseline |
-| `*_final_value_overrides_candidate.csv` | Candidate values in the model's internal units, ready for reviewer approval |
-| `*_source_promotion_plan.csv` | A checklist showing that a reviewer must choose the correct source owner |
+| `*_final_value_overrides_candidate.csv` | Candidate values in the model's internal units, ready for model-manager approval |
+| `*_source_promotion_plan.csv` | A checklist showing the source location the model manager/developer must choose |
 
 ## 4. Review and decide
 
@@ -177,7 +176,7 @@ Choose one of these outcomes:
 | Approve as a targeted override | Use the final-value override candidate as described below. |
 | Approve as a source-data correction | Update the owning source file/method and `UPDATE_METHOD.md`, then rebuild. |
 
-The correct source owner depends on provenance. A one-off reviewed policy or
+The correct source location depends on provenance. A one-off reviewed policy or
 model judgement may belong in `final_value_overrides`; a corrected upstream
 dataset value should be fixed in its actual processed/manual/supplemental
 source instead.
@@ -205,24 +204,25 @@ module1_final_value_overrides_20USA.csv
 
 4. Preserve the candidate's raw/internal `Value` values. Do not manually turn
    `Millions` or `Thousands` back into website display values.
-5. Add an approval note, source/evidence reference, reviewer, and date in the
+5. Add an approval note, source/evidence reference, model manager/developer,
+   and date in the
    `note` field and `UPDATE_METHOD.md`.
 
 ### B. Correct the underlying source
 
 Use this when the source data itself was wrong or superseded.
 
-1. Locate the source owner from the reviewed row's provenance and the source
+1. Locate the correct source location from the reviewed row's provenance and the source
    merge method.
 2. Update that source file or its documented generation method.
 3. Update `back-end/data/road_model/UPDATE_METHOD.md` with the reason, source,
-   reviewer, and affected outputs.
+   model manager/developer, and affected outputs.
 4. Do not also add a final override unless the source method cannot express the
    approved exception.
 
 ## 6. Build a new immutable defaults version
 
-After source owners have made the **approved batch** of changes, create one new
+After the model manager/developer has made the **approved batch** of changes, create one new
 dated version instead of rebuilding the previous version. From a
 notebook/interactive cell:
 
@@ -254,7 +254,7 @@ At minimum:
 1. Confirm the approved row exists in the new static CSV with the intended
    website/display value.
 2. Confirm its `Input Status`, comment, source, units, and scale are sensible.
-3. Run the reviewer diff again against the new version: the approved change
+3. Run the review diff again against the new version: the approved change
    should no longer appear as a difference.
 4. Run the affected economy through the road workflow.
 5. Confirm the website loads the new version and displays the approved value as
