@@ -74,8 +74,9 @@ When a researcher changes any existing Module 1 input — for example `Stock`,
 clicks **Run Road Model**:
 
 - once per browser session, the website explains that changed inputs and
-  comments will be saved to the shared archive and asks the researcher to
-  acknowledge this before the run continues;
+  comments will be saved to the shared archive, repeats what a useful source /
+  reason note contains, and asks the researcher to acknowledge this before the
+  run continues;
 - the website submits the complete canonical-long Module 1 CSV, not only the
   changed rows;
 - the model run starts from that submitted package; and
@@ -88,9 +89,13 @@ clicks **Run Road Model**:
 The archive is a review record. It is not a live database and it is not a
 source of truth for future defaults.
 
-Researchers should put a clear explanation in the changed row's comment. They
-must not include personal, confidential, or sensitive information: the archive
-folder is intentionally shared as **Anyone with the link → Viewer**.
+Every comment input is labelled **Source / reason for change**. For each changed
+value, researchers should record the dataset or document, source year, link or
+reference, and why the value changed. The same guidance is shown beside the run
+action and in the run acknowledgement. If a changed value has no note, the
+interface warns how many notes are missing but does not block the model run.
+Researchers must not include personal, confidential, or sensitive information:
+the archive folder is intentionally shared as **Anyone with the link → Viewer**.
 
 ## 2. Obtain the submission and correct baseline
 

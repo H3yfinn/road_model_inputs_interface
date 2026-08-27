@@ -76,6 +76,8 @@ const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario'
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
 const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
 const ROAD_RESEARCHER_ARCHIVE_ACKNOWLEDGEMENT_KEY = 'road-module1-archive-acknowledged';
+const ROAD_SOURCE_REASON_PLACEHOLDER = 'Source / reason for change';
+const ROAD_SOURCE_REASON_HELP = 'For changed values, record the dataset or document, source year, link or reference, and why the value changed. Do not include personal or confidential information.';
 const ROAD_MODULE1_STOCK_SHARE_TARGET_YEARS = [2040, 2060];
 const ROAD_SERIES_RECOMMENDATION = 'For a full path to 2060, it is often easiest to prepare the values in Excel or ask an AI tool to draft a year-by-year series, then paste it here.';
 const ROAD_MODULE1_STOCK_SHARE_BRANCHES = {
@@ -1351,6 +1353,19 @@ function getRoadModule1OverrideCount() {
     return State.roadModule1.overrides.size + State.roadModule1.sharedMileageOverrides.size + State.roadModule1.sharedFuelEconomyOverrides.size + State.roadModule1.sharedUtilisationOverrides.size;
 }
 
+function getRoadResearcherChangeNoteSummary() {
+    const changes = [
+        ...State.roadModule1.overrides.values(),
+        ...State.roadModule1.sharedMileageOverrides.values(),
+        ...State.roadModule1.sharedFuelEconomyOverrides.values(),
+        ...State.roadModule1.sharedUtilisationOverrides.values(),
+    ];
+    return {
+        changed: changes.length,
+        missingSourceReason: changes.filter(change => !String(change?.comment || '').trim()).length,
+    };
+}
+
 function getRoadModule1RowStats() {
     const rows = getRoadRowsForCurrentView();
     if (rows.length === 0) return null;
@@ -1425,7 +1440,7 @@ async function acknowledgeRoadResearcherArchiveForSession() {
 
     const acknowledged = await showCustomConfirm(
         'Before you run',
-        'Your changed inputs and comments will be saved to the shared researcher-submissions archive so they can be reviewed for future model updates.\n\nPlease do not include confidential or personal information.',
+        `Your changed inputs and comments will be saved to the shared researcher-submissions archive so they can be reviewed for future model updates.\n\nFor each changed value, use “${ROAD_SOURCE_REASON_PLACEHOLDER}” to record the dataset or document, source year, link or reference, and why the value changed. Please do not include confidential or personal information.`,
         { confirmText: 'I understand — continue', cancelText: 'Cancel' },
     );
     if (!acknowledged) return false;
@@ -3121,7 +3136,7 @@ function buildRoadModule1PairedFuelShareEditorHtml(group, depth = 0) {
             </div>
             <div class="road-row-actions road-paired-share-actions">
                 <button type="button" class="road-reset-button" title="Reset paired gasoline/diesel shares" aria-label="Reset paired fuel shares">&#8634;</button>
-                <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
             </div>
         </div>
     `;
@@ -3231,7 +3246,7 @@ function buildRoadModule1ReconciliationEditorHtml(group, depth = 0) {
             </div>
             <div class="road-row-actions">
                 <button type="button" class="road-reset-button" title="Reset fuel reconciliation" aria-label="Reset fuel reconciliation">&#8634;</button>
-                <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
             </div>
         </div>
     `;
@@ -3369,7 +3384,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
                 <div class="road-year-grid">${yearInputs}</div>
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="Reset row to the original provided value" aria-label="Reset row">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
+                    <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(rowComment)}">
                 </div>
             </div>
         `;
@@ -3410,7 +3425,7 @@ function buildRoadModule1TransportParamsEditorHtml(group, depth = 0) {
             </div>
             <div class="road-row-actions">
                 <button type="button" class="road-reset-button" title="Reset transport parameters" aria-label="Reset transport parameters">&#8634;</button>
-                <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
             </div>
         </div>
     `;
@@ -3500,7 +3515,7 @@ function buildRoadModule1TurnoverCalibrationEditorHtml(group, depth = 0) {
             </div>
             <div class="road-row-actions">
                 <button type="button" class="road-reset-button" title="Reset turnover calibration" aria-label="Reset turnover calibration">&#8634;</button>
-                <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
             </div>
         </div>
     `;
@@ -3634,7 +3649,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 <div class="road-year-grid">${yearInputs}</div>
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="Reset to the original provided value" aria-label="Reset PHEV utilisation rate">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
+                    <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(sharedComment)}">
                 </div>
             </div>
         `;
@@ -3669,7 +3684,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 <div class="road-year-grid">${yearInputs}</div>
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="Reset shared mileage to the original provided value" aria-label="Reset shared mileage">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(sharedComment)}">
+                    <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(sharedComment)}">
                 </div>
             </div>
         `;
@@ -3718,7 +3733,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-year-grid">${inputs}</div>
                     <div class="road-row-actions">
                         <button type="button" class="road-reset-button" title="Reset to provided value" aria-label="Reset">&#8634;</button>
-                        <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(comment)}">
+                        <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
                     </div>
                 </div>`
             ];
@@ -3816,7 +3831,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-series-footer">
                         <div class="road-series-hint">${ROAD_VARIABLE_HELP.salesShareMix.warning}</div>
                         <button type="button" class="road-reset-button" title="Reset sales-share series to provided defaults" aria-label="Reset sales-share series">&#8634;</button>
-                        <input type="text" class="road-comment-input" placeholder="Comment for sales-share series" value="${escapeHtml(comment)}">
+                        <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
                     </div>
                 </div>
             </div>
@@ -3906,7 +3921,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <div class="road-series-footer">
                         <div class="road-series-hint">${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
                         <button type="button" class="road-reset-button" title="Reset correction factor series to provided defaults" aria-label="Reset correction factor series">&#8634;</button>
-                        <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(comment)}">
+                        <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(comment)}">
                     </div>
                 </div>
             </div>
@@ -4004,7 +4019,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                     <textarea class="road-series-input road-value-input" rows="3" spellcheck="false" data-default-series="${escapeHtml(defaultSeriesText)}">${escapeHtml(seriesText)}</textarea>
                     <div class="road-series-footer">
                         <div class="road-series-hint">Paste from Excel or type values separated by commas, tabs, spaces, or new lines. ${escapeHtml(ROAD_SERIES_RECOMMENDATION)}</div>
-                        <input type="text" class="road-comment-input" placeholder="Comment for series" value="${escapeHtml(seriesComment)}">
+                        <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(seriesComment)}">
                     </div>
                 </div>
                 <div class="road-row-actions road-series-actions">
@@ -4065,7 +4080,7 @@ function buildRoadModule1EditorRowsHtml(group, depth = 0) {
                 ${longSeriesHint}
                 <div class="road-row-actions">
                     <button type="button" class="road-reset-button" title="${isRoadMileageRow(row) ? 'Reset detailed row to inherited shared mileage' : 'Reset row to the original provided value'}" aria-label="Reset row">&#8634;</button>
-                    <input type="text" class="road-comment-input" placeholder="Comment" value="${escapeHtml(rowComment)}">
+                    <input type="text" class="road-comment-input" ${roadSourceReasonInputAttributes()} value="${escapeHtml(rowComment)}">
                 </div>
             </div>
         `;
@@ -5047,6 +5062,10 @@ async function refreshRoadResearcherArchiveStatus() {
     }
 }
 
+function roadSourceReasonInputAttributes() {
+    return `placeholder="${escapeHtml(ROAD_SOURCE_REASON_PLACEHOLDER)}" title="${escapeHtml(ROAD_SOURCE_REASON_HELP)}" aria-label="Source and reason for change"`;
+}
+
 function showRoadRunLogModal() {
     if (!DOM.roadRunLogModal) return;
     DOM.roadRunLogModal.classList.remove('hidden');
@@ -5132,6 +5151,16 @@ async function runRoadModel() {
     if (domEconomy && domEconomy !== State.roadModule1.economy) {
         showCustomToast(`Economy selection changed to ${domEconomy} — wait for data to finish loading before running.`, "warning");
         return;
+    }
+
+    const noteSummary = getRoadResearcherChangeNoteSummary();
+    if (noteSummary.missingSourceReason > 0) {
+        const noun = noteSummary.missingSourceReason === 1 ? 'changed value has' : 'changed values have';
+        showCustomToast(
+            `${noteSummary.missingSourceReason} ${noun} no source / reason note. The run can continue, but reviewers may need to ask for more information.`,
+            'warning',
+            8000,
+        );
     }
 
     if (!await acknowledgeRoadResearcherArchiveForSession()) {
