@@ -89,12 +89,17 @@ all submissions. Researchers and former colleagues do not need the archive
 owner’s Google account, a Google Cloud account, or access to the OAuth client
 or Hugging Face Secrets to run the road model.
 
-To download archives, share the archive folder with each colleague’s own Google
-account as a Viewer. They need their own Google account only for that private
-folder access. An “Anyone with the link” folder is possible but is not suitable
-for researcher submissions. The archive owner account must remain active and
-retain Drive storage; a team-owned account or Shared Drive is the more durable
-long-term option.
+For simple long-term access, set the archive folder to **Anyone with the link →
+Viewer**. Former colleagues can then download files without your Google account,
+a Google Cloud account, or even their own Google account. This is intentionally
+not private: anyone who obtains the link can theoretically download the
+researcher submissions. That is acceptable here because the submissions are not
+treated as sensitive or especially useful outside the model workflow; do not use
+this setting if that changes.
+
+The archive owner account must remain active. Its My Drive storage is the
+intended archive location and has ample capacity, so storage quota is not a
+reason to move this workflow to a Shared Drive.
 
 ## Hugging Face Secrets to add after implementation
 
