@@ -199,6 +199,7 @@ const DOM = {
     roadDensityLess: document.getElementById('road-density-less'),
     roadSaveOutput: document.getElementById('road-save-output'),
     roadRunModel: document.getElementById('road-run-model'),
+    roadArchiveStatusWarning: document.getElementById('road-archive-status-warning'),
     roadResearcherSubmissionNotice: document.getElementById('road-researcher-submission-notice'),
     roadClearDraft: document.getElementById('road-clear-draft'),
     roadSaveStatus: document.getElementById('road-save-status'),
@@ -406,6 +407,7 @@ function showCustomToast(message, type = 'info', duration = 3500) {
 function initApp() {
     setupDropdowns();
     setupRoadModule1();
+    void refreshRoadResearcherArchiveStatus();
 
     if (DOM.btnStart) {
         renderGlobalMacroDriversPanel();
@@ -5027,6 +5029,24 @@ const ROAD_MODEL_API_BASE = `${typeof _API_ORIGIN !== 'undefined' ? _API_ORIGIN 
 
 let _roadRunEventSource = null;
 
+async function refreshRoadResearcherArchiveStatus() {
+    if (!DOM.roadArchiveStatusWarning) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    try {
+        const response = await fetch(`${ROAD_MODEL_API_BASE}/archive-status`, {
+            cache: 'no-store',
+            signal: controller.signal,
+        });
+        const status = response.ok ? await response.json() : null;
+        DOM.roadArchiveStatusWarning.classList.toggle('hidden', status?.available === true);
+    } catch {
+        DOM.roadArchiveStatusWarning.classList.remove('hidden');
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 function showRoadRunLogModal() {
     if (!DOM.roadRunLogModal) return;
     DOM.roadRunLogModal.classList.remove('hidden');
@@ -5182,7 +5202,13 @@ async function runRoadModel() {
         economyCanonical = data.economy_canonical;
         _appendRoadRunLog(`Module 1 CSV saved. Starting road_workflow for ${economyCanonical}…`);
         if (data.archive?.attempted) {
-            _appendRoadRunLog(data.archive.success ? 'Researcher submission archive saved successfully.' : `Researcher submission archive failed: ${data.archive.message}`, !data.archive.success);
+            _appendRoadRunLog(
+                data.archive.success
+                    ? 'Researcher submission archive saved successfully.'
+                    : `Researcher submission archive failed: ${data.archive.message} This run cannot be reviewed or promoted unless you download the filled CSV and rerun after the archive is available.`,
+                !data.archive.success,
+            );
+            if (!data.archive.success) DOM.roadArchiveStatusWarning?.classList.remove('hidden');
         }
     } catch (err) {
         _appendRoadRunLog(`Cannot reach backend at ${ROAD_MODEL_API_BASE}.`, true);

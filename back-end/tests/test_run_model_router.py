@@ -125,6 +125,23 @@ def test_run_endpoint_archiving_failure_does_not_block_model_start(tmp_path, cli
     assert response.json()["archive"]["success"] is False
 
 
+def test_archive_status_reports_read_only_availability(client, monkeypatch):
+    import api.run_model_router as router_mod
+
+    monkeypatch.setattr(
+        router_mod,
+        "get_drive_archive_status",
+        lambda: {"available": False, "message": "The researcher archive cannot currently be reached."},
+    )
+    response = client.get("/api/v1/road-module1/archive-status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "message": "The researcher archive cannot currently be reached.",
+    }
+
+
 def test_run_endpoint_rejects_unsafe_economy_and_version(tmp_path, client, monkeypatch):
     import api.run_model_router as router_mod
     workflow = tmp_path / "road_workflow.py"

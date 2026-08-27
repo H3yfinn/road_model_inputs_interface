@@ -254,6 +254,27 @@ def _csv_bytes(rows: pd.DataFrame | list[dict[str, Any]]) -> bytes:
 DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
 
 
+def get_drive_archive_status(drive_folder_id: str | None = None) -> dict[str, str | bool]:
+    """Check archive availability without creating, updating, or deleting Drive data."""
+    root_folder = drive_folder_id or os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "")
+    if not root_folder:
+        return {"available": False, "message": "The researcher archive is not configured."}
+    try:
+        service = _build_drive_service()
+        folder = service.files().get(
+            fileId=root_folder,
+            fields="id,mimeType,trashed,capabilities(canAddChildren)",
+            supportsAllDrives=True,
+        ).execute()
+        if folder.get("mimeType") != "application/vnd.google-apps.folder" or folder.get("trashed"):
+            raise ValueError("Configured archive folder is unavailable.")
+        if (folder.get("capabilities") or {}).get("canAddChildren") is False:
+            raise ValueError("Configured archive folder cannot accept submissions.")
+    except Exception:
+        return {"available": False, "message": "The researcher archive cannot currently be reached."}
+    return {"available": True, "message": "The researcher archive is available."}
+
+
 def _ensure_link_viewer_permission(service: Any, folder_id: str, permissions: list[dict[str, Any]]) -> None:
     """Ensure anonymous/link access is viewer-only, matching the documented archive policy."""
     anyone_permissions = [item for item in permissions if item.get("type") == "anyone"]

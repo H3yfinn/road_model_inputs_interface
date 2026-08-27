@@ -35,6 +35,13 @@ model run. Each metadata record includes economy, timezone-aware timestamp,
 Module 1 defaults version, session identity where available, model run ID,
 submission identifier, and the exact baseline CSV checksum.
 
+When the browser opens, it performs a read-only check of the configured archive
+folder. If the folder or Drive connection is unavailable, an amber warning next
+to **Tour** tells researchers to use **Download Filled CSV** before running if
+they need their changed inputs retained for later review. The model can still be
+run for exploratory work, but an unarchived run cannot be batch-reviewed or
+promoted unless it is rerun after the archive becomes available.
+
 A changed submission is archived only when the exact version/economy baseline
 CSV is locally available. Batch review verifies its recorded checksum against
 that immutable static version before comparing values. A missing or changed

@@ -264,3 +264,37 @@ def test_link_access_is_created_as_viewer_and_rejects_public_writer():
     assert calls[0]["body"] == {"type": "anyone", "role": "reader"}
     with pytest.raises(ValueError, match="non-viewer"):
         _ensure_link_viewer_permission(Service(), "folder", [{"type": "anyone", "role": "writer"}])
+
+
+def test_drive_archive_status_is_read_only_and_reports_unavailable(monkeypatch):
+    from core import researcher_submission_review as review
+
+    class Request:
+        def execute(self):
+            return {
+                "id": "folder", "mimeType": "application/vnd.google-apps.folder",
+                "trashed": False, "capabilities": {"canAddChildren": True},
+            }
+
+    class Files:
+        def __init__(self):
+            self.calls = []
+        def get(self, **kwargs):
+            self.calls.append(kwargs)
+            return Request()
+
+    class Service:
+        def __init__(self):
+            self.file_api = Files()
+        def files(self):
+            return self.file_api
+
+    service = Service()
+    monkeypatch.setattr(review, "_build_drive_service", lambda: service)
+    assert review.get_drive_archive_status("folder") == {
+        "available": True, "message": "The researcher archive is available.",
+    }
+    assert len(service.file_api.calls) == 1
+
+    monkeypatch.setattr(review, "_build_drive_service", lambda: (_ for _ in ()).throw(RuntimeError("offline")))
+    assert review.get_drive_archive_status("folder")["available"] is False

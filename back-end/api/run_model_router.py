@@ -5,6 +5,7 @@ Not part of the static/client-side-first researcher workflow. Only available whe
 backend server is running locally and leap_road_model is cloned as a sibling directory.
 
 Endpoints:
+  GET  /api/v1/road-module1/archive-status     — read-only archive availability for the browser
   POST /api/v1/road-module1/run-model         — write Module 1 CSV, start subprocess, return run_id
   GET  /api/v1/road-module1/run-model-stream  — SSE stream of log lines until the run finishes
 """
@@ -34,6 +35,7 @@ from core.researcher_submission_review import (
     archive_submission_to_drive,
     canonical_economy_code,
     create_my_drive_archive_folder,
+    get_drive_archive_status,
     path_within,
     validate_version,
 )
@@ -397,6 +399,12 @@ class RunModelResponse(BaseModel):
 # --------------------------------------------------------------------------- #
 # Endpoints                                                                    #
 # --------------------------------------------------------------------------- #
+
+@road_run_router.get("/archive-status")
+async def get_researcher_archive_status() -> dict[str, str | bool]:
+    """Report archive availability for the browser without changing Drive data."""
+    return get_drive_archive_status()
+
 
 @road_run_router.get("/google-oauth/start", include_in_schema=False)
 async def start_google_oauth_setup(
