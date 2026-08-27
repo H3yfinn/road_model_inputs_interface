@@ -188,6 +188,31 @@ source instead.
 Use this for a small approved exception that should intentionally take priority
 over source-merged values.
 
+#### Duplicate and priority rule — do not rely on file order
+
+Final-value overrides are the last layer after the normal source merge, so an
+override takes priority over a source-provided value. However, there is **no
+“last file wins” or alphabetical file-priority rule** between two final-value
+override rows.
+
+Each override key must be unique across every matching override file for the
+economy. The key is:
+
+```text
+Branch Path + Variable + Scenario + Year
+```
+
+If the same key appears twice — whether in one CSV or in two files in
+`final_value_overrides/` — the build fails with a duplicate-row-key error. It
+does not choose one value silently.
+
+Before adding a new override, search the existing economy override files for
+the same key. If an approved value supersedes an existing override, update that
+existing row and its note, or mark the old row `DO_NOT_USE`; do not add a second
+row and expect an implicit priority order. If different values genuinely need
+to coexist, they must have different scenarios, years, variables, or branch
+paths.
+
 1. Review the candidate CSV; do not promote a test file or an unreviewed file.
 2. Copy the approved rows into the economy's documented final-override source
    location under:
