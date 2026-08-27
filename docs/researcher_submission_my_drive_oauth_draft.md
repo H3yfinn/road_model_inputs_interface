@@ -40,10 +40,10 @@ The app also enforces its own folder allow-list:
    - User support email: `finn.maunsell@gmail.com`;
    - Developer contact email: `finn.maunsell@gmail.com`.
 
-   A logo, homepage, privacy-policy URL, terms-of-service URL, and authorised
-   domains are not needed for the initial Testing setup. Save the page. The
-   developer-contact field is separate from the support email and is required
-   even when both addresses are the same.
+   For the initial Testing setup, a logo, homepage, privacy-policy URL,
+   terms-of-service URL, and authorised domains are not needed. Save the page.
+   The developer-contact field is separate from the support email and is
+   required even when both addresses are the same.
 5. In **Audience**, choose the appropriate audience:
    - `External` for a personal Gmail account or early testing;
    - `Internal` only if every researcher uses the same Google Workspace.
@@ -71,6 +71,26 @@ https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth
    around this with a broader Drive permission.
 9. After the client is created, copy the OAuth client ID and client secret.
    Do not commit them.
+
+### Move to Production after the first successful test
+
+Testing refresh tokens expire after seven days. To keep the archive running
+long-term, return to **Branding** and enter these exact values before clicking
+**Audience → Publish app**:
+
+| Branding field | Value |
+|---|---|
+| Application home page | `https://finbarmaunsell-leap-road-model.hf.space/` |
+| Application privacy policy link | `https://finbarmaunsell-leap-road-model.hf.space/privacy.html` |
+| Authorised domains | `finbarmaunsell-leap-road-model.hf.space` |
+| Developer contact information | `finn.maunsell@gmail.com` |
+
+Leave the logo and Terms of Service link blank. A logo is not needed for this
+small internal-use archive and can trigger additional verification requirements.
+The privacy notice explains the model archive, its narrow Drive permission, and
+the link-sharing policy. Save Branding, publish the app from Audience, then
+reconnect the archive account using the one-time setup flow to replace the
+Testing refresh token.
 
 Google may show an “unverified app” warning during Testing. Only the configured
 test user should use that temporary flow. Testing refresh tokens expire after
