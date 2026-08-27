@@ -5,6 +5,11 @@ changes Module 1 inputs and clicks **Run Road Model**. The archive is a review
 record, not a source of truth: submissions are never automatically merged into
 future defaults.
 
+For normal end-of-iteration work, use the checkpointed batch-review tool in
+the promotion guide. It collects and records only submissions not already
+processed by that review batch, avoiding repeated manual inspection of the
+whole archive.
+
 ## Active deployment: Hugging Face + Finn's My Drive
 
 The deployed archive uses OAuth with the narrow `drive.file` permission. It

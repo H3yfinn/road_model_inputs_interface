@@ -7,6 +7,11 @@ This alternative lets the Road Model archive researcher submissions into a
 folder in **Finn's My Drive**. Archive files are owned by the signed-in Google
 account and consume that account's storage quota.
 
+The archive is intended for checkpointed batch review at the end of an
+iteration. Use the batch-review tool in
+`researcher_change_review_and_promotion_guide.md` to collect only newly
+arrived submissions; do not routinely sift through or tidy the entire folder.
+
 ## Intended security boundary
 
 The implementation must use only this Google Drive OAuth scope:

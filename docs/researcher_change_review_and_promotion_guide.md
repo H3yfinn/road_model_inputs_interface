@@ -21,12 +21,18 @@ promote changes as a **large batch at the end of a modelling iteration**. Do
 not normally rebuild and deploy defaults economy by economy as submissions
 arrive.
 
+Use `review_researcher_submission_batch.py` as the **default review entry
+point**. Its checkpoint means the model manager/developer sees only submissions
+that have arrived since the last recorded batch, rather than repeatedly sifting
+through every CSV and metadata file in Drive. Use the one-submission tool only
+to investigate an urgent or unusual individual submission.
+
 The recommended sequence is:
 
 1. Researchers submit and test changes for all relevant economies during the
    iteration.
-2. The model manager/developer collects the archive records, groups comparable changes, and resolves
-   cross-economy consistency issues together.
+2. The model manager/developer runs the batch-review tool, then groups the new
+   records and resolves cross-economy consistency issues together.
 3. The model manager/developer applies the approved set of changes together in
    the correct source location.
 4. Build, validate, commit, and deploy one new dated defaults version for that
@@ -109,63 +115,14 @@ front-end/road-module1-static/v2026_06_05_road_module1_sources/20USA.csv
 Use the version named in the metadata, not whatever happens to be the current
 website default. This is what makes the review reproducible.
 
-## 3. Generate the review artefacts
-
-Use the notebook-friendly functions in
-`back-end/scripts/review_researcher_submission.py`. The review step writes
-files only to its selected review-output folder; it does not modify sources,
-defaults, or the website bundle.
-
-In a Jupyter notebook or VS Code interactive Python cell, use a dated local
-review folder and set the paths explicitly. Because the repository folder is
-named `back-end` (with a hyphen), use this import setup instead of importing
-`back-end` as a Python package:
-
-```python
-#%%
-from pathlib import Path
-import sys
-
-REPO_DIR = Path(r"C:\Users\Work\github\road_model_inputs_interface")
-BACKEND_DIR = REPO_DIR / "back-end"
-sys.path.insert(0, str(BACKEND_DIR))
-sys.path.insert(0, str(BACKEND_DIR / "scripts"))
-
-from review_researcher_submission import review_submission
-
-SUBMISSION_PATH = Path(r"C:\review\20USA\submission_module1.csv")
-BASELINE_VERSION = "v2026_06_05_road_module1_sources"
-BASELINE_PATH = REPO_DIR / "front-end" / "road-module1-static" / BASELINE_VERSION / "20USA.csv"
-OUTPUT_DIR = Path(r"C:\review\20USA\2026_08_27_submission_review")
-SUBMISSION_ID = "2026-08-27_researcher_submission"
-
-artefacts = review_submission(
-    submission_path=SUBMISSION_PATH,
-    baseline_path=BASELINE_PATH,
-    output_dir=OUTPUT_DIR,
-    baseline_version=BASELINE_VERSION,
-    submission_id=SUBMISSION_ID,
-)
-artefacts
-#%%
-```
-
-The output folder contains:
-
-| File | Meaning |
-|---|---|
-| `*_review.csv` | Every changed, added, or removed row relative to the baseline |
-| `*_final_value_overrides_candidate.csv` | Candidate values in the model's internal units, ready for model-manager approval |
-| `*_source_promotion_plan.csv` | A checklist showing the source location the model manager/developer must choose |
-
-## 3A. Batch-download and review new archive submissions
+## 3. Default: batch-download and review new archive submissions
 
 For the normal end-of-iteration review, use
-`back-end/scripts/review_researcher_submission_batch.py` instead of downloading
-each economy manually. It uses the configured Drive archive connection to
-download only submission CSV + metadata pairs that are not already recorded in
-its local checkpoint. It creates a **review dataset and candidate override
-files**; it never alters source files, generated defaults, or the website.
+`back-end/scripts/review_researcher_submission_batch.py`. It uses the
+configured Drive archive connection to download only submission CSV + metadata
+pairs that are not already recorded in its local checkpoint. It creates a
+**review dataset and candidate override files**; it never alters source files,
+generated defaults, or the website.
 
 Run it only on the model manager/developer's secure local machine, where the
 existing Drive OAuth credentials are available as environment variables. Do not
@@ -220,6 +177,55 @@ Keep the checkpoint with the batch review record. To deliberately review every
 archived submission again, create a new empty review-output folder; do not
 delete a checkpoint by accident. Candidate CSVs are only a convenient starting
 point for the approval workflow below, not an automatic integration.
+
+## 3A. Exception: inspect one specific submission
+
+Use the notebook-friendly functions in
+`back-end/scripts/review_researcher_submission.py`. The review step writes
+files only to its selected review-output folder; it does not modify sources,
+defaults, or the website bundle.
+
+In a Jupyter notebook or VS Code interactive Python cell, use a dated local
+review folder and set the paths explicitly. Because the repository folder is
+named `back-end` (with a hyphen), use this import setup instead of importing
+`back-end` as a Python package:
+
+```python
+#%%
+from pathlib import Path
+import sys
+
+REPO_DIR = Path(r"C:\Users\Work\github\road_model_inputs_interface")
+BACKEND_DIR = REPO_DIR / "back-end"
+sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(BACKEND_DIR / "scripts"))
+
+from review_researcher_submission import review_submission
+
+SUBMISSION_PATH = Path(r"C:\review\20USA\submission_module1.csv")
+BASELINE_VERSION = "v2026_06_05_road_module1_sources"
+BASELINE_PATH = REPO_DIR / "front-end" / "road-module1-static" / BASELINE_VERSION / "20USA.csv"
+OUTPUT_DIR = Path(r"C:\review\20USA\2026_08_27_submission_review")
+SUBMISSION_ID = "2026-08-27_researcher_submission"
+
+artefacts = review_submission(
+    submission_path=SUBMISSION_PATH,
+    baseline_path=BASELINE_PATH,
+    output_dir=OUTPUT_DIR,
+    baseline_version=BASELINE_VERSION,
+    submission_id=SUBMISSION_ID,
+)
+artefacts
+#%%
+```
+
+The output folder contains:
+
+| File | Meaning |
+|---|---|
+| `*_review.csv` | Every changed, added, or removed row relative to the baseline |
+| `*_final_value_overrides_candidate.csv` | Candidate values in the model's internal units, ready for model-manager approval |
+| `*_source_promotion_plan.csv` | A checklist showing the source location the model manager/developer must choose |
 
 ## 4. Review and decide
 

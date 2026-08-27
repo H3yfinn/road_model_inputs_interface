@@ -1,5 +1,5 @@
 #%%
-"""Download and prepare newly archived Module 1 submissions for batch review.
+"""Default review entry point: prepare new archived Module 1 submissions in a batch.
 
 This notebook-friendly tool is for the model manager/developer at the end of a
 modelling iteration. It downloads only Drive submissions absent from its local

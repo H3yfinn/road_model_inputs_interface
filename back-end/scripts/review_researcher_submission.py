@@ -1,5 +1,10 @@
 #%%
-"""Notebook-friendly review entry point for archived Road Module 1 submissions."""
+"""Inspect one archived submission; use the batch-review entry point by default.
+
+For normal end-of-iteration work, run review_researcher_submission_batch.py so
+only submissions absent from the recorded checkpoint are collected. This file
+is intentionally retained for an urgent or unusual individual investigation.
+"""
 from __future__ import annotations
 
 import os
