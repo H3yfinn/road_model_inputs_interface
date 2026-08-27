@@ -158,6 +158,69 @@ The output folder contains:
 | `*_final_value_overrides_candidate.csv` | Candidate values in the model's internal units, ready for model-manager approval |
 | `*_source_promotion_plan.csv` | A checklist showing the source location the model manager/developer must choose |
 
+## 3A. Batch-download and review new archive submissions
+
+For the normal end-of-iteration review, use
+`back-end/scripts/review_researcher_submission_batch.py` instead of downloading
+each economy manually. It uses the configured Drive archive connection to
+download only submission CSV + metadata pairs that are not already recorded in
+its local checkpoint. It creates a **review dataset and candidate override
+files**; it never alters source files, generated defaults, or the website.
+
+Run it only on the model manager/developer's secure local machine, where the
+existing Drive OAuth credentials are available as environment variables. Do not
+put those credentials in a notebook, a CSV, or Git. In a Jupyter notebook or
+VS Code interactive cell:
+
+```python
+#%%
+from pathlib import Path
+import sys
+
+REPO_DIR = Path(r"C:\Users\Work\github\road_model_inputs_interface")
+BACKEND_DIR = REPO_DIR / "back-end"
+sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(BACKEND_DIR / "scripts"))
+
+from review_researcher_submission_batch import review_new_archived_submissions
+
+OUTPUT_DIR = Path(r"C:\review\2026_08_27_iteration_batch")
+STATIC_BUNDLE_DIR = REPO_DIR / "front-end" / "road-module1-static"
+DRIVE_FOLDER_ID = "the configured Road model researcher submissions folder ID"
+
+artefacts = review_new_archived_submissions(
+    output_dir=OUTPUT_DIR,
+    static_bundle_dir=STATIC_BUNDLE_DIR,
+    drive_folder_id=DRIVE_FOLDER_ID,
+)
+artefacts
+#%%
+```
+
+The output folder contains:
+
+| File | Meaning |
+|---|---|
+| `batch_review_manifest.csv` | Each newly downloaded submission, its archive files, baseline version, and changed-row count |
+| `batch_review_rows.csv` | The consolidated review dataset. It shows the old value, proposed value, action, comment, source submission, and `Batch Status`. |
+| `module1_final_value_overrides_<economy>_candidate.csv` | A candidate replacement dataset for that economy, in raw/internal units. It is not live and must still be approved. |
+| `batch_review_checkpoint.json` | The local record of submission IDs already included in this review folder. Future runs of this same folder download only later submissions. |
+
+`Batch Status` makes the decision visible before anything is promoted:
+
+| Status | Meaning and action |
+|---|---|
+| `replacement_candidate` | One existing baseline row has a proposed replacement. Check it, then decide whether to promote it. |
+| `same_replacement_proposed_multiple_times` | More than one submission proposes the same replacement. It is included once in the candidate file, but still needs a human decision. |
+| `conflicting_replacement_values` | Submissions propose different values for the same row. No candidate override is made; decide manually. |
+| `new_or_removed_row_requires_source_review` | A row key was added or removed. Do not use a final override; review the source/contract change. |
+| `baseline_version_mismatch_requires_review` | The same row was submitted against different defaults versions. Resolve the baseline difference first. |
+
+Keep the checkpoint with the batch review record. To deliberately review every
+archived submission again, create a new empty review-output folder; do not
+delete a checkpoint by accident. Candidate CSVs are only a convenient starting
+point for the approval workflow below, not an automatic integration.
+
 ## 4. Review and decide
 
 Open `*_review.csv` and check, row by row:
