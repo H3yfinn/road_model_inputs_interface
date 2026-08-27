@@ -14,6 +14,28 @@ keeps three things separate:
 An archived submission never updates source inputs or website defaults by
 itself.
 
+## Default cadence: batch promotion at the end of an iteration
+
+Treat the archive as a collection point during modelling, then review and
+promote changes as a **large batch at the end of a modelling iteration**. Do
+not normally rebuild and deploy defaults economy by economy as submissions
+arrive.
+
+The recommended sequence is:
+
+1. Researchers submit and test changes for all relevant economies during the
+   iteration.
+2. Reviewers collect the archive records, group comparable changes, and resolve
+   cross-economy consistency issues together.
+3. Source owners apply the approved set of changes together.
+4. Build, validate, commit, and deploy one new dated defaults version for that
+   reviewed batch.
+
+This produces one clear version boundary and avoids a website default changing
+mid-iteration because one economy happened to be reviewed first. An individual
+economy promotion is appropriate only for an urgent, documented correction that
+cannot wait for the normal batch.
+
 ## Plain-English flow
 
 ```text
@@ -200,8 +222,9 @@ Use this when the source data itself was wrong or superseded.
 
 ## 6. Build a new immutable defaults version
 
-After the source owner has made the approved change, create a new dated version
-instead of rebuilding the previous version. From a notebook/interactive cell:
+After source owners have made the **approved batch** of changes, create one new
+dated version instead of rebuilding the previous version. From a
+notebook/interactive cell:
 
 ```python
 #%%
