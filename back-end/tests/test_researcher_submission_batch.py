@@ -281,10 +281,18 @@ def test_drive_listing_paginates_with_large_page_size():
     assert calls[0]["pageSize"] == 1000
 
 
-def test_fake_drive_download_keeps_valid_pair_when_an_orphan_is_quarantined(tmp_path):
+@pytest.mark.parametrize("archive_format,use_legacy_columns", [("2.0", False), ("1.0", True), ("2.0", True)])
+def test_fake_drive_download_keeps_valid_pair_when_an_orphan_is_quarantined(tmp_path, archive_format, use_legacy_columns):
     baseline_payload = _csv_bytes([_row(2.0)])
-    csv_payload = _csv_bytes([_row(3.0)])
+    columns = LEGACY_LONG_COLUMNS if use_legacy_columns else LONG_COLUMNS
+    csv_payload = pd.DataFrame([_row(3.0)], columns=columns).to_csv(index=False).encode("utf-8")
     metadata = _metadata("good", csv_payload, baseline_payload)
+    metadata["archive_format_version"] = archive_format
+    if use_legacy_columns:
+        metadata["canonical_long_columns"] = LEGACY_LONG_COLUMNS
+    if archive_format == "1.0":
+        for key in ("pair_state", "archive_csv_file_id", "archive_metadata_file_id", "canonical_long_columns"):
+            metadata.pop(key)
     children = [
         {"id": "csv-good", "name": "good_module1_v1.csv", "modifiedTime": "1"},
         {"id": "metadata-good", "name": "good_metadata.json", "modifiedTime": "1"},
