@@ -1,8 +1,7 @@
-# Draft: My Drive OAuth Archive Setup
+# My Drive OAuth Archive Setup
 
-> Status: implementation is present but not yet deployed or connected to a
-> real OAuth client. Keep the existing Shared Drive documentation unchanged
-> until this route has been deployed and tested successfully.
+> Status: deployed and successfully tested against Finn's My Drive on
+> 2026-08-27.
 
 This alternative lets the Road Model archive researcher submissions into a
 folder in **Finn's My Drive**. Archive files are owned by the signed-in Google
@@ -21,10 +20,10 @@ Do **not** request broad `https://www.googleapis.com/auth/drive` access.
 or folders explicitly selected for the app. It is a narrow per-file permission,
 not a hard folder-only security primitive.
 
-The app must also enforce its own folder allow-list:
+The app also enforces its own folder allow-list:
 
-- the researcher/admin selects one archive folder using Google Picker;
-- the backend stores that approved folder ID;
+- the one-time OAuth setup creates the archive root folder;
+- the backend stores that created folder ID as a Hugging Face Secret;
 - the backend may create economy subfolders and CSV/metadata files only below
   that folder;
 - it must reject any other parent-folder ID supplied by a request.
@@ -49,7 +48,7 @@ The app must also enforce its own folder allow-list:
    - `External` for a personal Gmail account or early testing;
    - `Internal` only if every researcher uses the same Google Workspace.
 
-   Keep the app in **Testing** until the implementation is ready. Add
+   For the initial connection, keep the app in **Testing** and add
    `finn.maunsell@gmail.com` as a **Test user**: this is required for the
    initial authorisation of the archive-owning My Drive account. It does not
    mean every later road-model user needs a Google or Cloud account.
@@ -59,9 +58,7 @@ The app must also enforce its own folder allow-list:
 7. In **Clients**, choose **Create client**, select **Web application**, and
    name it `Road model researcher archive (HF)`. The legacy route is
    **APIs & Services → Credentials**.
-8. You may create the client now, but do not add a redirect URI until the
-   callback route has been implemented and its host has been confirmed. The
-   intended callback is:
+8. Add this authorised redirect URI to the OAuth web client:
 
 ```text
 https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth/callback
@@ -77,10 +74,9 @@ https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth
 
 Google may show an “unverified app” warning during Testing. Only the configured
 test user should use that temporary flow. Testing refresh tokens expire after
-seven days for Drive access, so do not leave the production archive in Testing.
-After the workflow is tested, move it to Production and re-authorise the
-archive account. The narrow `drive.file` scope is non-sensitive, but production
-requirements should be checked in the console at that time.
+seven days for Drive access. After the initial test, move the app to Production
+and reconnect the archive account to obtain a long-lived refresh token. The
+narrow `drive.file` scope is non-sensitive.
 
 ### Long-term access and colleagues
 
@@ -101,7 +97,7 @@ The archive owner account must remain active. Its My Drive storage is the
 intended archive location and has ample capacity, so storage quota is not a
 reason to move this workflow to a Shared Drive.
 
-## Hugging Face Secrets to add after implementation
+## Hugging Face Secrets
 
 Add these as **Secrets**, not Variables:
 
@@ -117,7 +113,7 @@ Add these as **Secrets**, not Variables:
 The setup token and refresh token are as sensitive as passwords. Never paste
 either into Git, browser JavaScript, chat, or a public HF Variable.
 
-## One-time deployment setup (after the OAuth client exists)
+## One-time deployment setup
 
 1. Add the three client settings and a new random `GOOGLE_OAUTH_SETUP_TOKEN`
    as Hugging Face **Secrets**. Do not add a refresh token or folder ID yet.
@@ -142,40 +138,13 @@ https://finbarmaunsell-leap-road-model.hf.space/api/v1/road-module1/google-oauth
    restart/redeploy the Space. Remove `GOOGLE_OAUTH_SETUP_TOKEN` afterwards;
    it is only needed for first-time setup or a deliberate reconnection.
 
-## Implementation requirements (do not skip)
+## Verified deployment test
 
-1. Keep the `/google-oauth/start` and `/google-oauth/callback` authorization
-   flow protected by the one-time setup token and state value.
-2. Keep the backend-created archive root folder as the sole permitted parent;
-   do not accept arbitrary folder IDs from ordinary model-run requests.
-3. Exchange the authorization code server-side and make the resulting refresh
-   token available only once to an authorised setup administrator.
-4. Use `drive.file` for all OAuth Drive API calls.
-5. Verify the created folder is accessible, then write only into that folder's
-   economy subfolders.
-6. Keep the archive failure non-blocking: a Drive error must still allow the
-   model run to start.
-7. Keep existing metadata fields, including baseline version and checksum.
-
-## First real test
-
-1. Select a new empty My Drive test folder through the implemented admin flow.
-2. Make one small, valid Module 1 edit.
-3. Run the model.
-4. Confirm exactly two new files appear beneath `<archive folder>/20_USA/`:
-   - complete submitted canonical-long CSV;
-   - matching metadata JSON.
-5. Confirm the metadata contains the run ID, timezone-aware timestamp, baseline
-   version, and baseline checksum.
-6. Confirm the model completed even if Drive was deliberately made unavailable.
-7. Revoke the OAuth grant or remove the refresh-token Secret, retry, and verify
-   that the run reports the archive failure without blocking.
-
-## After successful test
-
-Replace the service-account/Shared Drive production runbook with the tested
-OAuth method, update `UPDATE_METHOD.md`, and remove unused service-account
-configuration from the deployed environment and code.
+On 2026-08-27, the live Hugging Face Space archived a controlled `20_USA`
+submission with one changed reconciliation-weight value. The archive created
+both the complete canonical-long CSV and its metadata JSON, and the model run
+completed. The test submission is clearly labelled `REAL OAUTH ARCHIVE TEST —
+revert/not for source promotion.`
 
 ## References
 

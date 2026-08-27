@@ -333,7 +333,14 @@ source, final override, or static hand-off contract changes.
 - Recategorizations or mappings: Compact economy codes are normalized to canonical underscore codes. Legacy wide Stock/Mileage values use their scale labels to convert internal values to website/display values before comparison.
 - Output files changed: `outputs/researcher_submission_reviews/` only, unless a reviewer separately approves and places an override/source update.
 - Validation checks run: Automated canonical, legacy-wide, scale, duplicate, diff, override-unit, and mocked archive tests.
-- Notes/limitations: Drive writes require `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` and either `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` (recommended for Hugging Face Secrets) or `GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE` (local backend). Drive is intentionally not a source of truth and was locally mocked during initial validation.
+- Notes/limitations: The deployed archive uses OAuth My Drive credentials:
+  `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+  `GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN`, and
+  `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` (plus the redirect-URI Secret).
+  Drive is intentionally not a source of truth. The live OAuth archive was
+  verified on 2026-08-27 with a controlled `20_USA` submission; archive failure
+  remains non-blocking for model runs. The legacy service-account variables are
+  retained only as a local/Shared Drive fallback.
 
-Deployment details and the archive service-account access boundary are recorded
-in `docs/researcher_submission_drive_archive.md`.
+Deployment details and the My Drive OAuth boundary are recorded in
+`docs/researcher_submission_drive_archive.md`.
