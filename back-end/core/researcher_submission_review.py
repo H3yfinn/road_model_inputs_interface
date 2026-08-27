@@ -24,6 +24,7 @@ import pandas as pd
 LONG_COLUMNS = [
     "Economy", "Scenario", "Branch Path", "Variable", "Year", "Value",
     "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface",
+    "Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method",
 ]
 KEY_COLUMNS = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
 OVERRIDE_COLUMNS = [
@@ -38,6 +39,8 @@ SCALE_MULTIPLIERS = {
 ECONOMY_CODE_RE = re.compile(r"^(?P<number>\d{2})_?(?P<letters>[A-Za-z]{2,3})$")
 VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,199}$")
+SOURCE_CLASSIFICATIONS = {"native_observation", "projection", "structural_assumption", "model_assumption", "legacy_unknown"}
+BASE_YEAR_TREATMENTS = {"native", "carried_forward", "transformed", "legacy_unrecorded"}
 
 
 def canonical_economy_code(value: object) -> str:
@@ -90,6 +93,8 @@ def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
         "variable": "Variable", "year": "Year", "value": "Value", "scale": "Scale",
         "units": "Units", "source": "Source", "comment": "Comment",
         "input status": "Input Status", "shown in interface": "Shown In Interface",
+        "source data year": "Source Data Year", "source classification": "Source Classification",
+        "base year treatment": "Base Year Treatment", "derivation method": "Derivation Method",
         "region": "Economy",
     }
     renamed = {column: aliases.get(str(column).strip().lower(), column) for column in df.columns}
@@ -129,8 +134,22 @@ def normalise_module1_rows(
             df[column] = ""
     _coerce_text(df, "Economy")
     df["Economy"] = df["Economy"].map(canonical_economy_code)
-    for column in ["Scenario", "Branch Path", "Variable", "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface"]:
+    for column in ["Scenario", "Branch Path", "Variable", "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface", "Source Classification", "Base Year Treatment", "Derivation Method"]:
         _coerce_text(df, column)
+    df["Source Classification"] = df["Source Classification"].replace("", "legacy_unknown")
+    df["Base Year Treatment"] = df["Base Year Treatment"].replace("", "legacy_unrecorded")
+    df["Derivation Method"] = df["Derivation Method"].replace("", "legacy_unrecorded")
+    unknown_classifications = set(df["Source Classification"]) - SOURCE_CLASSIFICATIONS
+    unknown_treatments = set(df["Base Year Treatment"]) - BASE_YEAR_TREATMENTS
+    if unknown_classifications or unknown_treatments:
+        raise ValueError(f"Unknown provenance values: classifications={sorted(unknown_classifications)}, treatments={sorted(unknown_treatments)}")
+    raw_source_year = df["Source Data Year"]
+    source_year = pd.to_numeric(raw_source_year, errors="coerce")
+    has_source_year = raw_source_year.notna() & ~raw_source_year.astype(str).str.strip().isin({"", "nan", "<NA>"})
+    invalid_source_year = has_source_year & source_year.isna()
+    if invalid_source_year.any():
+        raise ValueError("Module 1 submission contains a non-numeric Source Data Year.")
+    df["Source Data Year"] = source_year.astype("Int64")
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
     if df["Year"].isna().any():
         raise ValueError("Module 1 submission contains a non-numeric Year.")

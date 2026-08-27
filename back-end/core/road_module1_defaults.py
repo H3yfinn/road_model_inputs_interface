@@ -220,6 +220,10 @@ MODULE1_LONG_VALUE_COLUMNS = [
     "Comment",
     "Input Status",
     "Shown In Interface",
+    "Source Data Year",
+    "Source Classification",
+    "Base Year Treatment",
+    "Derivation Method",
 ]
 
 MODULE1_LONG_COLUMNS = [

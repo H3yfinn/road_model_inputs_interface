@@ -75,7 +75,7 @@ const ROAD_MODULE1_STATIC_BASE_PATH = './road-module1-static';
 const ROAD_MODULE1_STATIC_INDEX_PATH = `${ROAD_MODULE1_STATIC_BASE_PATH}/index.json`;
 const ROAD_MODULE1_REQUIRED_KEY_COLUMNS = ['Branch Path', 'Variable', 'Scenario', 'Region'];
 const ROAD_MODULE1_LONG_KEY_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year'];
-const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface'];
+const ROAD_MODULE1_LONG_COLUMNS = ['Economy', 'Scenario', 'Branch Path', 'Variable', 'Year', 'Value', 'Scale', 'Units', 'Source', 'Comment', 'Input Status', 'Shown In Interface', 'Source Data Year', 'Source Classification', 'Base Year Treatment', 'Derivation Method'];
 const ROAD_RESEARCHER_ARCHIVE_ACKNOWLEDGEMENT_KEY = 'road-module1-archive-acknowledged';
 const ROAD_SOURCE_REASON_PLACEHOLDER = 'Source / reason for change';
 const ROAD_SOURCE_REASON_HELP = 'For changed values, record the dataset or document, source year, link or reference, and why the value changed. Do not include personal or confidential information.';
@@ -953,12 +953,21 @@ function convertRoadLongRowsToWideUiRows(longRows) {
             source_name: row.Source ?? '',
             source_scope: row.Economy ?? '',
             source_date: '',
+            _provenanceByYear: {},
             default_version: State.roadModule1.version || '',
             researcher_review_recommended: false,
             review_reason: ''
         };
         const year = String(row.Year ?? '').trim();
-        if (/^\d{4}$/.test(year)) target[year] = row.Value ?? '';
+        if (/^\d{4}$/.test(year)) {
+            target[year] = row.Value ?? '';
+            target._provenanceByYear[year] = {
+                'Source Data Year': row['Source Data Year'] ?? '',
+                'Source Classification': row['Source Classification'] || 'legacy_unknown',
+                'Base Year Treatment': row['Base Year Treatment'] || 'legacy_unrecorded',
+                'Derivation Method': row['Derivation Method'] || 'legacy_unrecorded'
+            };
+        }
         rowsByKey.set(key, target);
     });
     return Array.from(rowsByKey.values());
@@ -6054,7 +6063,13 @@ function convertRoadWideUiRowsToLongRows(rows, economyCode, includeBlankStockSha
                 Source: row.source_name || row.Source || '',
                 Comment: row.notes || row.Comment || '',
                 'Input Status': row._inputStatus || 'default',
-                'Shown In Interface': row['Shown In Interface'] ?? 'True'
+                'Shown In Interface': row['Shown In Interface'] ?? 'True',
+                ...((row._provenanceByYear || {})[String(year)] || {
+                    'Source Data Year': '',
+                    'Source Classification': 'legacy_unknown',
+                    'Base Year Treatment': 'legacy_unrecorded',
+                    'Derivation Method': 'legacy_unrecorded'
+                })
             });
         });
     });

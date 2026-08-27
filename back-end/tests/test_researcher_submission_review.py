@@ -45,6 +45,7 @@ def test_archive_rows_require_canonical_long_numeric_values_and_one_economy():
     assert list(canonical.columns) == [
         "Economy", "Scenario", "Branch Path", "Variable", "Year", "Value",
         "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface",
+        "Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method",
     ]
     assert set(canonical["Economy"]) == {"20_USA"}
 
