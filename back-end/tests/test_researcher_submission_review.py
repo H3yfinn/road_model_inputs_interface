@@ -75,6 +75,27 @@ def test_legacy_wide_values_convert_from_internal_units_to_display_units():
     assert normalised.loc[normalised["Variable"].eq("Sales Share"), "Value"].iloc[0] == 10.0
 
 
+def test_provenance_survives_internal_wide_and_canonical_long_round_trip():
+    import core.road_module1_defaults as defaults
+
+    source = pd.DataFrame([{
+        "Branch Path": "Demand\\Passenger road\\LPVs", "Variable": "Stock",
+        "Scenario": "Current Accounts", "Region": "United States", "Scale": "Millions",
+        "Units": "Vehicles", "2022": 2_000_000, "source_name": "synthetic.csv",
+        "notes": "seed", "input_source": "provided", "source_data_year": 2020,
+        "source_classification": "projection", "base_year_treatment": "carried_forward",
+        "derivation_method": "prior_observation_seed",
+    }])
+    for column in defaults.MODULE1_INPUT_COLUMNS:
+        if column not in source:
+            source[column] = "" if column not in defaults.YEAR_COLUMNS else pd.NA
+
+    long_rows = defaults._wide_defaults_to_long(source[defaults.MODULE1_INPUT_COLUMNS], "20_USA")
+    assert long_rows.loc[0, ["Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method"]].tolist() == [2020, "projection", "carried_forward", "prior_observation_seed"]
+    restored = defaults._long_defaults_to_ui_wide(long_rows, "20_USA")
+    assert restored.loc[0, ["source_data_year", "source_classification", "base_year_treatment", "derivation_method"]].tolist() == [2020, "projection", "carried_forward", "prior_observation_seed"]
+
+
 def test_review_diff_and_override_values_use_expected_units():
     baseline = normalise_module1_rows(_canonical_rows(), legacy_values_are_internal=False)
     submission = baseline.copy()

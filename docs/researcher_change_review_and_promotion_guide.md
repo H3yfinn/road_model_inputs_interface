@@ -458,6 +458,15 @@ follow pagination tokens so thousands of archived submissions remain usable.
 For each review batch, retain these locally with the iteration records:
 
 - `batch_review_manifest.csv` — the inventory of newly processed submissions;
+
+### Archive schema compatibility
+
+The reviewer accepts both the original 12-column canonical-long archive schema
+and the current 16-column schema with provenance fields. Archive formats 1.0
+and 2.0 must declare the exact column order they contain; a 12-column archive
+is normalised with `legacy_unknown` / `legacy_unrecorded` provenance rather
+than quarantined merely for predating these fields. New 16-column archives are
+still validated strictly.
 - `batch_review_decisions.csv` — the compact, one-row-per-key decision sheet;
 - `batch_review_rows.csv` — the proposal-level audit detail;
 - `batch_review_quarantine.csv` — invalid pair/baseline evidence and reasons;

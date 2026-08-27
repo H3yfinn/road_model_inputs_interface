@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from core.researcher_submission_review import LONG_COLUMNS, write_reviewer_csv
+from core.researcher_submission_review import LEGACY_LONG_COLUMNS, LONG_COLUMNS, write_reviewer_csv
 from scripts import review_researcher_submission_batch as batch
 
 
@@ -144,6 +144,27 @@ def test_validate_archive_pair_checks_checksum_filenames_ids_and_row_count():
         economy_folder_name="20_USA",
     )
     assert legacy_validated["archive_format_version"] == "1.0"
+
+    legacy_csv = pd.DataFrame([_row(3.0)], columns=LEGACY_LONG_COLUMNS).to_csv(index=False).encode("utf-8")
+    for archive_format in ("1.0", "2.0"):
+        legacy_pair = _metadata("legacy-pair", legacy_csv, baseline_payload)
+        legacy_pair["archive_format_version"] = archive_format
+        legacy_pair["row_count"] = 1
+        legacy_pair["csv_sha256"] = hashlib.sha256(legacy_csv).hexdigest()
+        legacy_pair["archive_csv_filename"] = "legacy-pair_module1_v1.csv"
+        legacy_pair["archive_metadata_filename"] = "legacy-pair_metadata.json"
+        if archive_format == "2.0":
+            legacy_pair["canonical_long_columns"] = LEGACY_LONG_COLUMNS
+        else:
+            for key in ("pair_state", "archive_csv_file_id", "archive_metadata_file_id", "canonical_long_columns"):
+                legacy_pair.pop(key)
+        _, legacy_rows = batch._validate_metadata_pair(
+            metadata=legacy_pair, metadata_bytes=json.dumps(legacy_pair).encode(), csv_bytes=legacy_csv,
+            csv_item={"id": "csv-legacy-pair", "name": "legacy-pair_module1_v1.csv"},
+            metadata_item={"id": "metadata-legacy-pair", "name": "legacy-pair_metadata.json"},
+            economy_folder_name="20_USA",
+        )
+        assert legacy_rows.loc[0, "Source Classification"] == "legacy_unknown"
 
     mutations = [
         ("csv_sha256", "0" * 64, "CSV SHA-256"),

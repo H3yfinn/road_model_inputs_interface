@@ -195,6 +195,10 @@ MODULE1_INPUT_COLUMNS = [
     "default_version",
     "researcher_review_recommended",
     "review_reason",
+    "source_data_year",
+    "source_classification",
+    "base_year_treatment",
+    "derivation_method",
 ]
 
 MODULE1_KEY_COLUMNS = [
@@ -3030,7 +3034,12 @@ def load_processed_source_inputs(
         )
         latest_row = ranked.iloc[0].copy()
         latest_row["Source Data Year"] = int(latest_row["Year"])
-        latest_row["Source Classification"] = "native_observation"
+        # A prior row is not necessarily an observation.  Retain any explicit
+        # classification and identify older unlabelled packages conservatively.
+        latest_row["Source Classification"] = (
+            str(latest_row.get("Source Classification", "") or "").strip()
+            or "legacy_unknown"
+        )
         latest_row["Base Year Treatment"] = "carried_forward"
         latest_row["Derivation Method"] = "prior_observation_seed"
         latest_row["Year"] = BASE_YEAR
@@ -3133,6 +3142,18 @@ def load_processed_source_inputs(
     source_df["default_version"] = DEFAULT_VERSION
     source_df["researcher_review_recommended"] = False
     source_df["review_reason"] = ""
+    source_df["source_data_year"] = pd.to_numeric(
+        source_df.get("Source Data Year", source_df["Year"]), errors="coerce"
+    ).astype("Int64")
+    source_df["source_classification"] = source_df.get(
+        "Source Classification", pd.Series("legacy_unknown", index=source_df.index)
+    ).fillna("").astype(str).str.strip().replace("", "legacy_unknown")
+    source_df["base_year_treatment"] = source_df.get(
+        "Base Year Treatment", pd.Series("legacy_unrecorded", index=source_df.index)
+    ).fillna("").astype(str).str.strip().replace("", "legacy_unrecorded")
+    source_df["derivation_method"] = source_df.get(
+        "Derivation Method", pd.Series("legacy_unrecorded", index=source_df.index)
+    ).fillna("").astype(str).str.strip().replace("", "legacy_unrecorded")
 
     index_columns = [column for column in MODULE1_INPUT_COLUMNS if column not in YEAR_COLUMNS]
     wide_df = (
@@ -3334,6 +3355,10 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
                     "Comment": comment,
                     "Input Status": input_status,
                     "Shown In Interface": True,
+                    "Source Data Year": row.get("source_data_year", pd.NA),
+                    "Source Classification": row.get("source_classification", "legacy_unknown"),
+                    "Base Year Treatment": row.get("base_year_treatment", "legacy_unrecorded"),
+                    "Derivation Method": row.get("derivation_method", "legacy_unrecorded"),
                 }
             )
 
@@ -3359,7 +3384,17 @@ def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: 
     df["Scale"] = df["Scale"].fillna("").astype(str).str.strip()
     df["Value"] = df.apply(lambda row: _to_internal_value(row["Value"], row["Scale"]), axis=1)
 
-    index_cols = ["Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Source", "Comment"]
+    for long_column, internal_column, default in [
+        ("Source Data Year", "source_data_year", pd.NA),
+        ("Source Classification", "source_classification", "legacy_unknown"),
+        ("Base Year Treatment", "base_year_treatment", "legacy_unrecorded"),
+        ("Derivation Method", "derivation_method", "legacy_unrecorded"),
+    ]:
+        df[internal_column] = df.get(long_column, default)
+    index_cols = [
+        "Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Source", "Comment",
+        "source_data_year", "source_classification", "base_year_treatment", "derivation_method",
+    ]
     wide = (
         df.pivot_table(
             index=index_cols,
@@ -3923,6 +3958,14 @@ def _normalize_module1_input_columns(input_df: pd.DataFrame) -> pd.DataFrame:
         rename_columns[column] = column_as_text
     normalized_df = input_df.rename(columns=rename_columns).copy()
 
+    for column, default in {
+        "source_data_year": pd.NA,
+        "source_classification": "legacy_unknown",
+        "base_year_treatment": "legacy_unrecorded",
+        "derivation_method": "legacy_unrecorded",
+    }.items():
+        if column not in normalized_df.columns:
+            normalized_df[column] = default
     missing_columns = [column for column in MODULE1_INPUT_COLUMNS if column not in normalized_df.columns]
     if missing_columns:
         raise ValueError("Road model default input workbook is missing columns: " + ", ".join(missing_columns))

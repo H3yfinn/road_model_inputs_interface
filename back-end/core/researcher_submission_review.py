@@ -26,6 +26,7 @@ LONG_COLUMNS = [
     "Scale", "Units", "Source", "Comment", "Input Status", "Shown In Interface",
     "Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method",
 ]
+LEGACY_LONG_COLUMNS = LONG_COLUMNS[:12]
 KEY_COLUMNS = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
 OVERRIDE_COLUMNS = [
     "Branch Path", "Variable", "Scenario", "Year", "Value", "Units",

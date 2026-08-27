@@ -28,6 +28,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from core.researcher_submission_review import (
     KEY_COLUMNS,
+    LEGACY_LONG_COLUMNS,
     LONG_COLUMNS,
     _build_drive_service,
     build_final_value_overrides,
@@ -280,8 +281,9 @@ def _validate_metadata_pair(
     if archive_format == "2.0":
         if metadata.get("pair_state") != "complete":
             raise ValueError("Archive v2 metadata pair_state must be 'complete'.")
-        if metadata.get("canonical_long_columns") != LONG_COLUMNS:
-            raise ValueError("Archive v2 canonical_long_columns does not match the required schema.")
+        declared_columns = metadata.get("canonical_long_columns")
+        if declared_columns not in (LEGACY_LONG_COLUMNS, LONG_COLUMNS):
+            raise ValueError("Archive v2 canonical_long_columns does not match a supported schema.")
         if str(metadata.get("archive_csv_file_id", "")) != str(csv_item.get("id", "")):
             raise ValueError("Metadata archive_csv_file_id does not match the Drive CSV ID.")
         if str(metadata.get("archive_metadata_file_id", "")) != str(metadata_item.get("id", "")):
@@ -305,8 +307,11 @@ def _validate_metadata_pair(
         raw_csv = pd.read_csv(io.BytesIO(csv_bytes))
     except Exception as exc:
         raise ValueError(f"Archive CSV cannot be parsed: {exc}") from exc
-    if list(raw_csv.columns) != LONG_COLUMNS:
-        raise ValueError("Archive CSV columns/order do not match the canonical-long Module 1 schema.")
+    csv_columns = list(raw_csv.columns)
+    if csv_columns not in (LEGACY_LONG_COLUMNS, LONG_COLUMNS):
+        raise ValueError("Archive CSV columns/order do not match a supported canonical-long Module 1 schema.")
+    if archive_format == "2.0" and metadata.get("canonical_long_columns") != csv_columns:
+        raise ValueError("Archive v2 canonical_long_columns does not match the Archive CSV schema.")
     raw_row_count = metadata["row_count"]
     if isinstance(raw_row_count, bool) or not isinstance(raw_row_count, int):
         raise ValueError("Metadata row_count must be an integer.")
