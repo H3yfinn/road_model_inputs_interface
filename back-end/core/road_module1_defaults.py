@@ -3012,13 +3012,27 @@ def load_processed_source_inputs(
         .astype(str)
         .agg("\u241f".join, axis=1)
     )
+    # Resolve each canonical key independently.  Never re-ingest a previously
+    # generated fallback: only ranked source rows reach this point.
     fallback_base_rows = []
     prior_year_df = source_df[source_df["Year"].lt(BASE_YEAR)].copy()
     for _, group_df in prior_year_df.groupby(base_year_key_columns, dropna=False):
         key = "\u241f".join(str(group_df.iloc[0][column]) for column in base_year_key_columns)
         if key in has_base_year:
             continue
-        latest_row = group_df.sort_values("Year").iloc[-1].copy()
+        # Ranking is deterministic: source quality/priority first, then newest
+        # eligible observation, then source name.  Future observations are not
+        # eligible for an earlier model base year.
+        ranked = group_df.sort_values(
+            ["_priority_sort", "Year", "_source_name"],
+            ascending=[True, False, True],
+            kind="stable",
+        )
+        latest_row = ranked.iloc[0].copy()
+        latest_row["Source Data Year"] = int(latest_row["Year"])
+        latest_row["Source Classification"] = "native_observation"
+        latest_row["Base Year Treatment"] = "carried_forward"
+        latest_row["Derivation Method"] = "prior_observation_seed"
         latest_row["Year"] = BASE_YEAR
         fallback_base_rows.append(latest_row)
     if fallback_base_rows:
