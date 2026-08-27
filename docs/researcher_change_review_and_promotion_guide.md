@@ -123,9 +123,12 @@ website default. This is what makes the review reproducible.
 For the normal end-of-iteration review, use
 `back-end/scripts/review_researcher_submission_batch.py`. It uses the
 configured Drive archive connection to download only submission CSV + metadata
-pairs that are not already recorded in its local checkpoint. It creates a
-**review dataset and candidate override files**; it never alters source files,
-generated defaults, or the website.
+pairs that are not already recorded in its local checkpoint. Archive pairs are
+untrusted input: before review, the tool validates metadata, pair filenames and
+IDs, canonical CSV columns, economy/version, row count, CSV checksum, baseline
+filename, and baseline checksum. It creates a **review dataset and candidate
+override files**; it never alters Drive, source files, generated defaults,
+active overrides, or the website.
 
 Run it only on the model manager/developer's secure local machine, where the
 existing Drive OAuth credentials are available as environment variables. Do not
@@ -161,10 +164,11 @@ The output folder contains:
 
 | File | Meaning |
 |---|---|
-| `batch_review_manifest.csv` | Each newly downloaded submission, its archive files, baseline version, and changed-row count |
-| `batch_review_rows.csv` | The consolidated review dataset. It shows the old value, proposed value, action, comment, source submission, and `Batch Status`. |
+| `batch_review_manifest.csv` | Each reviewed or quarantined submission, archive file IDs/checksums, baseline identity, row counts, outcome, and failure reason |
+| `batch_review_rows.csv` | The consolidated review dataset, including `Batch Status`, cumulative `Review Reasons`, proposal counts, and `Safe Replacement` |
+| `batch_review_quarantine.csv` | Invalid, incomplete, or baseline-unverifiable submissions, with file IDs, reason, and quarantine fingerprint |
 | `module1_final_value_overrides_<economy>_candidate.csv` | A candidate replacement dataset for that economy, in raw/internal units. It is not live and must still be approved. |
-| `batch_review_checkpoint.json` | The local record of submission IDs already included in this review folder. Future runs of this same folder download only later submissions. |
+| `batch_review_checkpoint.json` | The atomically replaced, file-locked record of successful submission IDs plus quarantined file fingerprints |
 
 `Batch Status` makes the decision visible before anything is promoted:
 
@@ -172,9 +176,27 @@ The output folder contains:
 |---|---|
 | `replacement_candidate` | One existing baseline row has a proposed replacement. Check it, then decide whether to promote it. |
 | `same_replacement_proposed_multiple_times` | More than one submission proposes the same replacement. It is included once in the candidate file, but still needs a human decision. |
-| `conflicting_replacement_values` | Submissions propose different values for the same row. No candidate override is made; decide manually. |
+| `conflicting_replacement_values` | Submissions against one baseline version propose different values for the same row. No candidate override is made; decide manually. |
 | `new_or_removed_row_requires_source_review` | A row key was added or removed. Do not use a final override; review the source/contract change. |
 | `baseline_version_mismatch_requires_review` | The same row was submitted against different defaults versions. Resolve the baseline difference first. |
+| `multiple_review_reasons` | Multiple blocking conditions apply. Read every semicolon-separated `Review Reasons` value. |
+
+`Review Reasons` can include `added_key_requires_source_review`,
+`removed_key_requires_source_review`, `baseline_version_mismatch`,
+`conflicting_proposed_values`, and `identical_duplicate_proposal`. Only existing
+key replacements with no blocking reason are marked `Safe Replacement=True`
+and included in a candidate. Identical duplicates remain visible in review rows
+but are deduplicated in the candidate.
+
+A malformed pair does not abort later valid submissions. It is written to the
+quarantine report and recorded by Drive/file fingerprint, not in
+`processed_submission_ids`. An unchanged bad object is skipped later; changed
+file identity/metadata makes it eligible for validation again. If nothing new
+is found, the result says so explicitly and all output CSVs contain headers.
+
+All reviewer CSV writers neutralise formula-like text beginning with `=`, `+`,
+`-`, or `@` (including after leading whitespace) by prefixing an apostrophe.
+Numeric negative values remain numeric.
 
 Keep the checkpoint with the batch review record. To deliberately review every
 archived submission again, create a new empty review-output folder; do not
@@ -417,14 +439,17 @@ access) can perform cleanup.
 Every submission is deliberately stored as a paired CSV and metadata JSON. The
 metadata records a unique `submission_id`, economy, timestamp, defaults version,
 model-run ID, original submission identifier, row count, CSV checksum, and the
-baseline filename and checksum. The shared ID is the authoritative way to match
-the CSV with its metadata, even when the archive contains thousands of files.
+baseline filename and checksum. Archive format 2 also records both Drive file
+IDs, the canonical columns, and `pair_state=complete`. The shared ID is the
+authoritative way to match the pair. Drive listings use 1,000-item pages and
+follow pagination tokens so thousands of archived submissions remain usable.
 
 For each review batch, retain these locally with the iteration records:
 
 - `batch_review_manifest.csv` — the inventory of newly processed submissions;
 - `batch_review_rows.csv` — the decision-ready comparison rows;
-- `batch_review_checkpoint.json` — the exact submission IDs already processed;
+- `batch_review_quarantine.csv` — invalid pair/baseline evidence and reasons;
+- `batch_review_checkpoint.json` — successful IDs and quarantined fingerprints;
 - the commit/version that eventually incorporated any approved changes.
 
 Never rename just one file in a CSV/metadata pair. If a file name must change,

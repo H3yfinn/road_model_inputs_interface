@@ -37,7 +37,7 @@ SCALE_MULTIPLIERS = {
 }
 ECONOMY_CODE_RE = re.compile(r"^(?P<number>\d{2})_?(?P<letters>[A-Za-z]{2,3})$")
 VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,199}$")
 
 
 def canonical_economy_code(value: object) -> str:
@@ -227,6 +227,21 @@ def build_source_promotion_plan(review: pd.DataFrame, baseline_version: str, sub
     return plan
 
 
+def _escape_spreadsheet_formula(value: Any) -> Any:
+    """Neutralise strings that spreadsheet applications could execute as formulas."""
+    if isinstance(value, str) and re.match(r"^[\t\r ]*[=+\-@]", value):
+        return "'" + value
+    return value
+
+
+def write_reviewer_csv(rows: pd.DataFrame, path: str | Path) -> None:
+    """Write a review artefact with formula-like text rendered inert."""
+    safe = rows.copy()
+    for column in safe.columns:
+        safe[column] = safe[column].map(_escape_spreadsheet_formula)
+    safe.to_csv(path, index=False)
+
+
 def _csv_bytes(rows: pd.DataFrame | list[dict[str, Any]]) -> bytes:
     buffer = io.StringIO(newline="")
     writer = csv.DictWriter(buffer, fieldnames=LONG_COLUMNS, extrasaction="ignore")
@@ -340,13 +355,24 @@ def archive_submission_to_drive(
     if not root_folder:
         return {"attempted": True, "success": False, "message": "Drive archive is not configured (ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID)."}
     try:
-        service = _build_drive_service()
-        from googleapiclient.http import MediaIoBaseUpload
-
         canonical_economy = canonical_economy_code(economy)
         version = validate_version(version)
         run_id = validate_identifier(run_id, "model run ID")
         canonical_rows = canonical_archive_rows(rows, canonical_economy)
+        csv_payload = _csv_bytes(canonical_rows)
+        baseline_file = Path(baseline_path) if baseline_path else None
+        if not baseline_file or not baseline_file.is_file():
+            raise ValueError("The exact baseline CSV is required before a changed submission can be archived.")
+        expected_baseline_name = f"{canonical_economy.replace('_', '')}.csv"
+        if baseline_file.name != expected_baseline_name:
+            raise ValueError(
+                f"Baseline filename must be {expected_baseline_name!r}, got {baseline_file.name!r}."
+            )
+        baseline_bytes = baseline_file.read_bytes()
+
+        service = _build_drive_service()
+        from googleapiclient.http import MediaIoBaseUpload
+
         query = f"name = '{canonical_economy}' and '{root_folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         matches = service.files().list(
             q=query, fields="files(id,name)", pageSize=1,
@@ -360,9 +386,6 @@ def archive_submission_to_drive(
         submission_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
         csv_name = f"{submission_id}_module1_{version}.csv"
         metadata_name = f"{submission_id}_metadata.json"
-        csv_payload = _csv_bytes(canonical_rows)
-        baseline_file = Path(baseline_path) if baseline_path else None
-        baseline_bytes = baseline_file.read_bytes() if baseline_file and baseline_file.exists() else b""
         metadata = {
             "archive_format_version": "2.0",
             "submission_id": submission_id, "economy": canonical_economy, "timestamp": datetime.now(timezone.utc).astimezone().isoformat(),
@@ -370,8 +393,8 @@ def archive_submission_to_drive(
             "model_run_id": run_id, "original_filename_or_submission_identifier": original_filename or submission_id,
             "archive_csv_filename": csv_name, "archive_metadata_filename": metadata_name,
             "row_count": len(canonical_rows), "csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
-            "baseline_filename": baseline_file.name if baseline_file and baseline_file.exists() else "",
-            "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest() if baseline_bytes else "",
+            "baseline_filename": baseline_file.name,
+            "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest(),
             "canonical_long_columns": LONG_COLUMNS,
             "pair_state": "complete",
         }

@@ -35,6 +35,12 @@ model run. Each metadata record includes economy, timezone-aware timestamp,
 Module 1 defaults version, session identity where available, model run ID,
 submission identifier, and the exact baseline CSV checksum.
 
+A changed submission is archived only when the exact version/economy baseline
+CSV is locally available. Batch review verifies its recorded checksum against
+that immutable static version before comparing values. A missing or changed
+baseline quarantines the submission; it is never silently compared with the
+current website default.
+
 Common errors:
 
 - `Drive archive is not configured`: add both settings above and restart/redeploy.

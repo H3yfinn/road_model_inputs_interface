@@ -129,20 +129,49 @@ def test_approved_source_promotion_requests_a_new_immutable_version(monkeypatch)
     assert called == ["v2026_08_24_researcher_reviewed"]
     with pytest.raises(ValueError, match="new immutable"):
         review_script.build_approved_source_version("v_existing")
+    with pytest.raises(ValueError, match="Invalid Module 1 defaults version"):
+        review_script.build_approved_source_version("../escape")
 
 
-def test_drive_archive_reports_missing_hf_or_local_credentials(monkeypatch):
+def test_individual_review_rejects_unsafe_submission_id(tmp_path):
+    from scripts.review_researcher_submission import review_submission
+
+    with pytest.raises(ValueError, match="Invalid submission ID"):
+        review_submission(
+            tmp_path / "submission.csv", tmp_path / "baseline.csv", tmp_path / "output",
+            "v1", "../escape",
+        )
+
+
+def test_drive_archive_reports_missing_hf_or_local_credentials(tmp_path, monkeypatch):
     from core.researcher_submission_review import archive_submission_to_drive
 
+    baseline = tmp_path / "20USA.csv"
+    baseline.write_text("baseline", encoding="utf-8")
     monkeypatch.setenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "folder-id")
     monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON", raising=False)
     monkeypatch.delenv("GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE", raising=False)
     monkeypatch.delenv("GOOGLE_DRIVE_ARCHIVE_REFRESH_TOKEN", raising=False)
     monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_ID", raising=False)
     monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_SECRET", raising=False)
-    result = archive_submission_to_drive(rows=[], economy="20USA", version="v_test", run_id="run")
+    result = archive_submission_to_drive(
+        rows=_canonical_rows().to_dict("records"), economy="20USA",
+        version="v_test", run_id="run", baseline_path=baseline,
+    )
     assert result["success"] is False
     assert "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON" in result["message"]
+
+
+def test_drive_archive_rejects_missing_baseline_before_drive_access(monkeypatch):
+    from core import researcher_submission_review as review
+
+    monkeypatch.setattr(review, "_build_drive_service", lambda: pytest.fail("Drive must not be accessed"))
+    result = review.archive_submission_to_drive(
+        rows=_canonical_rows().to_dict("records"), economy="20USA", version="v1",
+        run_id="run-1", drive_folder_id="root", baseline_path=None,
+    )
+    assert result["success"] is False
+    assert "exact baseline CSV is required" in result["message"]
 
 
 def test_drive_archive_stages_then_publishes_validated_pair(tmp_path, monkeypatch):
