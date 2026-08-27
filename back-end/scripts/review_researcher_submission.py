@@ -7,12 +7,17 @@ from pathlib import Path
 
 import pandas as pd
 
-import build_road_model_static_defaults as static_builder
-
 from core.researcher_submission_review import (
     build_final_value_overrides, build_source_promotion_plan, compare_submission_to_baseline,
     normalise_module1_csv,
 )
+
+
+def _load_static_builder():
+    """Import the expensive static builder only when an approved rebuild is requested."""
+    import build_road_model_static_defaults
+
+    return build_road_model_static_defaults
 
 
 def review_submission(submission_path: Path, baseline_path: Path, output_dir: Path, baseline_version: str, submission_id: str) -> dict[str, Path]:
@@ -36,6 +41,7 @@ def build_approved_source_version(new_version: str) -> None:
     This intentionally has no source-editing arguments: review approval and the
     source-file change happen first, then this creates a fresh dated package.
     """
+    static_builder = _load_static_builder()
     if not new_version or new_version == static_builder.DEFAULT_VERSION:
         raise ValueError("Choose a new immutable dated version; never rebuild the existing default version in place.")
     static_builder.main(version=new_version)

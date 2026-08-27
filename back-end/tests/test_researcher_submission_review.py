@@ -89,8 +89,14 @@ def test_approved_source_promotion_requests_a_new_immutable_version(monkeypatch)
     from scripts import review_researcher_submission as review_script
 
     called = []
-    monkeypatch.setattr(review_script.static_builder, "DEFAULT_VERSION", "v_existing")
-    monkeypatch.setattr(review_script.static_builder, "main", lambda version: called.append(version))
+    class FakeStaticBuilder:
+        DEFAULT_VERSION = "v_existing"
+
+        @staticmethod
+        def main(version):
+            called.append(version)
+
+    monkeypatch.setattr(review_script, "_load_static_builder", lambda: FakeStaticBuilder)
     review_script.build_approved_source_version("v2026_08_24_researcher_reviewed")
     assert called == ["v2026_08_24_researcher_reviewed"]
     with pytest.raises(ValueError, match="new immutable"):
