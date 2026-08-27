@@ -15,6 +15,7 @@ should provide. Edit that CSV to add/remove rows or update units.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -52,6 +53,21 @@ from core.road_module1_defaults import (
 NOTEBOOK_DIR = Path(__file__).resolve().parent
 OUTPUT_ROOT = NOTEBOOK_DIR / "outputs" / "road_module1_defaults"
 FRONTEND_STATIC_BUNDLE_ROOT = NOTEBOOK_DIR.parent / "front-end" / "road-module1-static"
+_ROAD_MODEL_ECONOMIES_PATH = Path(
+    os.getenv("LEAP_ROAD_MODEL_DIR") or str(NOTEBOOK_DIR.parent.parent / "leap_road_model")
+) / "codebase" / "config" / "economies.yaml"
+
+
+def _load_economy_base_years() -> dict[str, int]:
+    """Read base years from the model's authoritative economy registry."""
+    with _ROAD_MODEL_ECONOMIES_PATH.open(encoding="utf-8") as stream:
+        data = yaml.safe_load(stream) or {}
+    economies = data.get("economies") or {}
+    return {
+        str(code).replace("_", ""): int(metadata["base_year"])
+        for code, metadata in economies.items()
+        if isinstance(metadata, dict) and metadata.get("base_year") is not None
+    }
 
 
 def _sanitize_static_segment(value: str) -> str:
@@ -596,6 +612,7 @@ def write_frontend_static_bundle(
     """Write frontend static CSV defaults and index.json."""
     static_root.mkdir(parents=True, exist_ok=True)
     static_contract = _load_static_contract()
+    base_years = _load_economy_base_years()
 
     version_root = static_root / _sanitize_static_segment(version)
     shutil.rmtree(version_root, ignore_errors=True)
@@ -658,10 +675,14 @@ def write_frontend_static_bundle(
         if not str(v).startswith("_tmp")
     ]
     for available_version in available_versions:
+        available_economies = list_default_economies(version=available_version, output_root=output_root)
         versions_index.append(
             {
                 "version": available_version,
-                "economies": list_default_economies(version=available_version, output_root=output_root),
+                "economies": [
+                    {**economy, "base_year": base_years.get(str(economy["economy"]))}
+                    for economy in available_economies
+                ],
             }
         )
 

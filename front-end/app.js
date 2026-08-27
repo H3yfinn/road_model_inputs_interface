@@ -18,6 +18,7 @@ const State = {
     roadModule1: {
         version: null,
         economy: null,
+        baseYear: null,
         scenario: 'Target',
         scenarios: ['Current Accounts', 'Target'],
         configuredScenarios: ['Current Accounts', 'Reference', 'Target'],
@@ -661,6 +662,13 @@ function getRoadStaticIndexDefaultVersion(indexData, versions) {
     return '';
 }
 
+function getRoadStaticEconomyBaseYear(indexData, version, economy) {
+    const entry = (indexData?.versions || []).find(item => item?.version === version);
+    const economyEntry = (entry?.economies || []).find(item => item?.economy === economy);
+    const baseYear = Number(economyEntry?.base_year);
+    return Number.isInteger(baseYear) ? baseYear : null;
+}
+
 function getRoadStaticEconomies(indexData, version) {
     const versions = Array.isArray(indexData?.versions)
         ? indexData.versions
@@ -736,8 +744,10 @@ async function loadRoadModule1DefaultsFromStaticBundle(version, economy) {
         throw new Error(`Static defaults file is empty: ${path}`);
     }
 
+    const staticIndex = await fetchRoadModule1StaticIndex();
     return {
         key_columns: ROAD_MODULE1_LONG_KEY_COLUMNS,
+        base_year: getRoadStaticEconomyBaseYear(staticIndex, version, economy),
         rows
     };
 }
@@ -1468,6 +1478,7 @@ async function loadRoadModule1Defaults() {
 
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
+        State.roadModule1.baseYear = response.base_year;
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
@@ -1558,6 +1569,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
         const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         State.roadModule1.version = version;
         State.roadModule1.economy = economy;
+        State.roadModule1.baseYear = response.base_year;
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
         const splitRows = splitRoadModule1RowsByVisibility(response.rows);
         State.roadModule1.rows = normalizeRoadModule1RowsForUi(splitRows.visibleRows);
@@ -5206,6 +5218,7 @@ async function runRoadModel() {
             body: JSON.stringify({
                 economy: State.roadModule1.economy,
                 version: State.roadModule1.version,
+                base_year: State.roadModule1.baseYear,
                 rows: completedLongRows,
                 scenarios: projectionScenarios,
                 enable_visualisations: true,

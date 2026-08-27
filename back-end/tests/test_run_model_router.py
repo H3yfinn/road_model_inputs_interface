@@ -93,6 +93,34 @@ def test_write_module1_csv_normalises_economy_code(tmp_path, monkeypatch):
     assert path.exists()
 
 
+def test_write_module1_csv_records_base_year_manifest(tmp_path, monkeypatch):
+    import json
+    import api.run_model_router as router_mod
+    monkeypatch.setattr(router_mod, "_MODULE1_INPUT_DIR", tmp_path)
+
+    path = router_mod._write_module1_csv([{"Year": 2025, "Value": 1}], "20USA", "v2026_test", 2025)
+
+    manifest = json.loads((path.parent / "road_module1_package_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["base_year"] == 2025
+    assert manifest["economy"] == "20_USA"
+
+
+def test_static_bundle_base_year_reads_new_metadata(tmp_path, monkeypatch):
+    import json
+    import api.run_model_router as router_mod
+    monkeypatch.setattr(router_mod, "_STATIC_BUNDLE_DIR", tmp_path)
+    (tmp_path / "index.json").write_text(json.dumps({"versions": [{"version": "v_test", "economies": [{"economy": "20USA", "base_year": 2025}]}]}), encoding="utf-8")
+
+    assert router_mod._static_bundle_base_year("20_USA", "v_test") == 2025
+
+
+def test_submitted_package_requires_declared_base_year_rows():
+    from api.run_model_router import _validate_submitted_base_year_rows
+
+    with pytest.raises(ValueError, match="no rows"):
+        _validate_submitted_base_year_rows([{"Year": 2022, "Value": 1}], 2025)
+
+
 def test_write_module1_csv_rejects_version_path_traversal(tmp_path, monkeypatch):
     import api.run_model_router as router_mod
     monkeypatch.setattr(router_mod, "_MODULE1_INPUT_DIR", tmp_path)

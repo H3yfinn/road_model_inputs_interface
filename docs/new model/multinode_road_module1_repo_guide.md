@@ -399,6 +399,13 @@ legacy compatibility only and phased out of documentation and new workflows.
 
 ### Base-year focus
 
+The model economy registry is the authoritative default for each economy's base
+year (including Russia's 2021 exception). Static `index.json` records that year
+per version/economy. The local run API writes it into a runtime
+`road_module1_package_manifest.json` and passes it explicitly to the model;
+the model rejects a mismatch before it starts. Older static packages without
+this metadata remain readable as legacy/inferred packages.
+
 Module 1 is mainly a base-year data request. The current base year is recorded
 in code as `BASE_YEAR` and should be consistent across source files, generated
 defaults, UI labels, and downstream exports.

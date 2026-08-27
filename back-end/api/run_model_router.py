@@ -58,6 +58,7 @@ _ROAD_MODEL_REPO = Path(
 _ROAD_WORKFLOW = _ROAD_MODEL_REPO / "codebase" / "road_workflow.py"
 _MODULE1_INPUT_DIR = _ROAD_MODEL_REPO / "input_data" / "module1_defaults"
 _ROAD_SCENARIOS_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "scenarios.yaml"
+_ROAD_ECONOMIES_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "economies.yaml"
 _STATIC_BUNDLE_DIR = _INTERFACE_DIR / "front-end" / "road-module1-static"
 
 # In-memory registry of active subprocess handles keyed by run_id.
@@ -100,6 +101,47 @@ def _baseline_static_csv_path(economy: str, version: str) -> Path:
     """Locate the immutable browser baseline used by this run, when available."""
     compact_economy = _to_canonical_economy(economy).replace("_", "")
     return path_within(_STATIC_BUNDLE_DIR, validate_version(version), f"{compact_economy}.csv")
+
+
+def _configured_base_year(economy: str) -> int:
+    """Read the authoritative economy-specific base year from the model registry."""
+    import yaml
+
+    with _ROAD_ECONOMIES_CONFIG.open(encoding="utf-8") as stream:
+        data = yaml.safe_load(stream) or {}
+    metadata = (data.get("economies") or {}).get(_to_canonical_economy(economy))
+    if not isinstance(metadata, dict) or metadata.get("base_year") is None:
+        raise ValueError(f"No configured base year for economy {_to_canonical_economy(economy)}")
+    return int(metadata["base_year"])
+
+
+def _static_bundle_base_year(economy: str, version: str) -> int | None:
+    """Return static metadata's base year; absent means an older legacy bundle."""
+    index_path = _STATIC_BUNDLE_DIR / "index.json"
+    if not index_path.is_file():
+        return None
+    data = json.loads(index_path.read_text(encoding="utf-8"))
+    compact = _to_canonical_economy(economy).replace("_", "")
+    for item in data.get("versions", []):
+        if item.get("version") != version:
+            continue
+        for economy_item in item.get("economies", []):
+            if economy_item.get("economy") == compact and economy_item.get("base_year") is not None:
+                return int(economy_item["base_year"])
+    return None
+
+
+def _validate_submitted_base_year_rows(rows: list[dict[str, Any]], base_year: int) -> None:
+    """Fail before writing when a submission contains no rows for its declared base year."""
+    submitted_years = {
+        int(row["Year"])
+        for row in rows
+        if row.get("Year") not in (None, "") and str(row.get("Year")).strip().lstrip("-").isdigit()
+    }
+    if int(base_year) not in submitted_years:
+        raise ValueError(
+            f"Submitted Module 1 package has no rows for declared base year {base_year}."
+        )
 
 
 def _configured_scenario_labels() -> set[str]:
@@ -200,7 +242,7 @@ def _write_lifecycle_factors_csv(turnover_config: dict[str, Any], dest_dir: Path
     return csv_path
 
 
-def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -> Path:
+def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str, base_year: int | None = None) -> Path:
     """Write completed Module 1 rows as CSV into leap_road_model's input_data directory."""
     economy_canonical = _to_canonical_economy(economy)
     version = validate_version(version)
@@ -217,6 +259,17 @@ def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str) -
         writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
+
+    if base_year is not None:
+        (dest_dir / "road_module1_package_manifest.json").write_text(
+            json.dumps({
+                "base_year": int(base_year),
+                "base_year_provenance": "recorded",
+                "package_version": version,
+                "economy": economy_canonical,
+            }, indent=2),
+            encoding="utf-8",
+        )
 
     logger.info(f"Module 1 CSV written: {dest_file} ({len(rows)} rows)")
     return dest_file
@@ -380,6 +433,7 @@ class RunModelRequest(BaseModel):
     economy: str
     version: str
     rows: list[dict[str, Any]]
+    base_year: int | None = None
     scenarios: list[str] | None = None
     enable_visualisations: bool = True
     turnover_config: dict[str, Any] | None = None
@@ -525,7 +579,14 @@ async def start_road_model_run(payload: RunModelRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     try:
-        csv_path = _write_module1_csv(payload.rows, payload.economy, version)
+        base_year = int(payload.base_year) if payload.base_year is not None else _configured_base_year(economy_canonical)
+        static_base_year = _static_bundle_base_year(payload.economy, version)
+        if static_base_year is not None and static_base_year != base_year:
+            raise ValueError(
+                f"Static package base year {static_base_year} does not match submitted base year {base_year}."
+            )
+        _validate_submitted_base_year_rows(payload.rows, base_year)
+        csv_path = _write_module1_csv(payload.rows, payload.economy, version, base_year)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
@@ -562,6 +623,8 @@ async def start_road_model_run(payload: RunModelRequest):
         str(_MODULE1_INPUT_DIR),
         "--module1-defaults-version",
         version,
+        "--base-year",
+        str(base_year),
         "--scenarios",
         *projection_scenarios,
     ]
