@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy notice — APERC Road Model Archive</title>
+  <style>
+    body { margin: 0; background: #f8fafc; color: #1e293b; font: 16px/1.55 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 48px auto; padding: 0 24px 48px; }
+    h1 { color: #172554; } h2 { margin-top: 32px; color: #1e3a8a; }
+    a { color: #1d4ed8; } code { background: #e2e8f0; padding: 0.1em 0.25em; }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="/">← Road data preparation model</a></p>
+    <h1>Privacy notice — APERC Road Model Archive</h1>
+    <p>Last updated: 27 August 2026</p>
+
+    <h2>What this service does</h2>
+    <p>The Road Model lets researchers prepare road-transport model inputs. When a
+      researcher changes inputs and runs the model, the service may save a complete
+      submission CSV and small metadata record to the designated Google Drive archive.</p>
+
+    <h2>Google Drive access</h2>
+    <p>The archive owner connects Google Drive once using OAuth. The service requests
+      only <code>https://www.googleapis.com/auth/drive.file</code>, which permits it
+      to create and manage the archive folder and files it uses. It does not request
+      broad access to browse or manage all files in the archive owner's Drive.</p>
+    <p>The OAuth refresh token and client secret are stored as private deployment
+      secrets. They are not sent to researchers using the model.</p>
+
+    <h2>Information stored</h2>
+    <p>An archived submission can include the submitted model values, comments,
+      source/provenance labels, selected economy, model-input version, run identifier,
+      timestamp, submission filename/identifier, and checksum. It is retained in the
+      Google Drive archive until the archive administrator deletes it.</p>
+
+    <h2>Sharing and access</h2>
+    <p>The archive folder may be shared as <em>Anyone with the link — Viewer</em> so
+      former colleagues can download submissions. Anyone who obtains that link can
+      access the archive files. Researchers should therefore not include personal,
+      confidential, or sensitive information in model comments or submissions.</p>
+
+    <h2>Contact and choices</h2>
+    <p>For archive questions or deletion requests, contact
+      <a href="mailto:finn.maunsell@gmail.com">finn.maunsell@gmail.com</a>. The
+      archive owner can revoke the service's Google Drive access through their Google
+      Account at any time.</p>
+  </main>
+</body>
+</html>

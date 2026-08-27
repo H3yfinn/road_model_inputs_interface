@@ -244,6 +244,14 @@ def test_road_model_docs_served_from_model_repo(client):
     assert "plain-English overview" in response.text
 
 
+def test_privacy_notice_is_publicly_served(client):
+    response = client.get("/privacy.html")
+
+    assert response.status_code == 200
+    assert "Privacy notice" in response.text
+    assert "drive.file" in response.text
+
+
 # ---------------------------------------------------------------------------
 # Static contract drivetrain scope check
 # Mirrors valid_drive_types_by_vehicle_type in
