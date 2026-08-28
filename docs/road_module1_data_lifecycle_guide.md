@@ -77,7 +77,7 @@ is preserved in an archived transport data system even when it has not yet been
 joined into the current canonical row. Use:
 
 ```text
-9th Outlook legacy input — row-level provenance is preserved in the archived transport data system but has not yet been linked into this interface record. The displayed value may also reflect subsequent aggregation, disaggregation, or model reconciliation.
+9th Outlook legacy input — row-level provenance is preserved in the archived 9th-edition transport data system and can be investigated on demand: https://drive.google.com/file/d/103sIJ1L1mbQpGfL2shlB8nrIOTkbyFz3/view?usp=drive_link. The displayed value may also reflect subsequent aggregation, disaggregation, or model reconciliation.
 ```
 
 Until a separate classification migration is reviewed, keep incomplete legacy

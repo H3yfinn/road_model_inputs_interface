@@ -34,8 +34,13 @@ VALID_BASE_YEAR_TREATMENTS = frozenset(
 LEGACY_GUIDANCE = (
     "Legacy input — original source detail not yet recorded; please update when better evidence is available."
 )
+NINTH_OUTLOOK_ARCHIVE_URL = (
+    "https://drive.google.com/file/d/103sIJ1L1mbQpGfL2shlB8nrIOTkbyFz3/view?usp=drive_link"
+)
 NINTH_OUTLOOK_GUIDANCE = (
-    "9th Outlook input — original source detail not yet recorded; please update when better evidence is available."
+    "9th Outlook legacy input — row-level provenance is preserved in the archived 9th-edition "
+    f"transport data system and can be investigated on demand: {NINTH_OUTLOOK_ARCHIVE_URL}. "
+    "The displayed value may also reflect subsequent aggregation, disaggregation, or model reconciliation."
 )
 CURRENT_SOURCE_PACKAGE_VERSION = "v2026_06_05_road_module1_sources"
 

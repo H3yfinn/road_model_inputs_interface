@@ -138,7 +138,9 @@ The build then applies the pure normaliser in
 - blank dates and legacy-looking filenames are not evidence by themselves;
 - uncertain lineage stays blank/`legacy_unknown` and receives “original source
   detail not yet recorded” guidance;
-- 9th Outlook legacy lineage also stays non-native unless explicit source
+- proven, version-scoped 9th Outlook lineage points users to the archived
+  transport data system for investigation on demand, while retaining
+  `legacy_unknown` internally and staying non-native unless explicit source
   metadata establishes another classification;
 - a literal Russia 2022 source remains 2022 for the 2021 base year and is marked
   `carried_backward` / `future_year_seed`;

@@ -6,6 +6,7 @@ import pytest
 from core.road_module1_provenance import (
     CURRENT_SOURCE_PACKAGE_VERSION,
     LEGACY_GUIDANCE,
+    NINTH_OUTLOOK_ARCHIVE_URL,
     NINTH_OUTLOOK_GUIDANCE,
     LineageRule,
     audit_module1_source_quality,
@@ -60,6 +61,8 @@ def test_proven_ninth_outlook_missing_year_uses_2022_but_is_not_native():
     assert result.loc[0, "Source Classification"] == "legacy_unknown"
     assert result.loc[0, "Base Year Treatment"] == "transformed"
     assert NINTH_OUTLOOK_GUIDANCE in result.loc[0, "Comment"]
+    assert NINTH_OUTLOOK_ARCHIVE_URL in result.loc[0, "Comment"]
+    assert "original source detail not yet recorded" not in result.loc[0, "Comment"]
 
 
 def test_unknown_blank_date_stays_blank_and_requests_legacy_detail():
