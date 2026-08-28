@@ -8,6 +8,8 @@ Callers must supply that variable-to-policy mapping explicitly.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
+import re
 from typing import Any, Mapping, Sequence
 
 
@@ -96,10 +98,19 @@ POLICIES_BY_ID = {
 def _validate_year(value: object, field_name: str) -> int:
     if isinstance(value, bool):
         raise ValueError(f"{field_name} must be an integer year, not a boolean.")
-    try:
-        year = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{field_name} must be an integer year, got {value!r}.") from exc
+    if isinstance(value, str):
+        text = value.strip()
+        if not re.fullmatch(r"[+-]?\d+", text):
+            raise ValueError(f"{field_name} must be an integer year, got {value!r}.")
+        year = int(text)
+    else:
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{field_name} must be an integer year, got {value!r}.") from exc
+        if not math.isfinite(numeric) or not numeric.is_integer():
+            raise ValueError(f"{field_name} must be an integer year, got {value!r}.")
+        year = int(numeric)
     if not 1900 <= year <= 2100:
         raise ValueError(f"{field_name} {year} is outside the supported range 1900–2100.")
     return year
@@ -208,10 +219,17 @@ def resolve_base_year_candidates(
     requested_year = _validate_year(requested_base_year, "requested_base_year")
     resolver_policy = _validate_policy(policy)
     normalised = tuple(_normalise_candidate(value) for value in candidates)
-    candidate_ids = [candidate.candidate_id for candidate in normalised]
-    duplicates = sorted({item for item in candidate_ids if candidate_ids.count(item) > 1})
+    seen_ids: set[str] = set()
+    duplicates: set[str] = set()
+    for candidate in normalised:
+        if candidate.candidate_id in seen_ids:
+            duplicates.add(candidate.candidate_id)
+        seen_ids.add(candidate.candidate_id)
     if duplicates:
-        raise ValueError(f"Duplicate candidate identities: {duplicates}")
+        raise ValueError(f"Duplicate candidate identities: {sorted(duplicates)}")
+    row_keys = {candidate.row_key for candidate in normalised}
+    if len(row_keys) > 1:
+        raise ValueError(f"All candidates must have the same canonical row_key: {sorted(row_keys)!r}")
 
     rejected: list[CandidateRejection] = []
     eligible: list[Candidate] = []
@@ -233,7 +251,15 @@ def resolve_base_year_candidates(
     if not eligible:
         reason = "no_candidates" if not normalised else "no_eligible_candidates"
         return CandidateResolution(
-            requested_year, resolver_policy.policy_id, None, None, None, None, None, reason, tuple(rejected)
+            requested_year,
+            resolver_policy.policy_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            reason,
+            tuple(sorted(rejected, key=lambda item: item.candidate_id)),
         )
 
     def rank(candidate: Candidate) -> tuple[int, int, int, int, str]:
@@ -249,9 +275,31 @@ def resolve_base_year_candidates(
         )
 
     selected = min(eligible, key=rank)
+
+    def selection_rejection_reason(candidate: Candidate) -> str:
+        selected_direction, _, _ = _direction_and_treatment(selected, requested_year)
+        candidate_direction, _, _ = _direction_and_treatment(candidate, requested_year)
+        if selected_direction != candidate_direction:
+            if selected_direction == "exact":
+                return "exact_year_preferred"
+            return "eligible_earlier_data_preferred_over_future"
+        if selected_direction == "earlier" and selected.source_data_year > candidate.source_data_year:
+            return "newer_eligible_earlier_year_preferred"
+        if selected_direction == "future" and selected.source_data_year < candidate.source_data_year:
+            return "earlier_eligible_future_year_preferred"
+        selected_quality = resolver_policy.quality_tier_priority[selected.quality_tier]
+        candidate_quality = resolver_policy.quality_tier_priority[candidate.quality_tier]
+        if selected_quality < candidate_quality:
+            return "higher_configured_quality_tier_preferred"
+        selected_source = resolver_policy.source_priority[selected.source_priority_id]
+        candidate_source = resolver_policy.source_priority[candidate.source_priority_id]
+        if selected_source < candidate_source:
+            return "higher_configured_source_priority_preferred"
+        return "stable_candidate_id_tie_break_preferred"
+
     for candidate in eligible:
         if candidate.candidate_id != selected.candidate_id:
-            rejected.append(CandidateRejection(candidate.candidate_id, candidate.row_key, ("lower_selection_rank",)))
+            rejected.append(CandidateRejection(candidate.candidate_id, candidate.row_key, (selection_rejection_reason(candidate),)))
     direction, treatment, reason = _direction_and_treatment(selected, requested_year)
     return CandidateResolution(
         requested_year,

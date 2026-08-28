@@ -368,6 +368,11 @@ Deployment details and the My Drive OAuth boundary are recorded in
 - Output files changed: None. The resolver returns an in-memory selected
   candidate and structured rejections; this phase does not generate packages,
   static bundles, or audits on disk.
+- Audit reasons: A call accepts one canonical row key only. Rejections are
+  stable by candidate ID and explain the first selection dimension that lost:
+  exact year, newer earlier year, earlier-over-future, earlier future year,
+  configured quality tier, configured source priority, or candidate-ID tie
+  break.
 - Validation checks run: Synthetic resolver tests cover deterministic ranking,
   policy ineligibility, provenance, reversibility, and invalid inputs.
 - Notes/limitations: No production variable-to-policy assignment has been
