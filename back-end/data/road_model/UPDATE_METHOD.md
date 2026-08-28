@@ -361,14 +361,17 @@ Deployment details and the My Drive OAuth boundary are recorded in
   `config/road_module1_static_contract.csv`. Do not feed a previously
   shifted/generated candidate back into the resolver.
 - Variable policy mapping:
-  - `exact_year_required`: the seven `Reconciliation Weight ...` and
-    `Reconciliation Bound ...` variables. These use the resolver's
-    `energy_balance_exact_year` policy and cannot shift years.
+  - `exact_year_required`: no current canonical Module 1 variables. This family
+    remains available for external anchors such as ESTO energy-balance data,
+    which must match the requested year and use the resolver's
+    `energy_balance_exact_year` policy.
   - `seed_eligible`: `Stock`, `Mileage`, `Fuel Economy`, `Sales Share`,
     `Survival Rate`, `Vintage Profile Share`, `PHEV Electric Driving Share`,
     the passenger/freight projection assumptions, turnover bounds, and vehicle
-    equivalent weights/bounds. These may use exact year, latest eligible
-    earlier year, or only when neither exists the earliest eligible future year.
+    equivalent weights/bounds, plus the seven reconciliation weights/bounds.
+    These 23 researcher/source or model-judgement inputs may use exact year,
+    latest eligible earlier year, or only when neither exists the earliest
+    eligible future year.
   - `derived`: `Stock Share` only. It is recalculated from resolved `Stock` and
     must not be resolved or shifted independently.
 - Recategorizations or mappings: Native observations are selected exact-year,
@@ -396,3 +399,5 @@ Deployment details and the My Drive OAuth boundary are recorded in
   classifications. Some assumption sources are currently classified as
   `structural_assumption` or `model_assumption`; whether those classifications
   become resolver-eligible remains a separate explicit integration decision.
+  ESTO energy-balance observations sit outside the canonical Module 1 variable
+  registry and remain exact-year reconciliation anchors.

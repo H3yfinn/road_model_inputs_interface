@@ -43,18 +43,10 @@ VARIABLE_POLICY_FAMILIES = (
     VariablePolicyFamily(
         family_id=EXACT_YEAR_REQUIRED,
         description=(
-            "Energy-balance reconciliation controls that must come from the requested base year; "
-            "earlier or future seeds are not allowed."
+            "External energy-balance anchors that must come from the requested base year; earlier "
+            "or future seeds are not allowed. The current Module 1 contract contains none."
         ),
-        variables=(
-            "Reconciliation Bound Lower Efficiency",
-            "Reconciliation Bound Lower Mileage",
-            "Reconciliation Bound Upper Efficiency",
-            "Reconciliation Bound Upper Mileage",
-            "Reconciliation Weight Efficiency",
-            "Reconciliation Weight Mileage",
-            "Reconciliation Weight Stock",
-        ),
+        variables=(),
         resolver_policy_id="energy_balance_exact_year",
     ),
     VariablePolicyFamily(
@@ -71,6 +63,13 @@ VARIABLE_POLICY_FAMILIES = (
             "Passenger Stock Growth Rate Adjustment",
             "Passenger Vehicle Saturation",
             "PHEV Electric Driving Share",
+            "Reconciliation Bound Lower Efficiency",
+            "Reconciliation Bound Lower Mileage",
+            "Reconciliation Bound Upper Efficiency",
+            "Reconciliation Bound Upper Mileage",
+            "Reconciliation Weight Efficiency",
+            "Reconciliation Weight Mileage",
+            "Reconciliation Weight Stock",
             "Sales Share",
             "Stock",
             "Survival Rate",
@@ -121,8 +120,10 @@ def validate_policy_registry(
         if family_id in family_ids:
             raise ValueError(f"Duplicate variable policy family definition {family_id!r}.")
         family_ids.add(family_id)
-        if isinstance(family.variables, (str, bytes)) or not isinstance(family.variables, tuple) or not family.variables:
-            raise ValueError(f"Policy family {family_id!r} must define a non-empty tuple of variables.")
+        if isinstance(family.variables, (str, bytes)) or not isinstance(family.variables, tuple):
+            raise ValueError(f"Policy family {family_id!r} must define a tuple of variables.")
+        if not family.variables and family_id != EXACT_YEAR_REQUIRED:
+            raise ValueError(f"Policy family {family_id!r} must define at least one variable.")
 
         if family_id == DERIVED:
             if family.resolver_policy_id is not None:

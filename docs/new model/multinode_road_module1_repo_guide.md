@@ -425,8 +425,8 @@ canonical variable has not been deliberately classified.
 
 | Family | Meaning | Current variables |
 |---|---|---|
-| `exact_year_required` | Energy-balance reconciliation controls must match the requested base year; they cannot use an earlier or future seed. | All seven `Reconciliation Weight ...` and `Reconciliation Bound ...` variables. |
-| `seed_eligible` | An original researcher/source input may use the requested year, the latest eligible earlier year, or—only when neither exists—the earliest eligible future year. | Stock, mileage, fuel economy, sales shares, survival/vintage assumptions, PHEV use, passenger/freight projection assumptions, turnover bounds, and vehicle-equivalent weights/bounds. |
+| `exact_year_required` | External energy-balance anchors must match the requested base year; they cannot use an earlier or future seed. | No current canonical Module 1 variables. ESTO energy-balance data remains an exact-year external input. |
+| `seed_eligible` | An original researcher/source or model-judgement input may use the requested year, the latest eligible earlier year, or—only when neither exists—the earliest eligible future year. | 23 current variables: stock, mileage, fuel economy, sales shares, survival/vintage assumptions, PHEV use, passenger/freight projection assumptions, turnover bounds, vehicle-equivalent weights/bounds, and all seven reconciliation weights/bounds. |
 | `derived` | Recalculate from already resolved inputs; do not shift independently. | `Stock Share`, derived from resolved `Stock`. |
 
 This classification does not make a source eligible by itself. The resolver's

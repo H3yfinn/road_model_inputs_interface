@@ -25,12 +25,15 @@ def test_current_canonical_contract_has_exactly_one_policy_per_variable():
     assert len(inventory) == 24
     assert tuple(variable for variable, _ in coverage) == inventory
     assert coverage == tuple(sorted(coverage))
+    assert sum(family_id == SEED_ELIGIBLE for _, family_id in coverage) == 23
+    assert sum(family_id == DERIVED for _, family_id in coverage) == 1
+    assert sum(family_id == EXACT_YEAR_REQUIRED for _, family_id in coverage) == 0
 
 
 @pytest.mark.parametrize(
     "variable, expected_family",
     [
-        ("Reconciliation Weight Stock", EXACT_YEAR_REQUIRED),
+        ("Reconciliation Weight Stock", SEED_ELIGIBLE),
         ("Stock", SEED_ELIGIBLE),
         ("Mileage", SEED_ELIGIBLE),
         ("Fuel Economy", SEED_ELIGIBLE),
@@ -43,6 +46,13 @@ def test_current_canonical_contract_has_exactly_one_policy_per_variable():
 )
 def test_representative_variables_use_expected_policy_family(variable, expected_family):
     assert policy_family_for_variable(variable).family_id == expected_family
+
+
+def test_exact_year_family_is_retained_for_external_anchors_without_fake_module1_assignments():
+    exact_family = next(family for family in VARIABLE_POLICY_FAMILIES if family.family_id == EXACT_YEAR_REQUIRED)
+
+    assert exact_family.variables == ()
+    assert exact_family.resolver_policy_id == "energy_balance_exact_year"
 
 
 @pytest.mark.parametrize("variable", ["", "   ", None])
@@ -96,6 +106,14 @@ def test_duplicate_and_conflicting_assignments_are_rejected():
             ),
             "derived family",
         ),
+        (
+            (
+                VARIABLE_POLICY_FAMILIES[0],
+                replace(VARIABLE_POLICY_FAMILIES[1], variables=()),
+                VARIABLE_POLICY_FAMILIES[2],
+            ),
+            "at least one variable",
+        ),
     ],
 )
 def test_malformed_policy_definitions_are_rejected(families, message):
@@ -118,8 +136,8 @@ def test_new_contract_variable_fails_coverage_until_deliberately_classified(tmp_
         encoding="utf-8",
     )
     small_registry = (
-        VariablePolicyFamily(EXACT_YEAR_REQUIRED, "Exact.", ("Stock",), "energy_balance_exact_year"),
-        VariablePolicyFamily(SEED_ELIGIBLE, "Seed.", ("New Canonical Variable",), "seed_eligible"),
+        VariablePolicyFamily(EXACT_YEAR_REQUIRED, "External exact anchors.", (), "energy_balance_exact_year"),
+        VariablePolicyFamily(SEED_ELIGIBLE, "Seed.", ("New Canonical Variable", "Stock"), "seed_eligible"),
         VariablePolicyFamily(DERIVED, "Derived.", ("Stock Share",), None),
     )
 
@@ -127,6 +145,6 @@ def test_new_contract_variable_fails_coverage_until_deliberately_classified(tmp_
         validate_contract_policy_coverage(contract)
     assert validate_contract_policy_coverage(contract, small_registry) == (
         ("New Canonical Variable", SEED_ELIGIBLE),
-        ("Stock", EXACT_YEAR_REQUIRED),
+        ("Stock", SEED_ELIGIBLE),
         ("Stock Share", DERIVED),
     )
