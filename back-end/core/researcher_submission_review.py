@@ -41,7 +41,7 @@ ECONOMY_CODE_RE = re.compile(r"^(?P<number>\d{2})_?(?P<letters>[A-Za-z]{2,3})$")
 VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,199}$")
 SOURCE_CLASSIFICATIONS = {"native_observation", "projection", "structural_assumption", "model_assumption", "legacy_unknown"}
-BASE_YEAR_TREATMENTS = {"native", "carried_forward", "transformed", "legacy_unrecorded"}
+BASE_YEAR_TREATMENTS = {"native", "carried_forward", "carried_backward", "transformed", "legacy_unrecorded"}
 
 
 def canonical_economy_code(value: object) -> str:

@@ -115,6 +115,53 @@ Required rows must come from the source pool or from an explicitly supported
 derivation. Missing required rows should fail the build. Do not add silent
 row-completion fallbacks.
 
+### Structured provenance and year policy
+
+Source-prep and source-merge inputs may carry these optional columns in addition
+to the numeric row fields:
+
+```text
+Source, Comment, Source Data Year, Source Classification,
+Base Year Treatment, Derivation Method
+```
+
+They are preserved through the internal wide form and the canonical-long build
+output. Malformed years, classifications, or treatments fail validation instead
+of being repaired silently.
+
+The build then applies the pure normaliser in
+`back-end/core/road_module1_provenance.py`:
+
+- an explicit `Source Data Year` always wins;
+- a missing year becomes 2022 only for a source/package combination in the
+  explicit, version-scoped 9th Outlook lineage mapping;
+- blank dates and legacy-looking filenames are not evidence by themselves;
+- uncertain lineage stays blank/`legacy_unknown` and receives “original source
+  detail not yet recorded” guidance;
+- 9th Outlook legacy lineage also stays non-native unless explicit source
+  metadata establishes another classification;
+- a literal Russia 2022 source remains 2022 for the 2021 base year and is marked
+  `carried_backward` / `future_year_seed`;
+- derived and generated rows record the derivation, including `Stock Share`
+  from `Stock` and generated correction-factor defaults.
+
+The current 9th Outlook mapping applies only to the checked-in
+`v2026_06_05_road_module1_sources` package: its documented processed-source
+files and the dated Target 20260526 / Reference 20260615 transport export
+packages. Do not broaden it to every `processed_source/` file or LEAP export.
+Before adding a new mapping, trace the exact workbook/source generation path,
+confirm that the folder is active, and record the supporting document.
+
+Supplemental overlays safely copy an explicit four-digit `data_year` into
+`Source Data Year`. Evidence grades and estimation-status text remain in source
+notes unless the source itself provides a valid canonical classification; they
+do not imply a native observation.
+
+Use `audit_module1_source_quality()` for an in-memory quality summary. Pass a
+temporary caller-owned path only when a CSV is needed for review. The audit does
+not update generated defaults, the frontend static bundle, Drive, or any source
+file.
+
 ## Stock Share Derivation
 
 `Stock Share` rows are derived from base-year `Stock` rows after the source

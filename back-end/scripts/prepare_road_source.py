@@ -35,6 +35,14 @@ EXPORT_SHEET_NAME = "FOR_VIEWING"
 EXPORT_HEADER_ROW = 2
 ROAD_PREFIXES = ("Demand\\Passenger road", "Demand\\Freight road")
 KEEP_COLUMNS = ["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]
+PROVENANCE_COLUMNS = [
+    "Source",
+    "Comment",
+    "Source Data Year",
+    "Source Classification",
+    "Base Year Treatment",
+    "Derivation Method",
+]
 
 
 # PHEV is only valid for LPVs and LCVs. Buses and Motorcycles may appear in
@@ -133,7 +141,10 @@ def expand_for_viewing_to_long(export_df: pd.DataFrame) -> pd.DataFrame:
     year_columns = _year_columns(export_df)
     if not year_columns:
         return pd.DataFrame(columns=["Region", *KEEP_COLUMNS])
-    id_columns = ["Region", "Branch Path", "Variable", "Scenario", "Units"]
+    id_columns = [
+        "Region", "Branch Path", "Variable", "Scenario", "Units",
+        *[column for column in PROVENANCE_COLUMNS if column in export_df.columns],
+    ]
     long_df = export_df[id_columns + year_columns].melt(
         id_vars=id_columns,
         value_vars=year_columns,
@@ -165,6 +176,7 @@ def expand_export_to_long(export_df: pd.DataFrame) -> pd.DataFrame:
                     "Year": year,
                     "Value": value,
                     "Units": source_row.get("Units", ""),
+                    **{column: source_row.get(column, "") for column in PROVENANCE_COLUMNS if column in export_df.columns},
                 }
             )
     return pd.DataFrame(rows)
@@ -208,7 +220,8 @@ def write_processed_source_files(long_df: pd.DataFrame, output_dir: Path) -> lis
         if not economy:
             continue
         output = output_dir / f"road_module1_source_{economy}.csv"
-        region_df[KEEP_COLUMNS].sort_values(["Branch Path", "Variable", "Scenario", "Year"]).to_csv(output, index=False)
+        output_columns = [*KEEP_COLUMNS, *[column for column in PROVENANCE_COLUMNS if column in region_df.columns]]
+        region_df[output_columns].sort_values(["Branch Path", "Variable", "Scenario", "Year"]).to_csv(output, index=False)
         written.append(output)
     return written
 

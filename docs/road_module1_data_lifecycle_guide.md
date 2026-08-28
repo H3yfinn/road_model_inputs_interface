@@ -85,6 +85,51 @@ The note should include the dataset/document, source year, link/reference where
 available, and why the value changed. Missing detail remains a non-blocking run
 warning and is visible to the developer reviewer.
 
+### Provenance enrichment used by future builds
+
+`back-end/core/road_module1_provenance.py` normalises canonical-long provenance
+without changing `Value` or the canonical key `(Economy, Scenario, Branch Path,
+Variable, Year)`. The rule order is:
+
+1. Preserve and validate explicit structured metadata. An explicit `Source Data
+   Year` always wins.
+2. Apply an explicit source-lineage rule only when both the source-name pattern
+   and package version match.
+3. For a proven 9th Outlook lineage with no source year, use 2022 and retain
+   `legacy_unknown` unless a source supplied a more specific classification.
+4. Mark identified derived/generated rows with their actual derivation rather
+   than representing them as external observations.
+5. Leave an uncertain source year blank, retain `legacy_unknown`, and add the
+   honest missing-detail guidance.
+
+The checked-in mapping is intentionally narrow. For
+`v2026_06_05_road_module1_sources`, it covers the current
+`road_module1_source_<economy>.csv` package and the specifically dated Target
+20260526 / Reference 20260615 transport-export packages. Repository evidence in
+`leap_transport/docs/PROCESS_FLOW.md` establishes that those packages bridge
+9th-edition transport inputs into LEAP. A differently dated workbook, another
+LEAP export, another generated package, or a vaguely similar filename does not
+inherit that mapping. Add or change a rule only after reviewing the exact source
+generation path and documenting the evidence.
+
+For Current Accounts rows, a source year earlier than the economy base year is
+`carried_forward`; a later source year is `carried_backward` with
+`future_year_seed`. Thus a literal Russia 2022 source remains 2022 when used for
+the 2021 base year. A same-year 9th Outlook legacy input is `transformed`, not
+`native`, unless explicit structured metadata establishes a native observation.
+
+`Stock Share` is marked as derived from resolved `Stock`. Projected stock-share
+seeds, generated mileage/fuel-economy correction factors, specialist replacement
+sales shares, and scenario clones retain distinct derivation methods. Supplemental
+inputs propagate an explicit four-digit `data_year` through `Source Data Year`;
+their evidence grade or estimation status is not silently upgraded to a native
+classification.
+
+`audit_module1_source_quality()` reports total, complete, legacy-detail-needed,
+derived/generated, missing-date, and missing-classification counts in memory. It
+writes a CSV only when the caller supplies an output path; production artifacts
+are never an implicit side effect.
+
 ## Current source-quality audit
 
 Snapshot reviewed on 2026-08-28 for checked-in version
@@ -119,6 +164,30 @@ Overall: **the package is traceable to internal files, but evidence provenance
 is not consistently high quality**. A future generated version should preserve
 known detail, use honest legacy placeholders, and populate structured
 provenance. Do not hand-edit an existing immutable static version.
+
+### Temporary enriched-build validation
+
+On 2026-08-28 the complete 21-economy backend and static build was run into an
+isolated temporary directory using the checked-in sources and the enrichment
+rules above. The resulting 404,974 static canonical rows produced this in-memory
+audit (categories may overlap):
+
+| Metric | Rows |
+|---|---:|
+| Complete external provenance | 0 |
+| Legacy detail needed | 58,924 |
+| Derived/generated | 346,050 |
+| Missing source date | 345,344 |
+| Missing/non-specific classification | 59,630 |
+
+The zero complete count is deliberate rather than a failed upgrade: the
+current 9th Outlook bridge rows still lack original source detail and remain
+`legacy_unknown`, while supplemental synthetic/model inputs are not promoted to
+native observations. All 181 Russia Current Accounts rows carrying an explicit
+2022 source year were retained as 2022 and marked `carried_backward` for the
+2021 base year. The temporary validation also confirmed that enrichment did not
+change any canonical key or numeric value. No production output or static file
+was regenerated.
 
 ## Base-year resolution
 

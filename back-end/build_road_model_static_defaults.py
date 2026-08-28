@@ -23,6 +23,8 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from core.road_module1_provenance import enrich_module1_provenance
+
 from core.road_module1_defaults import (
     BASE_YEAR,
     DEFAULT_SCENARIOS,
@@ -290,6 +292,10 @@ def _load_projected_sales_share_long_rows(economy_code: str) -> pd.DataFrame:
         specialist_df["Comment"] = "Projected Sales Share from specialist override package."
         specialist_df["Input Status"] = "provided"
         specialist_df["Shown In Interface"] = "True"
+        for provenance_column in [
+            "Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method",
+        ]:
+            specialist_df[provenance_column] = pd.NA
         specialist_rows.append(specialist_df[MODULE1_LONG_COLUMNS])
     if specialist_rows:
         combined = pd.concat([combined, *specialist_rows], ignore_index=True)
@@ -645,6 +651,12 @@ def write_frontend_static_bundle(
         correction_factor_df = _build_projected_correction_factor_rows(long_defaults_df, economy_code)
         if not correction_factor_df.empty:
             long_defaults_df = pd.concat([long_defaults_df, correction_factor_df], ignore_index=True)
+
+        long_defaults_df = enrich_module1_provenance(
+            long_defaults_df,
+            package_version=version,
+            target_base_year=base_years.get(economy_code, BASE_YEAR),
+        )
 
         long_defaults_df = _filter_to_static_contract(
             long_df=long_defaults_df,

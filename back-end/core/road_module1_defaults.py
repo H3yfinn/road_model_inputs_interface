@@ -12,6 +12,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from core.road_module1_provenance import enrich_module1_provenance
+
 
 DEFAULT_VERSION = "v2026_06_05_road_module1_sources"
 SOURCE_DATE = "2026-05-25"
@@ -2329,6 +2331,14 @@ def _format_leap_scenario(scenario: str) -> str:
 
 
 PROCESSED_SOURCE_COLUMNS = ["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]
+SOURCE_PROVENANCE_COLUMNS = [
+    "Source",
+    "Comment",
+    "Source Data Year",
+    "Source Classification",
+    "Base Year Treatment",
+    "Derivation Method",
+]
 MANUAL_FILLED_SOURCE_COLUMNS = ["Economy", *PROCESSED_SOURCE_COLUMNS]
 MANUAL_DO_NOT_USE_COLUMN = "DO_NOT_USE"
 SOURCE_PRIORITY_COLUMNS = ["source_type", "source_name", "priority", "notes"]
@@ -2512,7 +2522,9 @@ def _load_manual_filled_rows(economy: EconomyInfo) -> pd.DataFrame:
             if "share_decreased_from" in source_df.columns
             else ""
         )
-        source_df = source_df[PROCESSED_SOURCE_COLUMNS].copy()
+        source_df = source_df[
+            [*PROCESSED_SOURCE_COLUMNS, *[column for column in SOURCE_PROVENANCE_COLUMNS if column in source_df.columns]]
+        ].copy()
         source_df["_source_type"] = "manual_missing_rows"
         source_df["_source_name"] = path.name
         source_df["_source_note"] = "Loaded from manually filled missing-row source."
@@ -3134,17 +3146,22 @@ def load_processed_source_inputs(
     source_df["Per..."] = ""
     source_df["input_source"] = "provided"
     source_df["standardized_label_status"] = "standardized"
-    source_df["notes"] = source_df["_source_note"].fillna("")
+    explicit_comment = source_df.get("Comment", pd.Series("", index=source_df.index)).fillna("").astype(str).str.strip()
+    source_df["notes"] = explicit_comment.where(explicit_comment.ne(""), source_df["_source_note"].fillna(""))
     source_df["source_type"] = source_df["_source_type"].fillna("")
-    source_df["source_name"] = source_df["_source_name"].fillna("")
+    explicit_source = source_df.get("Source", pd.Series("", index=source_df.index)).fillna("").astype(str).str.strip()
+    source_df["source_name"] = explicit_source.where(explicit_source.ne(""), source_df["_source_name"].fillna(""))
     source_df["source_scope"] = economy.code
     source_df["source_date"] = SOURCE_DATE
     source_df["default_version"] = DEFAULT_VERSION
     source_df["researcher_review_recommended"] = False
     source_df["review_reason"] = ""
-    source_df["source_data_year"] = pd.to_numeric(
-        source_df.get("Source Data Year", source_df["Year"]), errors="coerce"
-    ).astype("Int64")
+    parsed_source_data_year = pd.to_numeric(
+        source_df.get("Source Data Year", pd.Series("", index=source_df.index)), errors="coerce"
+    )
+    source_df["source_data_year"] = parsed_source_data_year.astype(object).where(
+        parsed_source_data_year.notna(), ""
+    )
     source_df["source_classification"] = source_df.get(
         "Source Classification", pd.Series("legacy_unknown", index=source_df.index)
     ).fillna("").astype(str).str.strip().replace("", "legacy_unknown")
@@ -3331,6 +3348,10 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
     for _, row in defaults_df.iterrows():
         source = row.get("source_name", row.get("Source", ""))
         comment = row.get("notes", row.get("Comment", ""))
+        source_data_year = row.get("source_data_year", pd.NA)
+        if pd.isna(source_data_year) or str(source_data_year).strip() in {"", "<NA>", "nan"}:
+            source_date = str(row.get("source_date", "")).strip()
+            source_data_year = int(source_date) if re.fullmatch(r"\d{4}", source_date) else pd.NA
         input_status = str(row.get("Input Status", row.get("input_source", "")) or "").strip().lower()
         if input_status in {"", "provided", "default_filled"}:
             input_status = "default"
@@ -3355,7 +3376,7 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
                     "Comment": comment,
                     "Input Status": input_status,
                     "Shown In Interface": True,
-                    "Source Data Year": row.get("source_data_year", pd.NA),
+                    "Source Data Year": source_data_year,
                     "Source Classification": row.get("source_classification", "legacy_unknown"),
                     "Base Year Treatment": row.get("base_year_treatment", "legacy_unrecorded"),
                     "Derivation Method": row.get("derivation_method", "legacy_unrecorded"),
@@ -4750,6 +4771,11 @@ def write_economy_package(
         paths["final_value_override_report_html"] = override_report_html_path
 
     long_defaults = _wide_defaults_to_long(default_filled, economy=economy.code)
+    long_defaults = enrich_module1_provenance(
+        long_defaults,
+        package_version=version,
+        target_base_year=2021 if economy.code == "16RUS" else BASE_YEAR,
+    )
     long_defaults.to_csv(paths["default_filled_inputs"], index=False)
 
     # Keep these variables computed for optional debugging/use in interactive sessions.
