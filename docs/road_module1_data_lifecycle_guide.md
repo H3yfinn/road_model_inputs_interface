@@ -278,11 +278,56 @@ its real source-data year and is marked `carried_forward` (earlier source) or
 
 Initial strategies should remain limited to:
 
-- `prefer_earlier`: latest earlier, then earliest future;
-- `closest_available`: smallest year distance, with earlier winning a tie.
+- `prefer_earlier`: latest earlier, then earliest future. This is the only
+  strategy currently implemented by the pure resolver and opt-in generator;
+- `closest_available`: a documented future option, not currently implemented.
 
-Use one global strategy plus sparse per-variable overrides. Store them in the
-generated manifest/audit, not in approved source/default data.
+The current opt-in generator accepts sparse per-variable resolver-policy
+overrides. They can make a `seed_eligible` variable stricter by requiring an
+exact-year native observation, but cannot broaden an exact-year policy or make
+another classification eligible. Store these choices in the generated
+manifest/audit, not in approved source/default data.
+
+### Opt-in backend generation boundary
+
+`back-end/core/base_year_package_generation.py` is the first package-writing
+boundary for the pure resolver. It is deliberately separate from
+`write_economy_package()` and is not called by the browser, API startup, normal
+defaults build, or static-bundle build. The checked-in static package remains
+the authoritative fallback.
+
+An operator supplies all of the following explicitly:
+
+- one economy and requested base year;
+- the complete canonical-long fallback rows for that economy/year;
+- original candidate records whose payload year is their actual source-data
+  year and whose canonical key exists in the fallback;
+- a source-package identity, future package version, optional sparse policy
+  overrides, and a caller-owned output directory.
+
+For each non-derived fallback key, the generator calls the existing resolver.
+A selected candidate replaces that value and preserves its real source year,
+classification, treatment and source identity. If no candidate is eligible,
+the fallback row is copied unchanged. `legacy_unknown` remains ineligible.
+`Stock Share` candidates are rejected and the output shares are recalculated
+from resolved `Stock` rows. Candidate IDs must be package-wide unique, and a
+candidate labelled shifted/generated—or a payload whose year differs from its
+source year—fails validation so generated output cannot be recycled as input.
+
+The caller-owned directory receives a canonical CSV, deterministic resolution
+audit CSV, and JSON manifest. The manifest records the economy, requested base
+year, source package, strategy/overrides, summary and rejection counts,
+filenames, and SHA-256 checksums. Selected candidate provenance is recorded in
+the audit. Generation time is isolated at the manifest top level; the nested
+`resolution` object and both CSV files are deterministic for equivalent inputs.
+
+This is not production promotion. The function refuses to write beneath the
+checked-in data directory, current backend defaults output root, or frontend
+static root. Development and review must use a temporary or otherwise
+caller-owned staging directory. Promotion, index updates, UI selection, source
+discovery, `closest_available`, additional eligibility, and conversion of the
+existing processed sources into candidate records remain separately reviewed
+work.
 
 ## What the researcher interface should see
 
@@ -315,7 +360,7 @@ road-module1-static/index.json
 It uses `cache: no-store`, sanitises version/economy path segments and reloads
 on selection changes. It can offer a browser-local draft. However, the current
 checked-in index lacks the newer per-economy base-year metadata and startup is
-not yet connected to the resolver.
+not connected to either the resolver or the opt-in backend generator.
 
 The target is one deterministic lookup, not Drive discovery:
 

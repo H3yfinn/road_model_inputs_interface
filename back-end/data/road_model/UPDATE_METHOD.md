@@ -462,9 +462,10 @@ Deployment details and the My Drive OAuth boundary are recorded in
   non-native value retains its classification and is `transformed`. Missing
   classification remains `legacy_unknown`, which is not eligible under the
   supplied policies.
-- Output files changed: None. The resolver returns an in-memory selected
-  candidate and structured rejections; this phase does not generate packages,
-  static bundles, or audits on disk.
+- Output files changed at this historical checkpoint: None. The resolver
+  returned an in-memory selected candidate and structured rejections. The later
+  opt-in generation boundary below can write review artifacts to a caller-owned
+  directory; it remains disconnected from normal/static builds.
 - Audit reasons: A call accepts one canonical row key only. Rejections are
   stable by candidate ID and explain the first selection dimension that lost:
   exact year, newer earlier year, earlier-over-future, earlier future year,
@@ -475,14 +476,65 @@ Deployment details and the My Drive OAuth boundary are recorded in
   tests cover exact/seed/derived lookups, strict canonical spelling, malformed
   definitions, duplicates/conflicts, deterministic inventory, and full current
   contract coverage.
-- Notes/limitations: This checkpoint classifies variables only. It does not
-  connect the resolver to generation, regenerate packages, add source quality
-  tiers or age thresholds, change resolver ranking, or broaden eligible source
-  classifications. Some assumption sources are currently classified as
+- Notes/limitations: This checkpoint originally classified variables only. The
+  later opt-in integration does not regenerate checked-in packages, add source
+  quality tiers or age thresholds, change resolver ranking, or broaden eligible
+  source classifications. Some assumption sources are currently classified as
   `structural_assumption` or `model_assumption`; whether those classifications
   become resolver-eligible remains a separate explicit integration decision.
   ESTO energy-balance observations sit outside the canonical Module 1 variable
   registry and remain exact-year reconciliation anchors.
+
+## Opt-in resolved base-year package generation
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Added
+  `back-end/core/base_year_package_generation.py`, a backend-only opt-in writer
+  around the existing pure resolver. It is not wired into
+  `write_economy_package()`, API startup, the researcher UI, or static-package
+  discovery. Current checked-in defaults remain the authoritative fallback.
+- Source inputs: A caller supplies a complete canonical-long fallback for one
+  economy/requested year plus explicit original candidates. Each candidate
+  carries a package-wide unique ID, source identity, source-data year,
+  classification, configured resolver priority identifiers and a complete
+  canonical payload at the original source year. The generator does not scan
+  source folders or generated packages.
+- Update method: Call `generate_resolved_base_year_package()` with an explicit
+  caller-owned output directory, source-package identity and future package
+  version. The existing variable registry chooses the resolver policy. The only
+  implemented ranking strategy remains `prefer_earlier`: exact native, latest
+  earlier native, then earliest future native. Sparse per-variable policy
+  overrides may make a seed-eligible variable exact-year-only; they cannot
+  broaden an exact-year policy or eligibility.
+- Fallback and derivation: If a canonical key has no eligible candidate, its
+  fallback row is copied unchanged. `legacy_unknown` is still ineligible.
+  `Stock Share` is never resolved independently; candidates for it fail and its
+  rows are derived from the resolved `Stock` totals for sibling vehicle-type
+  branches.
+- Validation boundary: Candidate payload keys must match the fallback key,
+  payload year must equal source-data year, classifications must agree, values
+  must be finite, and generated/shifted candidate origins are rejected. Output
+  canonical keys must exactly match the fallback key set. The writer refuses
+  the checked-in data tree, backend production-default output root and frontend
+  static root.
+- Outputs: The caller directory receives `<economy>_<year>.csv`, a deterministic
+  resolution-audit CSV, and a JSON manifest. The audit records selected
+  candidate/source identity, strategy and override use, source year,
+  classification, treatment, selection reason and deterministic rejections.
+  The manifest records source package/version, output and audit filenames and
+  SHA-256 checksums, summary/rejection counts, and an isolated generation time.
+- Validation checks: Synthetic tests cover opt-in/fallback behavior,
+  exact/earlier/future selection, strict sparse overrides, derived stock share,
+  deterministic output and idempotence, manifest checksums and counts,
+  malformed metadata, package-wide candidate identity, generated-candidate
+  rejection and protected output paths. Development validation uses temporary
+  directories only.
+- Remaining limitations: `closest_available` is documented but not implemented
+  because adding it would change resolver ranking policy. Production candidate
+  extraction, immutable-version promotion/index updates, UI integration and
+  additional eligible classifications remain out of scope and require separate
+  review.
 
 ## Archived 9th Outlook provenance discovery
 
