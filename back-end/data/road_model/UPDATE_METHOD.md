@@ -344,3 +344,32 @@ source, final override, or static hand-off contract changes.
 
 Deployment details and the My Drive OAuth boundary are recorded in
 `docs/researcher_submission_drive_archive.md`.
+
+## Base-year candidate resolver contract
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Added a pure candidate resolver for a future dynamic
+  base-year build phase. It has no filesystem, browser, Drive, or generated
+  package dependency.
+- Source inputs: Explicit original candidate records only. A record includes a
+  stable candidate ID, canonical row key, source identity, source-data year,
+  source classification, and configured quality/source-priority identifiers.
+- Update method: Select the variable policy outside the resolver. Use
+  `energy_balance_exact_year` for energy-balance anchors and `seed_eligible`
+  only where an approved caller mapping explicitly permits observation seeding.
+  Do not feed a previously shifted/generated candidate back into the resolver.
+- Recategorizations or mappings: Native observations are selected exact-year,
+  then latest eligible earlier, then earliest eligible future. Earlier values
+  are `carried_forward`; future values are `carried_backward`; an exact-year
+  non-native value retains its classification and is `transformed`. Missing
+  classification remains `legacy_unknown`, which is not eligible under the
+  supplied policies.
+- Output files changed: None. The resolver returns an in-memory selected
+  candidate and structured rejections; this phase does not generate packages,
+  static bundles, or audits on disk.
+- Validation checks run: Synthetic resolver tests cover deterministic ranking,
+  policy ineligibility, provenance, reversibility, and invalid inputs.
+- Notes/limitations: No production variable-to-policy assignment has been
+  inferred. That mapping, source quality tiers, and any age threshold require a
+  reviewed modelling decision before the resolver is connected to generation.
