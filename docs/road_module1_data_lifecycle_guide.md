@@ -439,6 +439,41 @@ then prints a JSON summary. The output directory must be new or empty. Existing
 files are never overwritten, protected data/default/static paths are refused,
 and the command has no promotion or index-update operation.
 
+To deliberately run the same staged workflow for every economy and include the
+researcher-submission archive review in one operator action, use:
+
+```powershell
+python back-end/scripts/generate_module1_review_package.py `
+  --all-economies `
+  --base-year 2022 `
+  --package-version review_only_all_2022 `
+  --output-dir C:\path\to\new_or_empty_staging_directory `
+  --include-drive-submissions
+```
+
+The Drive step is opt-in: omitting `--include-drive-submissions` makes no Drive
+request. When included, it uses the existing archive credentials and
+`ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID`; an operator may instead pass
+`--drive-folder-id`. It downloads and validates archived submission pairs into
+the staging directory, quarantines malformed pairs, and produces review
+decisions and candidate overrides. It does not apply a submission, modify
+Drive, promote a package, update the static index, or merge researcher changes
+into the newly generated economy packages. Because the staging directory is
+new, this combined run reviews all currently visible archive pairs rather than
+continuing an older checkpoint.
+
+Here `--base-year 2022` means “build the checked-in economy review packages for
+model/output year 2022.” It does not assert that every researcher submission or
+source observation was collected in 2022. Each Drive submission retains its
+recorded version, economy, baseline checksum and source-year provenance and is
+compared only with its exact immutable baseline. The combined
+`review_run_summary.json` keeps the package results, supplemental inventory and
+Drive-review result separate so a reviewer can decide what deserves later
+promotion. Every economy is attempted independently. A malformed economy does
+not prevent later economies from being staged, but it is recorded under
+`economy_failures` and the command returns a nonzero exit code so partial output
+cannot be mistaken for a complete build.
+
 ## What the researcher interface should see
 
 Researchers receive an already selected, validated package. Their editing
