@@ -1,5 +1,10 @@
 # Researcher Change Review and Default-Promotion Guide
 
+For the shared end-to-end data flow, provenance contract, and separation between
+the researcher interface, model-manager setup, and this developer-only review
+workflow, see
+[`road_module1_data_lifecycle_guide.md`](road_module1_data_lifecycle_guide.md).
+
 ## Intention
 
 Use this guide when a researcher changes a Road Module 1 value in the website

@@ -1,5 +1,9 @@
 # Road Model Data Folder Guide
 
+For the end-to-end human/AI explanation of provenance, base-year resolution,
+the researcher interface, developer-only review, and promotion boundaries, see
+[`../../../docs/road_module1_data_lifecycle_guide.md`](../../../docs/road_module1_data_lifecycle_guide.md).
+
 This folder is the source-data package for Road Module 1. The code reads files
 here, combines them into final Module 1 rows, validates them, and writes outputs
 to the build (see [Outputs](#outputs) below).
