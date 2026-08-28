@@ -95,6 +95,7 @@ def _projection_scenario_labels() -> list[str]:
 def _load_projected_sales_share_from_processed_source(
     economy_code: str,
     scenario: str | None = None,
+    years: tuple[int, ...] = tuple(PROJECTED_SALES_SHARE_YEARS),
 ) -> pd.DataFrame:
     """Read future Sales Share rows from the processed source CSV."""
     src_path = PROCESSED_SOURCE_DIR / f"road_module1_source_{economy_code}.csv"
@@ -104,7 +105,7 @@ def _load_projected_sales_share_from_processed_source(
     df = pd.read_csv(src_path)
     future = df[
         df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
-        & pd.to_numeric(df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
+        & pd.to_numeric(df["Year"], errors="coerce").isin(years)
     ].copy()
     specialist_paths = sorted(
         FINAL_VALUE_OVERRIDE_DIR.glob(f"*/module1_final_value_overrides_{economy_code}.csv")
@@ -115,7 +116,7 @@ def _load_projected_sales_share_from_processed_source(
             specialist_df = pd.read_csv(specialist_path)
             specialist_df = specialist_df[
                 specialist_df["Variable"].fillna("").astype(str).str.strip().eq("Sales Share")
-                & pd.to_numeric(specialist_df["Year"], errors="coerce").isin(PROJECTED_SALES_SHARE_YEARS)
+                & pd.to_numeric(specialist_df["Year"], errors="coerce").isin(years)
             ][["Branch Path", "Variable", "Scenario", "Year", "Value", "Units"]].copy()
             specialist_frames.append(specialist_df)
         if specialist_frames:
@@ -150,14 +151,23 @@ def _load_projected_sales_share_from_processed_source(
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
-def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -> pd.DataFrame:
-    """Load 2023-2060 Sales Share rows for one projected scenario.
+def _load_projected_sales_share_for_scenario(
+    economy_code: str,
+    scenario: str,
+    years: tuple[int, ...] = tuple(PROJECTED_SALES_SHARE_YEARS),
+) -> pd.DataFrame:
+    """Load requested Sales Share years for one projected scenario.
 
     Falls back to the processed source CSV when no workbook is available.
     """
+    if not years or any(isinstance(year, bool) or not isinstance(year, int) for year in years):
+        raise ValueError("Projected Sales Share years must be a non-empty tuple of integer years.")
+    requested_years = tuple(sorted(set(years)))
     workbook_path = find_transport_leap_export_path(economy=economy_code, scenario=scenario)
     if workbook_path is None:
-        return _load_projected_sales_share_from_processed_source(economy_code, scenario=scenario)
+        return _load_projected_sales_share_from_processed_source(
+            economy_code, scenario=scenario, years=requested_years
+        )
 
     raw_df = pd.read_excel(
         workbook_path,
@@ -177,7 +187,9 @@ def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -
     economy_regions = _transport_leap_source_regions(get_economy_info(economy_code))
     sales_df = sales_df[sales_df["Region"].fillna("").astype(str).str.strip().isin(economy_regions)].copy()
     if sales_df.empty:
-        return _load_projected_sales_share_from_processed_source(economy_code, scenario=scenario)
+        return _load_projected_sales_share_from_processed_source(
+            economy_code, scenario=scenario, years=requested_years
+        )
 
     year_by_column = {}
     for column in sales_df.columns:
@@ -185,7 +197,7 @@ def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -
             year = int(float(column))
         except (TypeError, ValueError):
             continue
-        if year in PROJECTED_SALES_SHARE_YEARS:
+        if year in requested_years:
             year_by_column[column] = year
 
     if not year_by_column:
@@ -201,7 +213,7 @@ def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -
         year_by_column = {
             column: year
             for column, year in zip(value_columns, [BASE_YEAR, *PROJECTED_SALES_SHARE_YEARS])
-            if year in PROJECTED_SALES_SHARE_YEARS
+            if year in requested_years
         }
     if not year_by_column:
         return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)

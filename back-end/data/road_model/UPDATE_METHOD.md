@@ -799,13 +799,35 @@ Deployment details and the My Drive OAuth boundary are recorded in
   1,558 rows for 2023–2060 with zero duplicate canonical keys. A complete
   21-economy static build in a temporary root passed contract checks and wrote
   20,031 rows per economy with zero duplicate canonical keys.
-- Safety and remaining decision: No checked-in backend output or frontend static
+- Safety: No checked-in backend output or frontend static
   file was regenerated. The temporary build differs materially from the current
   22,212-row bundle. It adds no keys and removes 2,156 unique keys per economy:
   28 out-of-contract Current Accounts Mileage/Fuel Economy keys and their 2,128
   correction-factor descendants. Shared Current Accounts values are unchanged;
   shared projection Sales Share changes range from 0 to 735 rows per economy.
   Those projection changes must be reviewed before an authorised regeneration.
-  Supplying explicit source-workbook 2022
-  Reference/Target rows for requested base year 2021 is recommended over
-  carrying/interpolating values, but remains a model-manager policy decision.
+
+## Explicit 2022 projection seed for a 2021 review package
+
+- Date: 2026-08-28
+- Author: Codex
+- Approved behavior: When the requested base year is 2021, prepend the explicit
+  2022 `Sales Share` rows from the matched Reference and Target LEAP workbooks.
+  Do not carry Current Accounts into the projection layer, interpolate, or
+  synthesize the missing first projection year.
+- Validation: Both scenarios must exist and contain only economy-matched 2022
+  Sales Share rows whose `Source` is the selected workbook, with identical
+  nonempty row-key coverage in Reference and Target. Processed-source
+  fallback, partial scenario coverage, wrong economy/scenario/year/variable,
+  non-finite values and conflicting canonical keys fail the economy package.
+  LEAP workbook region aliases are explicit for China, the Philippines and the
+  United States; canonical interface display names remain unchanged.
+- Scope: The general projected Sales Share loader now accepts an explicit year
+  set while retaining 2023-2060 as its normal build default. The 2022 injection
+  occurs only for a requested 2021 staged review package.
+- Verification: All 21 economies passed strict 2022 workbook-seed validation.
+  A staging-only all-economy 2021 run generated 15 packages and quarantined the
+  6 economies with pre-existing checked-in-static conflicts (`02BD`, `12NZ`,
+  `14PE`, `16RUS`, `18CT`, `21VN`) without blocking valid economies.
+- Safety: No checked-in source/default/static output, active model input/output,
+  Drive file, secret, index or deployment setting was changed or promoted.

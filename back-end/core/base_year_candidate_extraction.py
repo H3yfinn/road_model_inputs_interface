@@ -32,6 +32,7 @@ from core.road_module1_provenance import enrich_module1_provenance, source_linea
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "front-end" / "road-module1-static"
 REQUIRED_PROJECTION_SCENARIOS = frozenset({"Reference", "Target"})
+EXPLICIT_PROJECTION_SEED_YEAR = 2022
 CONFLICT_REPORT_COLUMNS = [
     "Conflict Group",
     "Package Component",
@@ -377,6 +378,60 @@ def summarise_static_package_conflicts(report: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(summary_rows, columns=CONFLICT_REVIEW_COLUMNS)
 
 
+def _load_explicit_projection_seed_rows(economy: str, seed_year: int) -> pd.DataFrame:
+    """Load scenario-native seed rows from matched economy workbooks, never generated output."""
+    from build_road_model_static_defaults import _load_projected_sales_share_for_scenario
+    from core.road_module1_defaults import find_transport_leap_export_path
+
+    scenario_rows: list[pd.DataFrame] = []
+    for scenario in sorted(REQUIRED_PROJECTION_SCENARIOS):
+        workbook_path = find_transport_leap_export_path(economy=economy, scenario=scenario)
+        if workbook_path is None:
+            raise ValueError(
+                f"Requested base year 2021 requires an explicit {seed_year} {scenario} workbook for {economy}."
+            )
+        rows = _load_projected_sales_share_for_scenario(
+            economy,
+            scenario,
+            years=(seed_year,),
+        )
+        if rows.empty:
+            raise ValueError(
+                f"Matched {scenario} workbook {workbook_path.name!r} has no usable {seed_year} Sales Share rows."
+            )
+        found_sources = set(rows["Source"].fillna("").astype(str).str.strip())
+        if found_sources != {workbook_path.name}:
+            raise ValueError(
+                f"Explicit {seed_year} {scenario} seed rows did not come only from matched workbook "
+                f"{workbook_path.name!r}; found {sorted(found_sources)}."
+            )
+        scenario_rows.append(rows)
+    combined = pd.concat(scenario_rows, ignore_index=True)
+    expected = {
+        "Economy": {economy},
+        "Scenario": set(REQUIRED_PROJECTION_SCENARIOS),
+        "Variable": {"Sales Share"},
+        "Year": {seed_year},
+    }
+    for column, expected_values in expected.items():
+        found = set(combined[column].dropna().tolist())
+        if found != expected_values:
+            raise ValueError(
+                f"Explicit projection seed {column} values must be {sorted(expected_values)}; found {sorted(found)}."
+            )
+    scenario_keys = {
+        scenario: set(zip(group["Branch Path"], group["Variable"]))
+        for scenario, group in combined.groupby("Scenario", sort=True)
+    }
+    reference_keys = next(iter(scenario_keys.values()))
+    if any(keys != reference_keys for keys in scenario_keys.values()):
+        counts = {scenario: len(keys) for scenario, keys in scenario_keys.items()}
+        raise ValueError(
+            f"Explicit {seed_year} projection seed scenarios have different row-key coverage: {counts}."
+        )
+    return combined[CANONICAL_LONG_COLUMNS].copy()
+
+
 def load_static_package_components(
     *,
     fallback_csv: str | Path,
@@ -422,6 +477,24 @@ def load_static_package_components(
         ~rows["Scenario"].astype(str).str.strip().eq("Current Accounts")
         & rows["Year"].gt(requested_base_year)
     ].copy()
+    if requested_base_year == EXPLICIT_PROJECTION_SEED_YEAR - 1:
+        existing_seed_scenarios = set(
+            projection_series.loc[
+                projection_series["Year"].eq(EXPLICIT_PROJECTION_SEED_YEAR), "Scenario"
+            ].astype(str).str.strip()
+        )
+        if existing_seed_scenarios and existing_seed_scenarios != REQUIRED_PROJECTION_SCENARIOS:
+            raise ValueError(
+                f"Static projection seed year {EXPLICIT_PROJECTION_SEED_YEAR} is partial; "
+                f"found scenarios {sorted(existing_seed_scenarios)}."
+            )
+        if not existing_seed_scenarios:
+            projection_series = pd.concat(
+                [projection_series, _load_explicit_projection_seed_rows(
+                    economy, EXPLICIT_PROJECTION_SEED_YEAR
+                )],
+                ignore_index=True,
+            )
     projection_series = enrich_module1_provenance(
         projection_series,
         package_version=source_package_version,

@@ -397,9 +397,13 @@ continuous coverage beginning in the year after the requested base year. It
 rejects non-finite values and conflicting canonical duplicates. Identical
 duplicate Stock Share rows collapse only when exactly one is the explicit
 Stock-derived copy. An empty projection is allowed when the requested base year
-is at the end of the available series. A requested 2021 package currently fails
-clearly because the checked-in projections begin in 2023 and therefore cannot
-supply 2022; the adapter does not invent the missing year.
+is at the end of the available series. For the specifically approved 2021 case,
+the adapter prepends the explicit 2022 Sales Share rows from the matched
+Reference and Target LEAP workbooks before applying the same coverage checks.
+It does not copy Current Accounts, interpolate, or synthesize a 2022 value. A
+missing workbook, wrong region/scenario, processed-source fallback, partial
+scenario pair, mismatched Reference/Target row keys, or malformed 2022 row fails
+that economy's staged package.
 
 The current static 20USA 2022 fallback contains five duplicate Stock Share
 keys: each is an identical legacy copy paired with the explicit
@@ -422,10 +426,17 @@ eligibility to arbitrary legacy rows.
 The checked-in 16RUS Current Accounts template is dated 2022. Russia provenance
 is treated as complete enough for this workflow: preserve the recorded 2022
 source year, do not attempt a separate 2021-versus-2022 research exercise, and use
-`carried_backward` if that value is packaged for a 2021 base year. A complete
-2021 review package still cannot be produced until the projection-series 2022
-gap is resolved; this is a projection coverage limitation rather than an
-outstanding provenance decision.
+`carried_backward` if that value is packaged for a 2021 base year. The explicit
+2022 Reference/Target seed resolves the former projection gap. Russia remains
+quarantined when using the current checked-in static bundle because that bundle
+contains conflicting Current Accounts keys; this is a separate source-package
+conflict, not a provenance-year decision.
+
+A staging-only all-economy 2021 run on 2026-08-28 generated 15 packages and
+quarantined 6 without stopping later economies. All 21 economies first passed
+the explicit 2022 workbook-seed validation. The quarantines were the already
+documented checked-in-static conflicts for `02BD`, `12NZ`, `14PE`, `16RUS`,
+`18CT` and `21VN`. No source, static, Drive or active model data was changed.
 
 ### Supplemental provenance inventory
 

@@ -284,6 +284,55 @@ def test_projected_sales_share_workbook_is_filtered_to_requested_economy(monkeyp
     assert rows.iloc[0]["Source"] == workbook.name
 
 
+def test_projected_sales_share_loader_can_request_explicit_2022_seed(monkeypatch, tmp_path):
+    import build_road_model_static_defaults as builder
+
+    workbook = tmp_path / "transport_leap_export_combined_20_USA_Reference_20260615.xlsx"
+    workbook.touch()
+    monkeypatch.setattr(builder, "find_transport_leap_export_path", lambda **kwargs: workbook)
+    monkeypatch.setattr(
+        builder.pd,
+        "read_excel",
+        lambda *args, **kwargs: pd.DataFrame([{
+            "Branch Path": r"Demand\Passenger road\LPVs\BEV",
+            "Variable": "Sales Share",
+            "Scenario": "Reference",
+            "Region": "United States of America",
+            "Scale": "%",
+            "Units": "Share",
+            "2022": 7.0,
+            "2023": 8.0,
+        }]),
+    )
+
+    rows = builder._load_projected_sales_share_for_scenario(
+        "20USA", "Reference", years=(2022,)
+    )
+
+    assert len(rows) == 1
+    assert rows.iloc[0]["Year"] == 2022
+    assert rows.iloc[0]["Value"] == 7.0
+    assert rows.iloc[0]["Source"] == workbook.name
+
+
+@pytest.mark.parametrize(
+    ("economy_code", "expected_region"),
+    [
+        ("05PRC", "People's Republic of China"),
+        ("15PHL", "Philippines"),
+        ("20USA", "United States of America"),
+    ],
+)
+def test_transport_leap_source_regions_include_explicit_workbook_aliases(
+    economy_code, expected_region
+):
+    import core.road_module1_defaults as defaults
+
+    assert expected_region in defaults._transport_leap_source_regions(
+        defaults.get_economy_info(economy_code)
+    )
+
+
 def test_current_accounts_static_normalisation_collapses_only_identical_source_scenarios():
     import build_road_model_static_defaults as builder
 

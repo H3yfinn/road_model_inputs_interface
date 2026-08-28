@@ -17,7 +17,7 @@ packages for 2022, 2024 and 2026 passed canonical submission normalisation.
 
 | Requested base year | Economies generated | Economies quarantined | Resolution totals for generated economies | Assessment |
 |---:|---:|---:|---|---|
-| 2021 | 0 | 21 | None | The checked-in static package begins at 2022, so strict fallback validation correctly refused to invent a 2021 slice. |
+| 2021 | 15 | 6 | 4,350 resolved; 3,180 authoritative fallback; 75 derived; 7,605 rows | The approved explicit 2022 Reference/Target workbook seed closes the first-projection-year gap. Six pre-existing checked-in-static conflicts were quarantined independently. |
 | 2022 | 20 | 1 | 5,800 resolved; 4,240 authoritative fallback; 100 derived; 10,140 rows | Complete Current Accounts slices were produced for 20 economies. Russia was quarantined for conflicting canonical keys. |
 | 2024 | 16 | 5 | 928 resolved; 0 fallback; 8,192 derived; 9,120 rows | Technically valid but not a complete base-year package: only projected Sales Share and generated correction-factor rows exist at this year. |
 | 2026 | 16 | 5 | 928 resolved; 0 fallback; 8,192 derived; 9,120 rows | Same structure and exceptions as 2024; also not a complete base-year package. |
@@ -40,6 +40,8 @@ their values compared rather than silently selecting the first row.
 
 | Year(s) | Economies | Conflict |
 |---|---|---|
+| 2021 | `02BD`, `12NZ`, `14PE`, `18CT`, `21VN` | Each economy has 853 conflicting Reference Sales Share groups across the retained 2023-2060 projection; the explicit 2022 workbook seed itself passed. |
+| 2021 | `16RUS` | 66 conflicting Current Accounts keys in the checked-in static template; the explicit 2022 workbook seed itself passed. |
 | 2022 | `16RUS` | 66 conflicting Current Accounts keys: 47 Fuel Economy and 19 Sales Share. Five additional Stock Share duplicate keys have identical values and are safely handled by the existing explicit-derived-row rule. |
 | 2024 and 2026 | `02BD`, `12NZ`, `14PE`, `18CT`, `21VN` | Each economy has 22 conflicting Reference Sales Share keys at each tested year. |
 
@@ -109,11 +111,14 @@ Economy and Sales Share. Each of the other five economies has 809 projected
 Sales Share groups / 8,143 evidence rows across the retained 2025–2060 series;
 this confirms why the compact decision sheet must remain separate from raw
 evidence.
-The requested 2021 case now reaches the complete template but is deliberately
-quarantined because the checked-in projection series begins in 2023 and cannot
-supply 2022. The Russia and five projected Sales Share conflict groups described
-above are now prevented in code: short and canonical economy codes resolve the
-same workbook token, ALL_ECONS fallback rows are filtered to the requested
+The requested 2021 case now prepends explicit 2022 Sales Share rows from the
+matched Reference and Target LEAP workbooks. All 21 economies passed strict
+workbook-source, region, scenario, year and variable validation; no Current
+Accounts copy or interpolation is used. The staging-only run generated 15
+packages and independently quarantined the six current checked-in-static
+conflict economies. The Russia and five projected Sales Share conflict groups
+described above are prevented in newly built static output: short and canonical
+economy codes resolve the same workbook token, ALL_ECONS fallback rows are filtered to the requested
 region, and Current Accounts construction prefers true Current Accounts rows,
 uses other scenarios only for missing keys, and rejects any remaining
 disagreement. A temporary all-economy static build wrote 21 files with 20,031
@@ -127,9 +132,8 @@ changes are confined to projected Sales Share (0–735 rows per economy),
 including the intended short-code Reference workbook corrections plus other
 projection differences that still need review.
 
-The remaining 2021 projection choice is genuinely policy-relevant. The safest
-technical option is to retain explicit 2022 Reference/Target Sales Share rows
-already present in the source workbooks, because carrying 2021 Current Accounts
-or interpolating 2022 would invent assumptions. This option still requires
-model-manager confirmation before implementation. Activation and interface
-discovery remain separate actions.
+The 2021 projection policy is now approved and implemented only in the opt-in
+review-package path: retain explicit 2022 Reference/Target Sales Share rows from
+the matched workbooks. Activation and interface discovery remain separate
+actions, and the materially different regenerated static bundle still requires
+review before any authorised promotion.

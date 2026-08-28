@@ -119,6 +119,11 @@ ECONOMY_CODE_TO_LEAP_REGION_NAMES: dict[str, str] = {
     "20USA": "United States",
     "21VN":  "Viet Nam",
 }
+TRANSPORT_LEAP_REGION_ALIASES: dict[str, tuple[str, ...]] = {
+    "05PRC": ("People's Republic of China",),
+    "15PHL": ("Philippines",),
+    "20USA": ("United States of America",),
+}
 LEAP_REGION_NAME_TO_ECONOMY_CODE = {
     name: code for code, name in ECONOMY_CODE_TO_LEAP_REGION_NAMES.items()
 }
@@ -2073,6 +2078,7 @@ def _transport_leap_source_regions(economy: EconomyInfo) -> list[str]:
     canonical = ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code)
     if canonical and canonical not in regions:
         regions.append(canonical)
+    regions.extend(TRANSPORT_LEAP_REGION_ALIASES.get(economy.code, ()))
     seen = set()
     unique_regions = []
     for region in regions:
@@ -2116,6 +2122,8 @@ def _transport_leap_source_scope(
     if source_region == economy.name:
         return "exact_region_match"
     if source_region == ECONOMY_CODE_TO_LEAP_REGION_NAMES.get(economy.code):
+        return "leap_region_alias_match"
+    if source_region in TRANSPORT_LEAP_REGION_ALIASES.get(economy.code, ()):
         return "leap_region_alias_match"
     if source_region == "APEC":
         return "apec_fallback_non_absolute"

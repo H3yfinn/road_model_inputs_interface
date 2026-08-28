@@ -12,6 +12,7 @@ from core.base_year_candidate_extraction import (
     build_static_package_conflict_report,
     extract_original_candidates,
     generate_checked_in_source_review_package,
+    _load_explicit_projection_seed_rows,
     load_static_package_components,
     load_static_fallback,
     summarise_static_package_conflicts,
@@ -312,7 +313,7 @@ def test_static_conflict_summary_has_one_simple_row_per_decision(tmp_path):
     assert review.iloc[0]["Reviewer Note (reason)"] == ""
 
 
-def test_static_components_reject_projection_gap_after_earlier_base_year(tmp_path):
+def test_static_components_reject_projection_gap_when_explicit_seed_is_unavailable(tmp_path, monkeypatch):
     rows = []
     for scenario in ("Reference", "Target"):
         row = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
@@ -320,6 +321,10 @@ def test_static_components_reject_projection_gap_after_earlier_base_year(tmp_pat
         rows.append(row)
     path = tmp_path / "20USA.csv"
     pd.concat([_fallback(), pd.DataFrame(rows)], ignore_index=True).to_csv(path, index=False)
+    monkeypatch.setattr(
+        "core.base_year_candidate_extraction._load_explicit_projection_seed_rows",
+        lambda economy, seed_year: pd.DataFrame(columns=CANONICAL_LONG_COLUMNS),
+    )
 
     with pytest.raises(ValueError, match="requires coverage from 2022"):
         load_static_package_components(
@@ -328,6 +333,156 @@ def test_static_components_reject_projection_gap_after_earlier_base_year(tmp_pat
             requested_base_year=2021,
             source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
         )
+
+
+def test_static_components_prepend_explicit_2022_projection_seed_for_2021_package(tmp_path, monkeypatch):
+    projections = []
+    seeds = []
+    for scenario in ("Reference", "Target"):
+        projection = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 20.0)
+        projection.update(Scenario=scenario, Year=2023)
+        projections.append(projection)
+        seed = dict(
+            projection,
+            Year=2022,
+            Value=10.0,
+            Source=(
+                "transport_leap_export_combined_20_USA_domestic_international_"
+                f"{scenario}_20260615.xlsx"
+            ),
+        )
+        seeds.append(seed)
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame(projections)], ignore_index=True).to_csv(path, index=False)
+    monkeypatch.setattr(
+        "core.base_year_candidate_extraction._load_explicit_projection_seed_rows",
+        lambda economy, seed_year: pd.DataFrame(seeds),
+    )
+
+    components = load_static_package_components(
+        fallback_csv=path,
+        economy="20USA",
+        requested_base_year=2021,
+        source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+    )
+
+    assert set(components.projection_series["Year"]) == {2022, 2023}
+    seed_rows = components.projection_series[components.projection_series["Year"].eq(2022)]
+    assert set(seed_rows["Scenario"]) == {"Reference", "Target"}
+    assert set(seed_rows["Source Data Year"].dropna().astype(int)) == {2022}
+    assert seed_rows["Source"].str.endswith("_20260615.xlsx").all()
+
+
+def test_explicit_projection_seed_rejects_processed_source_fallback(tmp_path, monkeypatch):
+    import build_road_model_static_defaults as builder
+    import core.road_module1_defaults as defaults
+
+    monkeypatch.setattr(
+        defaults,
+        "find_transport_leap_export_path",
+        lambda **kwargs: tmp_path / f"20USA_{kwargs['scenario']}.xlsx",
+    )
+    fallback = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+    fallback.update(
+        Scenario="Reference",
+        Year=2022,
+        Source="road_module1_source_20USA.csv",
+    )
+    monkeypatch.setattr(
+        builder,
+        "_load_projected_sales_share_for_scenario",
+        lambda economy, scenario, years: pd.DataFrame([dict(fallback, Scenario=scenario)]),
+    )
+
+    with pytest.raises(ValueError, match="did not come only from matched workbook"):
+        _load_explicit_projection_seed_rows("20USA", 2022)
+
+
+def test_explicit_projection_seed_rejects_wrong_economy_id(tmp_path, monkeypatch):
+    import build_road_model_static_defaults as builder
+    import core.road_module1_defaults as defaults
+
+    monkeypatch.setattr(
+        defaults,
+        "find_transport_leap_export_path",
+        lambda **kwargs: tmp_path / f"20USA_{kwargs['scenario']}.xlsx",
+    )
+
+    def load_rows(economy, scenario, years):
+        row = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+        row.update(
+            Economy="01AUS",
+            Scenario=scenario,
+            Year=2022,
+            Source=f"20USA_{scenario}.xlsx",
+        )
+        return pd.DataFrame([row])
+
+    monkeypatch.setattr(builder, "_load_projected_sales_share_for_scenario", load_rows)
+
+    with pytest.raises(ValueError, match="projection seed Economy values"):
+        _load_explicit_projection_seed_rows("20USA", 2022)
+
+
+def test_explicit_projection_seed_rejects_different_scenario_key_coverage(tmp_path, monkeypatch):
+    import build_road_model_static_defaults as builder
+    import core.road_module1_defaults as defaults
+
+    monkeypatch.setattr(
+        defaults,
+        "find_transport_leap_export_path",
+        lambda **kwargs: tmp_path / f"20USA_{kwargs['scenario']}.xlsx",
+    )
+
+    def load_rows(economy, scenario, years):
+        branches = [r"Demand\Passenger road\Cars"]
+        if scenario == "Target":
+            branches.append(r"Demand\Passenger road\2W")
+        rows = []
+        for branch in branches:
+            row = _fallback_row(branch, "Sales Share", 10.0)
+            row.update(
+                Scenario=scenario,
+                Year=2022,
+                Source=f"20USA_{scenario}.xlsx",
+            )
+            rows.append(row)
+        return pd.DataFrame(rows)
+
+    monkeypatch.setattr(builder, "_load_projected_sales_share_for_scenario", load_rows)
+
+    with pytest.raises(ValueError, match="different row-key coverage"):
+        _load_explicit_projection_seed_rows("20USA", 2022)
+
+
+def test_static_components_reject_partial_static_2022_projection_seed(tmp_path, monkeypatch):
+    rows = []
+    for scenario, year in (("Reference", 2022), ("Reference", 2023), ("Target", 2023)):
+        row = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+        row.update(Scenario=scenario, Year=year)
+        rows.append(row)
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame(rows)], ignore_index=True).to_csv(path, index=False)
+    seed_loader_called = False
+
+    def seed_loader(economy, seed_year):
+        nonlocal seed_loader_called
+        seed_loader_called = True
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        "core.base_year_candidate_extraction._load_explicit_projection_seed_rows",
+        seed_loader,
+    )
+
+    with pytest.raises(ValueError, match="seed year 2022 is partial"):
+        load_static_package_components(
+            fallback_csv=path,
+            economy="20USA",
+            requested_base_year=2021,
+            source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+        )
+    assert seed_loader_called is False
 
 
 def test_static_components_reject_fractional_requested_base_year(tmp_path):
