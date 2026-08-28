@@ -47,6 +47,7 @@ class SupplementalSourceSpec:
     derivation_method: str
     metadata_limited: bool = False
     workbook_profile: bool = False
+    provenance_note: str = ""
 
 
 @dataclass
@@ -122,6 +123,9 @@ SUPPLEMENTAL_SOURCE_SPECS = (
         "model_assumption",
         "supplemental_apec_default",
         metadata_limited=True,
+        provenance_note=(
+            "ChatGPT-assisted APERC model assumption; original external evidence and source year unknown"
+        ),
     ),
     SupplementalSourceSpec(
         "supplemental_source_files/vehicle_survival_modified_00_APEC.xlsx",
@@ -132,6 +136,9 @@ SUPPLEMENTAL_SOURCE_SPECS = (
         "supplemental_lifecycle_profile",
         metadata_limited=True,
         workbook_profile=True,
+        provenance_note=(
+            "ChatGPT-assisted APERC model assumption; original external evidence and source year unknown"
+        ),
     ),
     SupplementalSourceSpec(
         "supplemental_source_files/vintage_modelled_from_survival_00_APEC.xlsx",
@@ -142,6 +149,9 @@ SUPPLEMENTAL_SOURCE_SPECS = (
         "vintage_profile_from_survival",
         metadata_limited=True,
         workbook_profile=True,
+        provenance_note=(
+            "ChatGPT-assisted derived assumption; original external evidence and source year unknown"
+        ),
     ),
 )
 SPECS_BY_PATH = {spec.relative_path: spec for spec in SUPPLEMENTAL_SOURCE_SPECS}
@@ -248,7 +258,9 @@ def _csv_records(path: Path, spec: SupplementalSourceSpec) -> list[dict[str, Any
                 f"estimation_status={record['estimation_status']}" if record["estimation_status"] else "",
             ) if part
         )
-        record["Comment"] = "; ".join(part for part in (note, metadata) if part)
+        record["Comment"] = "; ".join(
+            part for part in (note, metadata, spec.provenance_note) if part
+        )
         try:
             source_year = _year(source_row.get("data_year"))
         except ValueError as exc:
@@ -286,7 +298,13 @@ def _workbook_profile_record(path: Path, spec: SupplementalSourceSpec) -> dict[s
     profile_name = _text(frame.iloc[1, 1])
     record.update(
         source_scope=f"area={area}",
-        Comment=f"Profile={profile_name}; structured source year/evidence grade not recorded in workbook.",
+        Comment="; ".join(
+            part for part in (
+                f"Profile={profile_name}",
+                spec.provenance_note,
+                "Structured source year/evidence grade not recorded in workbook.",
+            ) if part
+        ),
         source_record_count=len(profile),
     )
     return record

@@ -412,11 +412,32 @@ from candidate extraction and leaves every source value untouched.
 Normal records are `tracked_complete`. Known source formats that intentionally
 lack a year or evidence grade—currently the lifecycle-factor rows and the two
 survival/vintage profile workbooks—are `tracked_metadata_limited` and do not
-require review. Only a missing active file, unconfigured active source,
+require review. These lifecycle inputs are recorded as ChatGPT-assisted APERC
+model/derived assumptions whose original external evidence and source year are
+unknown; they must not be presented as external observations. Only a missing
+active file, unconfigured active source,
 malformed schema/year/profile, missing record identity, or
 duplicate/conflicting source identity becomes `attention_required`. A
 2026-08-28 read-only inventory produced 73 records: 69
 tracked complete, 4 tracked with limited metadata, and 0 requiring review.
+
+### Staged review-package command
+
+Operators can run the complete safe review workflow from the repository root:
+
+```powershell
+python back-end/scripts/generate_module1_review_package.py `
+  --economy 20USA `
+  --base-year 2022 `
+  --package-version review_only_20USA_2022 `
+  --output-dir C:\path\to\new_or_empty_staging_directory
+```
+
+The command extracts checked-in candidates, runs the resolver, writes the
+resolution package/audits and the separate supplemental provenance inventory,
+then prints a JSON summary. The output directory must be new or empty. Existing
+files are never overwritten, protected data/default/static paths are refused,
+and the command has no promotion or index-update operation.
 
 ## What the researcher interface should see
 

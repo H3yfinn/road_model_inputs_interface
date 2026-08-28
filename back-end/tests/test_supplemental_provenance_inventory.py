@@ -48,6 +48,10 @@ def test_checked_in_inventory_tracks_active_supplements_without_review_flags():
     }
     assert set(inventory.rows["Source Classification"]) == {"model_assumption", "structural_assumption"}
     assert not inventory.rows["review_required"].any()
+    lifecycle = inventory.rows[inventory.rows["tracking_status"].eq("tracked_metadata_limited")]
+    assert lifecycle["Source Data Year"].isna().all()
+    assert lifecycle["Comment"].str.contains("ChatGPT-assisted", regex=False).all()
+    assert lifecycle["Comment"].str.contains("original external evidence and source year unknown", regex=False).all()
 
 
 def test_inventory_is_deterministic_and_optionally_writes_only_to_caller_path(tmp_path):

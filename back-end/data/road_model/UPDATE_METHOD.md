@@ -235,7 +235,9 @@ modify the existing supplemental loaders.
 
 `tracked_complete` and `tracked_metadata_limited` require no reviewer action.
 The latter is expected for the lifecycle-factor rows and the survival/vintage
-workbooks, which do not carry complete year/evidence metadata. Only
+workbooks. They are ChatGPT-assisted APERC model/derived assumptions whose
+original external evidence and source year are unknown, rather than external
+observations. Only
 `attention_required` should be surfaced: missing or unconfigured active files,
 malformed schema/year/profile data, missing record identities, and
 duplicate/conflicting source identities.
@@ -663,7 +665,9 @@ Deployment details and the My Drive OAuth boundary are recorded in
   Derivation Method fields. Synthetic/default inputs remain model or structural
   assumptions. Evidence grade and estimation status are tracked separately and
   do not confer native status. Known incomplete workbook/profile metadata is
-  `tracked_metadata_limited`, not an action item.
+  `tracked_metadata_limited`, not an action item. The lifecycle factors and
+  survival/vintage profiles explicitly record that they are ChatGPT-assisted
+  assumptions with unknown original external evidence and source year.
 - Audit behavior: Only missing/unconfigured active files, malformed schemas or
   years/profiles, missing record identities, and duplicate/conflicting source
   identities are `attention_required`. `audit_module1_source_quality()` now
@@ -680,3 +684,27 @@ Deployment details and the My Drive OAuth boundary are recorded in
   a 2021 base-year package. This change does not modify numeric inputs,
   production/static outputs, Drive, UI behavior, classification eligibility or
   promotion.
+
+## Staged Module 1 review-package operator command
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Added
+  `back-end/scripts/generate_module1_review_package.py` as a small command-line
+  entry point for the existing checked-in candidate extraction, opt-in resolver
+  package generation and separate supplemental provenance inventory.
+- Update method: Run the script with explicit `--economy`, `--base-year`,
+  `--package-version` and `--output-dir` arguments. The source-package version
+  defaults to the current checked-in version; an explicit fallback CSV remains
+  optional.
+- Outputs: The new or empty caller-owned staging directory receives the
+  canonical review CSV, resolution audit and manifest, extracted candidate JSON
+  and audit, and supplemental provenance inventory CSV. A structured JSON
+  summary is printed for the operator.
+- Safety: The command refuses a non-empty directory and inherits the protected
+  production/source/static path checks. It has no promotion, static-index,
+  Drive, UI or deployment operation.
+- Validation checks: Automated tests cover staged summary/artifact reporting,
+  refusal to overwrite an existing directory, clean command-line output and a
+  nonzero safe-failure exit. Production-source validation is run only into a
+  temporary directory.
