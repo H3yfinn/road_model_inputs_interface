@@ -162,6 +162,44 @@ temporary caller-owned path only when a CSV is needed for review. The audit does
 not update generated defaults, the frontend static bundle, Drive, or any source
 file.
 
+### Recovering archived 9th Outlook provenance
+
+The original 9th-edition transport data system is preserved for provenance
+recovery at:
+
+- [APERC code archive folder](https://drive.google.com/drive/folders/1K--aSZYmolHb0Kl3m9ANjw11jWFdpj9u)
+- [transport_data_system.zip](https://drive.google.com/file/d/103sIJ1L1mbQpGfL2shlB8nrIOTkbyFz3/view?usp=drive_link)
+
+The same folder contains `transport_model_9th_edition.7z`. Its relevant combined
+source snapshot is:
+
+```text
+transport_model_9th_edition/input_data/transport_data_system/combined_data_DATE20250122.csv
+```
+
+Treat these archives as read-only recovery evidence, not as runtime inputs or
+automatically approved defaults. The combined snapshot preserves row-level
+`dataset` and `comment` labels, but later 9th-model code explicitly removed those
+fields and could transform the values through unit conversion, non-road splits,
+aggregation, estimation and ESTO reconciliation.
+
+For a future recovery build:
+
+1. extract only required files into a temporary or reviewed local workspace;
+2. join on the full archived key `(economy, date, medium, measure, vehicle_type,
+   transport_type, drive, fuel)`;
+3. require deterministic lineage evidence before attaching an archived label;
+4. describe transformed values as seeded/reconciled/derived rather than direct
+   observations;
+5. use “archived provenance not yet linked” instead of “source unknown” for
+   proven 9th Outlook rows whose detailed source has not yet been imported; and
+6. preserve all current numeric values and canonical keys until a separately
+   reviewed source update explicitly changes them.
+
+Do not commit the multi-gigabyte archive or wholesale combined-data snapshot to
+this repository. `combined_data_DATE20230902.csv` is an older comparison copy
+and must not override the 2025 snapshot merely because it is locally available.
+
 ## Stock Share Derivation
 
 `Stock Share` rows are derived from base-year `Stock` rows after the source
@@ -448,3 +486,27 @@ Deployment details and the My Drive OAuth boundary are recorded in
   become resolver-eligible remains a separate explicit integration decision.
   ESTO energy-balance observations sit outside the canonical Module 1 variable
   registry and remain exact-year reconciliation anchors.
+
+## Archived 9th Outlook provenance discovery
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Recorded the recovery location and interpretation of the full
+  9th-edition transport data system after locating the 2025 combined provenance
+  snapshot and the model code that discarded its metadata downstream.
+- Source inputs: Read-only inspection of `transport_data_system.zip`,
+  `transport_model_9th_edition.7z`, `combined_data_DATE20250122.csv`, and the
+  older `combined_data_DATE20230902.csv` comparison copy.
+- Update method: Documentation only. No archived data was added to the active
+  source pool, and no defaults, static files, Drive files or numeric values were
+  changed.
+- Recategorizations or mappings: Clarified that `legacy_unknown` means archived
+  provenance has not yet been linked for proven 9th Outlook lineage; it must not
+  be presented as evidence that the historical source never existed.
+- Output files changed: Documentation only.
+- Validation checks run: Full interface test suite and documentation diff
+  review.
+- Notes/limitations: A future versioned crosswalk must distinguish exact source
+  rows, technical assumptions, transformed/reconciled values and generated
+  derivatives. Classification-schema or resolver-eligibility changes remain a
+  separate explicit decision.

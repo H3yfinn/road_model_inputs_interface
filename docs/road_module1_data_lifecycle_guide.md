@@ -64,14 +64,26 @@ grade or estimation status, and transformation notes.
 
 ### Legacy value with incomplete evidence
 
-Do not invent a citation. Use:
+Do not invent a citation. Where no recoverable lineage has been established,
+use:
 
 ```text
 Legacy input — original source detail not yet recorded; please update when better evidence is available.
 ```
 
 Use `9th Outlook input — ...` only where repository evidence establishes that
-lineage. Keep incomplete legacy classification as `legacy_unknown`.
+lineage. For the known 9th Outlook transport lineage, the historical provenance
+is preserved in an archived transport data system even when it has not yet been
+joined into the current canonical row. Use:
+
+```text
+9th Outlook legacy input — row-level provenance is preserved in the archived transport data system but has not yet been linked into this interface record. The displayed value may also reflect subsequent aggregation, disaggregation, or model reconciliation.
+```
+
+Until a separate classification migration is reviewed, keep incomplete legacy
+classification as `legacy_unknown` internally. In this context that status
+means **archived provenance not yet linked**, not that the original provenance
+never existed. Do not present it to researchers simply as “source unknown.”
 
 ### Derived or generated value
 
@@ -129,6 +141,68 @@ classification.
 derived/generated, missing-date, and missing-classification counts in memory. It
 writes a CSV only when the caller supplies an output path; production artifacts
 are never an implicit side effect.
+
+### Archived 9th Outlook provenance recovery
+
+The full 9th-edition transport data system and related APERC-era code archives
+are preserved in this read-only recovery folder:
+
+- [APERC code archive folder](https://drive.google.com/drive/folders/1K--aSZYmolHb0Kl3m9ANjw11jWFdpj9u)
+- [Full 9th-edition transport data system ZIP](https://drive.google.com/file/d/103sIJ1L1mbQpGfL2shlB8nrIOTkbyFz3/view?usp=drive_link)
+
+The folder also contains `transport_model_9th_edition.7z`, the archived model
+used to inspect the exact source-generation path. Inside that model archive,
+the strongest current combined provenance snapshot is:
+
+```text
+transport_model_9th_edition/input_data/transport_data_system/combined_data_DATE20250122.csv
+```
+
+It contains 130,773 unique rows keyed by economy, date, medium, measure, vehicle
+type, transport type, drive and fuel. Its `dataset` and `comment` fields recover
+useful lineage including 9th Outlook ESTO, EGEDA/8th transport splits, IEA EV
+Explorer, ATO and named national statistics. Generic labels such as
+`manually_inputted_data`, `estimated` and `9th_model_first_iteration` still need
+human interpretation. A named technical-assumption source also does not make a
+row a native economy observation; for example, US Alternative Fuels Data Center
+efficiency assumptions were applied across multiple economies.
+
+The archived 9th-model import code explicitly dropped `Dataset`, `Source` and
+`Comment` before the transport inputs were reshaped. Later aggregation dropped
+`Dataset` again. Non-road splitting, unit conversion, ESTO reconciliation and
+other model calculations could then change the numeric value. Consequently,
+future recovery must distinguish:
+
+- an exact external observation;
+- a technical assumption seeded from an identified dataset;
+- an archived source row subsequently reconciled or transformed; and
+- a derived/generated value with multiple upstream inputs.
+
+Do not ingest the Drive ZIP or scan the archive at browser/model runtime. The
+Drive folder is recovery evidence, not an active source/default layer. Recovery
+work should use a reviewed local or temporary extract, join on the full archived
+source key, preserve transformation notes, and generate a new immutable package
+only after tests and human review. Do not commit the entire combined CSV or
+replace current numeric values merely because an archived row shares a key.
+
+An older local copy, `combined_data_DATE20230902.csv`, is useful for historical
+comparison but is not the primary reference: it has fewer rows and source
+labels, and many shared keys changed value or dataset label before the 2025
+snapshot.
+
+The next bounded provenance phase should:
+
+1. define a versioned crosswalk from current Module 1 source keys to the 2025
+   archived keys without changing canonical row keys or values;
+2. replace generic user-facing “unknown” wording with “archived provenance not
+   yet linked” for proven 9th Outlook lineage;
+3. propagate specific archived `dataset`/`comment` detail only for deterministic
+   matches, recording reconciliation or derivation where applicable;
+4. keep genuinely unconnected rows separate from recoverable 9th Outlook rows;
+5. add audit categories for archived-exact, archived-transformed,
+   archived-detail-needed and genuinely-unlinked rows; and
+6. validate entirely with temporary extracts and synthetic fixtures before any
+   new immutable production package is considered.
 
 ## Current source-quality audit
 
@@ -188,6 +262,13 @@ native observations. All 181 Russia Current Accounts rows carrying an explicit
 2021 base year. The temporary validation also confirmed that enrichment did not
 change any canonical key or numeric value. No production output or static file
 was regenerated.
+
+This audit predates discovery of the archived transport data system described
+above. Its `legacy_unknown` and `legacy detail needed` counts remain accurate for
+the structured fields in that generated package, but should now be interpreted
+as **archived detail not yet recovered into the package** for proven 9th Outlook
+rows. The discovery does not retroactively make transformed rows external
+observations or alter the recorded source year.
 
 ## Base-year resolution
 
