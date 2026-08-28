@@ -83,6 +83,9 @@ def test_explicit_russia_2022_remains_2022_and_is_carried_backward_to_2021():
     assert result.loc[0, "Source Data Year"] == 2022
     assert result.loc[0, "Base Year Treatment"] == "carried_backward"
     assert result.loc[0, "Derivation Method"] == "future_year_seed"
+    counts = dict(audit_module1_source_quality(result).itertuples(index=False, name=None))
+    assert counts["complete"] == 1
+    assert counts["operationally_complete"] == 1
 
 
 @pytest.mark.parametrize(
@@ -303,6 +306,10 @@ def test_source_quality_audit_counts_and_optional_temp_output(tmp_path):
         ),
         _row(**{"Branch Path": "Demand\\Freight road\\Trucks", "Source": "unmapped.csv"}),
         _row(
+            **{"Branch Path": "Demand\\Passenger road\\Buses"},
+            Source="road_module1_source_20USA.csv",
+        ),
+        _row(
             Variable="Mileage Correction Factor",
             Scenario="Target",
             Source="generated_default_correction_factor",
@@ -312,8 +319,10 @@ def test_source_quality_audit_counts_and_optional_temp_output(tmp_path):
     output = tmp_path / "audit" / "source_quality.csv"
     report = audit_module1_source_quality(enriched, output)
     counts = dict(report.itertuples(index=False, name=None))
-    assert counts["total"] == 3
+    assert counts["total"] == 4
     assert counts["complete"] == 1
+    assert counts["operationally_complete"] == 2
+    assert counts["archived_reference_available"] == 1
     assert counts["legacy_detail_needed"] == 1
     assert counts["derived_generated"] == 1
     assert counts["missing_date"] == 2

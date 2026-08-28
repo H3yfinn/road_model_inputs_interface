@@ -252,11 +252,16 @@ def audit_module1_source_quality(
     classification = df["Source Classification"].fillna("").astype(str).str.strip()
     treatment = df["Base Year Treatment"].fillna("").astype(str).str.strip()
     derivation = df["Derivation Method"].fillna("").astype(str).str.strip()
-    derived_generated = ~derivation.isin({"", "legacy_unrecorded"}) & derivation.ne("prior_observation_seed")
+    derived_generated = ~derivation.isin(
+        {"", "legacy_unrecorded", "prior_observation_seed", "future_year_seed"}
+    )
+    archived_reference_available = comment.str.contains(
+        NINTH_OUTLOOK_ARCHIVE_URL, case=False, regex=False
+    )
     legacy_detail_needed = (
         classification.eq("legacy_unknown")
         | comment.str.contains("original source detail not yet recorded", case=False, regex=False)
-    ) & ~derived_generated
+    ) & ~derived_generated & ~archived_reference_available
     missing_classification = classification.isin({"", "legacy_unknown"})
     complete = (
         source.ne("")
@@ -265,10 +270,13 @@ def audit_module1_source_quality(
         & ~treatment.isin({"", "legacy_unrecorded"})
         & ~derived_generated
     )
+    operationally_complete = complete | archived_reference_available
     metrics = pd.DataFrame(
         [
             ("total", len(df)),
             ("complete", int(complete.sum())),
+            ("operationally_complete", int(operationally_complete.sum())),
+            ("archived_reference_available", int(archived_reference_available.sum())),
             ("legacy_detail_needed", int(legacy_detail_needed.sum())),
             ("derived_generated", int(derived_generated.sum())),
             ("missing_date", int(source_year.isna().sum())),

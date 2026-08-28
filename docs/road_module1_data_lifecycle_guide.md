@@ -140,10 +140,13 @@ derivation methods. Supplemental inputs propagate an explicit four-digit
 `data_year` through `Source Data Year`; their evidence grade or estimation
 status is not silently upgraded to a native classification.
 
-`audit_module1_source_quality()` reports total, complete, legacy-detail-needed,
-derived/generated, missing-date, and missing-classification counts in memory. It
-writes a CSV only when the caller supplies an output path; production artifacts
-are never an implicit side effect.
+`audit_module1_source_quality()` reports total, complete external provenance,
+operationally complete, archived-reference-available, legacy-detail-needed,
+derived/generated, missing-date, and missing-classification counts in memory.
+Known 9th Outlook rows with the archive link count as operationally complete
+and are excluded from `legacy_detail_needed`; their internal classification
+remains `legacy_unknown`. The audit writes a CSV only when the caller supplies
+an output path; production artifacts are never an implicit side effect.
 
 ### Archived 9th Outlook provenance recovery
 
@@ -193,12 +196,13 @@ comparison but is not the primary reference: it has fewer rows and source
 labels, and many shared keys changed value or dataset label before the 2025
 snapshot.
 
-No bulk provenance-recovery or row-by-row crosswalk is planned. The current
-legacy records should remain as they are and be replaced gradually when better
-sources are supplied through normal reviewed updates. If a particular legacy
-value ever needs investigation, use the archived transport data system and its
-full source key on demand. That targeted lookup is expected to require much less
-work than pre-emptively sourcing every historic row.
+No bulk provenance-recovery or row-by-row crosswalk is planned. Known rows that
+carry the archive guidance are **complete enough for normal operation** and do
+not belong in a reviewer action queue. Their `legacy_unknown` classification is
+an honest technical description, not a request for more work. The records
+should remain as they are and be replaced gradually when better sources arrive
+through normal reviewed updates. If a particular value ever becomes material,
+the archive and its full source key remain available for an on-demand lookup.
 
 ## Current source-quality audit
 
@@ -259,12 +263,12 @@ native observations. All 181 Russia Current Accounts rows carrying an explicit
 change any canonical key or numeric value. No production output or static file
 was regenerated.
 
-This audit predates discovery of the archived transport data system described
-above. Its `legacy_unknown` and `legacy detail needed` counts remain accurate for
-the structured fields in that generated package, but should now be interpreted
-as **archived detail not yet recovered into the package** for proven 9th Outlook
-rows. The discovery does not retroactively make transformed rows external
-observations or alter the recorded source year.
+This audit predates discovery of the archived transport data system and the
+later operational-status split. A current audit separates proven rows carrying
+the archive link into `archived_reference_available` and counts them as
+`operationally_complete`, without making them native observations. Only other
+unresolved legacy rows remain in `legacy_detail_needed`. The discovery does not
+alter recorded source years or transformed classifications.
 
 ## Base-year resolution
 
@@ -382,11 +386,37 @@ by normal percentage recalculation/rounding; no non-Stock-Share or detailed
 Stock Share value changed beyond CSV floating-point serialization tolerance.
 This is useful audit evidence, not an argument to broaden eligibility.
 
-The checked-in 16RUS static package currently begins at 2022 and therefore
-cannot serve as an exact 2021 authoritative fallback for this adapter. Do not
-silently relabel 2022 as 2021; supplying a reviewed 2021 fallback is a separate
-human decision. Supplemental inputs with explicit evidence metadata are also
-not yet included by this adapter.
+The checked-in 16RUS static package begins at 2022. Russia provenance is treated
+as complete enough for this workflow: preserve the recorded 2022 source year,
+do not attempt a separate 2021-versus-2022 research exercise, and use
+`carried_backward` if that value is packaged for a 2021 base year. The current
+adapter does not manufacture a 2021 fallback, but this is a packaging limitation
+rather than an outstanding provenance decision.
+
+### Supplemental provenance inventory
+
+Supplemental inputs remain in their existing files and loaders; they are not
+resolver candidates and do not require routine reviewer approval.
+`back-end/core/supplemental_provenance_inventory.py` reads only the seven active
+supplemental paths declared in `road_module1_default_parameters.json` and
+describes them using the same Source, Comment, Source Data Year, Source
+Classification, Base Year Treatment and Derivation Method fields used by the
+canonical package. Evidence grade and estimation status remain separate audit
+fields and never imply a native observation.
+
+`build_supplemental_provenance_inventory()` returns the deterministic inventory
+and summary in memory. It writes a CSV only when given a caller-owned path
+outside the protected data/default/static trees. The inventory stays separate
+from candidate extraction and leaves every source value untouched.
+
+Normal records are `tracked_complete`. Known source formats that intentionally
+lack a year or evidence grade—currently the lifecycle-factor rows and the two
+survival/vintage profile workbooks—are `tracked_metadata_limited` and do not
+require review. Only a missing active file, unconfigured active source,
+malformed schema/year/profile, missing record identity, or
+duplicate/conflicting source identity becomes `attention_required`. A
+2026-08-28 read-only inventory produced 73 records: 69
+tracked complete, 4 tracked with limited metadata, and 0 requiring review.
 
 ## What the researcher interface should see
 
@@ -394,8 +424,8 @@ Researchers receive an already selected, validated package. Their editing
 surface should show:
 
 - value and units;
-- a compact status: `Native 2024`, `From 2022`, `From 2026`, `Derived`, or
-  `Source detail needed`;
+- a compact status: `Native 2024`, `From 2022`, `From 2026`, `Derived`,
+  `Archived reference`, or `Source detail needed`;
 - full provenance in expandable row details;
 - a filter for shifted, missing or weak-source-detail values; and
 - **Source / reason for change** when they edit.

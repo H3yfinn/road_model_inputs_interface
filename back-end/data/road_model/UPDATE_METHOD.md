@@ -185,13 +185,15 @@ automatically approved defaults. The combined snapshot preserves row-level
 fields and could transform the values through unit conversion, non-road splits,
 aggregation, estimation and ESTO reconciliation.
 
-Do not plan or run a bulk row-by-row provenance recovery. Leave current legacy
-records unchanged and replace them gradually through normal reviewed source
-updates. If a specific value needs investigation, extract only the required
-archive files into a temporary or reviewed local workspace and look it up using
-the full archived key `(economy, date, medium, measure, vehicle_type,
-transport_type, drive, fuel)`. Preserve the current numeric value and canonical
-key unless that investigation leads to a separately reviewed source update.
+Do not plan or run a bulk row-by-row provenance recovery. Known records carrying
+the archive guidance are complete enough for normal operation and should not be
+put into a reviewer action queue. Leave them unchanged and replace them
+gradually through normal reviewed source updates. If a specific value becomes
+material, extract only the required archive files into a temporary or reviewed
+local workspace and look it up using the full archived key `(economy, date,
+medium, measure, vehicle_type, transport_type, drive, fuel)`. Preserve the
+current numeric value and canonical key unless that investigation leads to a
+separately reviewed source update.
 
 Do not commit the multi-gigabyte archive or wholesale combined-data snapshot to
 this repository. `combined_data_DATE20230902.csv` is an older comparison copy
@@ -222,6 +224,23 @@ Active supplemental source files include:
 
 When any supplemental source changes, record the source, method, affected file,
 and validation checks in a new entry at the end of this file.
+
+For routine tracking, call
+`build_supplemental_provenance_inventory()` from
+`back-end/core/supplemental_provenance_inventory.py`. It inventories only the
+seven active supplemental paths named in `road_module1_default_parameters.json`
+and uses the canonical provenance fields plus evidence grade, estimation status
+and a separate tracking status. It does not feed the candidate resolver or
+modify the existing supplemental loaders.
+
+`tracked_complete` and `tracked_metadata_limited` require no reviewer action.
+The latter is expected for the lifecycle-factor rows and the survival/vintage
+workbooks, which do not carry complete year/evidence metadata. Only
+`attention_required` should be surfaced: missing or unconfigured active files,
+malformed schema/year/profile data, missing record identities, and
+duplicate/conflicting source identities.
+The report is in memory unless a caller supplies a safe output path; protected
+data/default/static paths are refused.
 
 ## Final Value Overrides
 
@@ -593,11 +612,12 @@ Deployment details and the My Drive OAuth boundary are recorded in
   serialization tolerance.
 - Notes/limitations: This is review-package generation, not promotion. Current
   checked-in sources provide no eligible native candidate in the 20USA run, and
-  eligibility was intentionally not broadened. The checked-in 16RUS static
-  package starts at 2022, so it cannot be silently used as an exact 2021
-  fallback; a reviewed 2021 fallback requires a separate human decision.
-  Supplemental-source extraction, immutable promotion/index changes and UI
-  integration remain out of scope.
+  eligibility was intentionally not broadened. Russia is complete enough for
+  normal operation: keep an explicit 2022 source year and carry it backward if
+  used for the 2021 model base year; no separate dating investigation is
+  required. Supplemental inputs are tracked by the separate inventory described
+  above and remain outside candidate resolution. Immutable promotion/index
+  changes and UI integration remain out of scope.
 
 ## Archived 9th Outlook provenance discovery
 
@@ -619,5 +639,44 @@ Deployment details and the My Drive OAuth boundary are recorded in
 - Validation checks run: Full interface test suite and documentation diff
   review.
 - Notes/limitations: No bulk crosswalk or retrospective sourcing project is
-  planned. Legacy rows remain available for targeted archive investigation and
-  should be replaced gradually through normal reviewed source updates.
+  planned. Rows carrying the archive guidance are operationally complete and
+  require no routine review. The archive remains available only if a specific
+  material value later needs investigation.
+
+## Low-touch supplemental provenance inventory
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Added a separate deterministic inventory for active
+  supplemental sources and revised quality-audit semantics so known archived
+  9th Outlook rows are complete enough for operations without being relabelled
+  as native observations.
+- Source inputs: The seven active supplemental paths declared in
+  `road_module1_default_parameters.json`. Five are CSV sources; two are the
+  checked-in survival/vintage lifecycle workbooks.
+- Update method: Call `build_supplemental_provenance_inventory()` for an
+  in-memory report or provide a safe caller-owned CSV path. Existing source
+  files and loaders remain authoritative and unchanged. The inventory never
+  creates resolver candidates.
+- Recategorizations or mappings: Supplemental records use the canonical Source,
+  Comment, Source Data Year, Source Classification, Base Year Treatment and
+  Derivation Method fields. Synthetic/default inputs remain model or structural
+  assumptions. Evidence grade and estimation status are tracked separately and
+  do not confer native status. Known incomplete workbook/profile metadata is
+  `tracked_metadata_limited`, not an action item.
+- Audit behavior: Only missing/unconfigured active files, malformed schemas or
+  years/profiles, missing record identities, and duplicate/conflicting source
+  identities are `attention_required`. `audit_module1_source_quality()` now
+  separately reports `archived_reference_available` and
+  `operationally_complete`; archived-linked
+  rows no longer inflate `legacy_detail_needed`.
+- Validation checks: The checked-in inventory produced 73 records across 7
+  active sources: 69 `tracked_complete`, 4 `tracked_metadata_limited`, and 0
+  requiring review. Automated tests cover deterministic output, no source-file
+  mutation, malformed years/workbooks, missing/unconfigured files, duplicate
+  identities and protected output paths.
+- Notes/limitations: Russia requires no separate dating investigation. Preserve
+  any explicit 2022 source year and use `carried_backward` if the value supports
+  a 2021 base-year package. This change does not modify numeric inputs,
+  production/static outputs, Drive, UI behavior, classification eligibility or
+  promotion.
