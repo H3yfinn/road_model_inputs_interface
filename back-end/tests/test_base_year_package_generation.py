@@ -163,6 +163,32 @@ def test_stock_share_without_explicit_stock_derivation_preserves_fallback(tmp_pa
     assert share_audit["selection_reason"] == "stock_share_has_no_explicit_stock_derivation"
 
 
+@pytest.mark.parametrize(
+    "variable",
+    ["Mileage Correction Factor", "Fuel Economy Correction Factor"],
+)
+def test_generated_correction_factors_are_preserved_without_resolution(tmp_path, variable):
+    row = fallback_row(
+        "Demand\\Passenger road\\LPVs\\ICE",
+        variable,
+        1.05,
+        **{
+            "Source": "generated_default_correction_factor",
+            "Source Classification": "model_assumption",
+            "Base Year Treatment": "transformed",
+            "Derivation Method": "generated_default_correction_factor",
+        },
+    )
+    paths = generate(tmp_path, [row], [])
+    resolved = pd.read_csv(paths["resolved_csv"])
+    audit = pd.read_csv(paths["audit_csv"])
+
+    assert resolved.loc[0, "Value"] == 1.05
+    assert audit.loc[0, "status"] == "derived"
+    assert audit.loc[0, "selection_reason"] == "generated_derived_control_preserved"
+    assert pd.isna(audit.loc[0, "resolver_policy_id"])
+
+
 def test_explicit_stock_share_derivation_requires_stock_basis(tmp_path):
     row = fallback_row(
         "Demand\\Passenger road\\LPVs", "Stock Share", 100,

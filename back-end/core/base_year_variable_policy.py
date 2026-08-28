@@ -27,6 +27,9 @@ EXACT_YEAR_REQUIRED = "exact_year_required"
 SEED_ELIGIBLE = "seed_eligible"
 DERIVED = "derived"
 REQUIRED_POLICY_FAMILY_IDS = frozenset({EXACT_YEAR_REQUIRED, SEED_ELIGIBLE, DERIVED})
+GENERATED_ONLY_VARIABLES = frozenset(
+    {"Fuel Economy Correction Factor", "Mileage Correction Factor"}
+)
 
 
 @dataclass(frozen=True)
@@ -87,7 +90,11 @@ VARIABLE_POLICY_FAMILIES = (
         description=(
             "Values recalculated from already resolved inputs and therefore never independently shifted."
         ),
-        variables=("Stock Share",),
+        variables=(
+            "Fuel Economy Correction Factor",
+            "Mileage Correction Factor",
+            "Stock Share",
+        ),
         resolver_policy_id=None,
     ),
 )
@@ -194,7 +201,7 @@ def validate_contract_policy_coverage(
     canonical_variables = inventory_canonical_variables(contract_path)
     lookup = validate_policy_registry(families)
     unknown = sorted(set(canonical_variables) - set(lookup))
-    stale = sorted(set(lookup) - set(canonical_variables))
+    stale = sorted(set(lookup) - set(canonical_variables) - GENERATED_ONLY_VARIABLES)
     if unknown or stale:
         details: list[str] = []
         if unknown:

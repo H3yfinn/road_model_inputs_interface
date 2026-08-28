@@ -8,6 +8,7 @@ from core.base_year_variable_policy import (
     CANONICAL_CONTRACT_PATH,
     DERIVED,
     EXACT_YEAR_REQUIRED,
+    GENERATED_ONLY_VARIABLES,
     SEED_ELIGIBLE,
     VARIABLE_POLICY_FAMILIES,
     VariablePolicyFamily,
@@ -42,6 +43,8 @@ def test_current_canonical_contract_has_exactly_one_policy_per_variable():
         ("Sales Share", SEED_ELIGIBLE),
         ("PHEV Electric Driving Share", SEED_ELIGIBLE),
         ("Stock Share", DERIVED),
+        ("Fuel Economy Correction Factor", DERIVED),
+        ("Mileage Correction Factor", DERIVED),
     ],
 )
 def test_representative_variables_use_expected_policy_family(variable, expected_family):
@@ -53,6 +56,15 @@ def test_exact_year_family_is_retained_for_external_anchors_without_fake_module1
 
     assert exact_family.variables == ()
     assert exact_family.resolver_policy_id == "energy_balance_exact_year"
+
+
+def test_generated_correction_factors_are_derived_but_not_source_contract_rows():
+    assert GENERATED_ONLY_VARIABLES == {
+        "Fuel Economy Correction Factor",
+        "Mileage Correction Factor",
+    }
+    assert not (set(inventory_canonical_variables()) & GENERATED_ONLY_VARIABLES)
+    assert all(policy_family_for_variable(variable).family_id == DERIVED for variable in GENERATED_ONLY_VARIABLES)
 
 
 @pytest.mark.parametrize("variable", ["", "   ", None])

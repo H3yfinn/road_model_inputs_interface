@@ -377,6 +377,28 @@ def generate_resolved_base_year_package(
     for _, fallback_row in fallback[~fallback["Variable"].eq("Stock Share")].iterrows():
         key = tuple(str(fallback_row[column]) for column in RESOLUTION_KEY_COLUMNS)
         family = policy_family_for_variable(key[-1])
+        if family.family_id == DERIVED:
+            row = fallback_row.to_dict()
+            output_rows.append(row)
+            audit_rows.append(
+                {
+                    **{column: key[index] for index, column in enumerate(RESOLUTION_KEY_COLUMNS)},
+                    "requested_base_year": year,
+                    "status": "derived",
+                    "strategy": "generated_authoritative_fallback",
+                    "resolver_policy_id": "",
+                    "policy_override_applied": False,
+                    "candidate_id": "",
+                    "source_id": str(row.get("Source", "")),
+                    "selected_source_data_year": row.get("Source Data Year", ""),
+                    "selected_source_classification": row.get("Source Classification", ""),
+                    "base_year_treatment": row.get("Base Year Treatment", ""),
+                    "selection_reason": "generated_derived_control_preserved",
+                    "rejection_count": 0,
+                    "rejections": "[]",
+                }
+            )
+            continue
         policy_id = overrides.get(key[-1], family.resolver_policy_id)
         row_candidates = grouped.get(key, [])
         result = resolve_base_year_candidates(row_candidates, year, policy_id)

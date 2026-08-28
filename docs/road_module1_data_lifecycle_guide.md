@@ -272,12 +272,21 @@ alter recorded source years or transformed classifications.
 
 ## Base-year resolution
 
+The all-economy 2021/2022/2024/2026 dry run and its quarantined conflicts are
+recorded in
+[`road_module1_base_year_dry_run_2026_08_28.md`](road_module1_base_year_dry_run_2026_08_28.md).
+It confirms that a requested-year projection slice is not a complete base-year
+template; do not activate those staged outputs as interface/model packages.
+
 Resolution starts from original candidates, never a previously shifted output.
 Current Module 1 policies are simple:
 
 - 23 original source/researcher/model-judgement variables are `seed_eligible`;
 - `Stock Share` is never a resolver candidate; only rows explicitly marked
   `stock_share_from_stock` are recalculated from resolved `Stock`;
+- generated `Mileage Correction Factor` and `Fuel Economy Correction Factor`
+  rows are derived controls outside the maintained 24-variable source contract
+  and are never resolver candidates;
 - ESTO energy balances are external exact-year reconciliation anchors.
 
 An exact-year eligible observation wins. Otherwise the selected fallback keeps

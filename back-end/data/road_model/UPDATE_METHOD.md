@@ -171,6 +171,10 @@ source-package version match an explicit rule in `road_module1_provenance.py`.
 Package generation validates that mapping again before resolution. This allows
 known 9th Outlook bridge values to seed a later or earlier base year without
 making all unknown legacy data eligible or relabelling it as native.
+Generated `Mileage Correction Factor` and `Fuel Economy Correction Factor`
+rows are classified as derived controls outside the maintained source contract;
+they remain authoritative fallback rows and never become independent resolver
+candidates.
 
 ### Recovering archived 9th Outlook provenance
 
