@@ -164,6 +164,14 @@ temporary caller-owned path only when a CSV is needed for review. The audit does
 not update generated defaults, the frontend static bundle, Drive, or any source
 file.
 
+For base-year candidate resolution, a `legacy_unknown` classification remains
+ineligible by itself. The extraction layer may add the separate
+`verified_9th_outlook` candidate marker only when the source name and immutable
+source-package version match an explicit rule in `road_module1_provenance.py`.
+Package generation validates that mapping again before resolution. This allows
+known 9th Outlook bridge values to seed a later or earlier base year without
+making all unknown legacy data eligible or relabelling it as native.
+
 ### Recovering archived 9th Outlook provenance
 
 The original 9th-edition transport data system is preserved for provenance

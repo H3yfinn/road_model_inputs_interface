@@ -10,6 +10,7 @@ from core.base_year_package_generation import (
     CANONICAL_LONG_COLUMNS,
     generate_resolved_base_year_package,
 )
+from core.researcher_submission_review import normalise_module1_rows
 
 
 ECONOMY = "20USA"
@@ -130,8 +131,18 @@ def test_opt_in_generation_selects_exact_earlier_future_and_derives_stock_share(
         "Demand\\Passenger road\\Motorcycles": 50.0,
     }
     assert set(shares["Derivation Method"]) == {"stock_share_from_stock"}
+    assert set(shares["Base Year Treatment"]) == {"transformed"}
     assert set(audit[audit["Variable"].eq("Stock Share")]["status"]) == {"derived"}
     assert not any(candidate_row["row_key"][-1] == "Stock Share" for candidate_row in candidates)
+    normalised = normalise_module1_rows(resolved, legacy_values_are_internal=False)
+    assert len(normalised) == len(resolved)
+
+
+def test_future_candidate_uses_canonical_future_year_seed_term(tmp_path):
+    row = fallback_row("Demand\\Passenger road\\LPVs\\BEV", "Mileage", 3)
+    paths = generate(tmp_path, [row], [candidate("future", row, 2026, 33)])
+    resolved = pd.read_csv(paths["resolved_csv"])
+    assert resolved.loc[0, "Derivation Method"] == "future_year_seed"
 
 
 def test_stock_share_without_explicit_stock_derivation_preserves_fallback(tmp_path):
@@ -264,6 +275,21 @@ def test_stock_share_candidate_is_rejected_instead_of_independently_resolved(tmp
     row = fallback_row("Demand\\Passenger road\\LPVs", "Stock Share", 100)
     with pytest.raises(ValueError, match="derived from resolved Stock"):
         generate(tmp_path, [row], [candidate("share", row, 2024, 100)])
+
+
+def test_unmapped_candidate_cannot_self_declare_verified_9th_lineage(tmp_path):
+    row = fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Mileage", 9)
+    item = candidate(
+        "forged-lineage",
+        row,
+        2022,
+        99,
+        source_classification="legacy_unknown",
+        source_lineage="verified_9th_outlook",
+    )
+    item["payload"]["Source Classification"] = "legacy_unknown"
+    with pytest.raises(ValueError, match="does not match the explicit source/package lineage mapping"):
+        generate(tmp_path, [row], [item])
 
 
 def test_candidate_identity_must_be_unique_across_the_package(tmp_path):

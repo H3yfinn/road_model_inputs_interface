@@ -179,7 +179,7 @@ def test_extracts_explicit_original_native_candidate_and_preserves_source_year()
     assert result.summary["status_counts"] == {"candidate": 1}
 
 
-def test_known_9th_row_is_extracted_but_remains_resolver_ineligible():
+def test_known_9th_row_is_extracted_with_verified_lineage_but_remains_legacy_unknown():
     row = _source_row(
         r"Demand\Passenger road\Cars",
         "Mileage",
@@ -194,6 +194,7 @@ def test_known_9th_row_is_extracted_but_remains_resolver_ineligible():
     assert len(result.candidates) == 1
     assert result.candidates[0]["source_data_year"] == 2022
     assert result.candidates[0]["source_classification"] == "legacy_unknown"
+    assert result.candidates[0]["source_lineage"] == "verified_9th_outlook"
 
 
 def test_excludes_missing_year_shifted_rows_and_derived_stock_share():

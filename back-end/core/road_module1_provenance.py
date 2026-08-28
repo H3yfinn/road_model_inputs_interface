@@ -120,6 +120,16 @@ def _matching_lineage_rule(
     return matches[0] if matches else None
 
 
+def source_lineage(
+    source: object,
+    package_version: str,
+    rules: Iterable[LineageRule] = DEFAULT_LINEAGE_RULES,
+) -> str:
+    """Return the explicitly mapped lineage for one source, if any."""
+    rule = _matching_lineage_rule(_text(source), package_version, tuple(rules))
+    return "" if rule is None else rule.lineage
+
+
 def _derived_kind(row: pd.Series) -> tuple[str, str, str] | None:
     source = _text(row.get("Source"))
     comment = _text(row.get("Comment"))

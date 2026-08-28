@@ -116,6 +116,24 @@ def test_legacy_unknown_is_conservatively_ineligible():
     assert result.rejections[0].reasons == ("ineligible_source_classification",)
 
 
+def test_only_verified_9th_lineage_makes_legacy_candidate_seed_eligible():
+    verified = candidate(
+        "verified",
+        2022,
+        source_classification="legacy_unknown",
+        source_lineage="verified_9th_outlook",
+    )
+    result = resolve_base_year_candidates([verified], 2024, "seed_eligible")
+    assert result.selected.candidate_id == "verified"
+    assert result.base_year_treatment == "carried_forward"
+
+    exact_year_result = resolve_base_year_candidates(
+        [verified], 2022, EXACT_YEAR_ENERGY_BALANCE_POLICY
+    )
+    assert exact_year_result.selected is None
+    assert exact_year_result.rejections[0].reasons == ("ineligible_source_classification",)
+
+
 def test_exact_year_only_policy_rejects_seed_years():
     result = resolve_base_year_candidates([candidate("old", 2021)], 2022, EXACT_YEAR_ENERGY_BALANCE_POLICY)
     assert result.selected is None

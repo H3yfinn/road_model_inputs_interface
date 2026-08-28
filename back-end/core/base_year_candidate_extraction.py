@@ -27,7 +27,7 @@ from core.base_year_package_generation import (
     normalise_authoritative_fallback,
 )
 from core.base_year_variable_policy import DERIVED, policy_family_for_variable
-from core.road_module1_provenance import enrich_module1_provenance
+from core.road_module1_provenance import enrich_module1_provenance, source_lineage
 
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "front-end" / "road-module1-static"
@@ -48,6 +48,7 @@ EXTRACTION_AUDIT_COLUMNS = [
     "source_row_year",
     "source_data_year",
     "source_classification",
+    "source_lineage",
     "source_type",
     "source_name",
     "source_priority",
@@ -227,6 +228,11 @@ def extract_original_candidates(
                 "_source_type": _text(raw_record["_source_type"]),
                 "_source_name": _text(raw_record["_source_name"]),
                 "_priority": int(raw_record["_priority"]),
+                "_source_lineage": (
+                    "verified_9th_outlook"
+                    if source_lineage(payload["Source"], source_package_version) == "9th_outlook"
+                    else ""
+                ),
             }
         )
 
@@ -257,7 +263,11 @@ def extract_original_candidates(
         group = grouped[group_key]
         family = policy_family_for_variable(str(group_key[-2]))
         eligible = POLICIES_BY_ID[family.resolver_policy_id].eligible_classifications
-        eligible_rows = [row for row in group if row["Source Classification"] in eligible]
+        eligible_lineages = POLICIES_BY_ID[family.resolver_policy_id].eligible_source_lineages
+        eligible_rows = [
+            row for row in group
+            if row["Source Classification"] in eligible or row["_source_lineage"] in eligible_lineages
+        ]
         priority_pool = eligible_rows or group
         selected_priority = min(int(row["_priority"]) for row in priority_pool)
         finalists = [row for row in priority_pool if int(row["_priority"]) == selected_priority]
@@ -277,6 +287,7 @@ def extract_original_candidates(
             "source_id": f"{winner['_source_type']}:{winner['_source_name']}",
             "source_data_year": int(winner["Source Data Year"]),
             "source_classification": winner["Source Classification"],
+            "source_lineage": winner["_source_lineage"],
             "quality_tier": "default",
             "source_priority_id": "default",
             "payload": {column: winner[column] for column in CANONICAL_LONG_COLUMNS},
@@ -324,6 +335,7 @@ def _audit_record(record: Mapping[str, Any], status: str, reason: str, candidate
         "source_row_year": int(record["Year"]),
         "source_data_year": record.get("Source Data Year", ""),
         "source_classification": record.get("Source Classification", ""),
+        "source_lineage": record.get("_source_lineage", ""),
         "source_type": record["_source_type"],
         "source_name": record["_source_name"],
         "source_priority": int(record["_priority"]),

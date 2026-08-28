@@ -284,6 +284,14 @@ An exact-year eligible observation wins. Otherwise the selected fallback keeps
 its real source-data year and is marked `carried_forward` (earlier source) or
 `carried_backward` (future source).
 
+Rows that remain honestly classified as `legacy_unknown` are resolver-eligible
+only when the candidate extractor can reproduce an explicit, version-scoped
+9th Outlook lineage mapping. The candidate carries the separate
+`verified_9th_outlook` marker; package generation recomputes that marker from
+the canonical `Source` and source-package version, so an arbitrary legacy row
+cannot opt itself in. This exception applies only to seed-eligible Module 1
+variables and never broadens an exact-year energy-balance policy.
+
 Initial strategies should remain limited to:
 
 - `prefer_earlier`: latest earlier, then earliest future. This is the only

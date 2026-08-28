@@ -22,6 +22,7 @@ VALID_SOURCE_CLASSIFICATIONS = frozenset(
         "legacy_unknown",
     }
 )
+VALID_SOURCE_LINEAGES = frozenset({"verified_9th_outlook"})
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class ResolverPolicy:
     eligible_classifications: frozenset[str]
     quality_tier_priority: Mapping[str, int]
     source_priority: Mapping[str, int]
+    eligible_source_lineages: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,7 @@ class Candidate:
     quality_tier: str
     source_priority_id: str
     payload: Mapping[str, Any]
+    source_lineage: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,7 @@ SEED_ELIGIBLE_POLICY = ResolverPolicy(
     eligible_classifications=frozenset({"native_observation"}),
     quality_tier_priority={"default": 0},
     source_priority={"default": 0},
+    eligible_source_lineages=frozenset({"verified_9th_outlook"}),
 )
 
 POLICIES_BY_ID = {
@@ -137,6 +141,7 @@ def _normalise_candidate(value: Candidate | Mapping[str, Any]) -> Candidate:
                 quality_tier=value["quality_tier"],
                 source_priority_id=value["source_priority_id"],
                 payload=value.get("payload", {}),
+                source_lineage=value.get("source_lineage", ""),
             )
         except KeyError as exc:
             raise ValueError(f"Candidate is missing required field {exc.args[0]!r}.") from exc
@@ -156,6 +161,9 @@ def _normalise_candidate(value: Candidate | Mapping[str, Any]) -> Candidate:
         raise ValueError(f"Unsupported source_classification {classification!r}.")
     if not isinstance(candidate.payload, Mapping):
         raise ValueError("payload must be a mapping.")
+    lineage = str(candidate.source_lineage or "").strip()
+    if lineage and lineage not in VALID_SOURCE_LINEAGES:
+        raise ValueError(f"Unsupported source_lineage {lineage!r}.")
     return Candidate(
         candidate_id=_required_text(candidate.candidate_id, "candidate_id"),
         row_key=row_key,
@@ -165,6 +173,7 @@ def _normalise_candidate(value: Candidate | Mapping[str, Any]) -> Candidate:
         quality_tier=_required_text(candidate.quality_tier, "quality_tier"),
         source_priority_id=_required_text(candidate.source_priority_id, "source_priority_id"),
         payload=dict(candidate.payload),
+        source_lineage=lineage,
     )
 
 
@@ -181,6 +190,8 @@ def _validate_policy(policy: ResolverPolicy | str) -> ResolverPolicy:
         raise ValueError("allow_seed_years must be boolean.")
     if not policy.eligible_classifications <= VALID_SOURCE_CLASSIFICATIONS:
         raise ValueError("Policy has unsupported eligible source classifications.")
+    if not policy.eligible_source_lineages <= VALID_SOURCE_LINEAGES:
+        raise ValueError("Policy has unsupported eligible source lineages.")
     if not policy.quality_tier_priority or not policy.source_priority:
         raise ValueError("Policy must supply explicit quality-tier and source priorities.")
     for priorities, label in (
@@ -235,7 +246,9 @@ def resolve_base_year_candidates(
     eligible: list[Candidate] = []
     for candidate in normalised:
         reasons: list[str] = []
-        if candidate.source_classification not in resolver_policy.eligible_classifications:
+        classification_eligible = candidate.source_classification in resolver_policy.eligible_classifications
+        lineage_eligible = candidate.source_lineage in resolver_policy.eligible_source_lineages
+        if not classification_eligible and not lineage_eligible:
             reasons.append("ineligible_source_classification")
         if not resolver_policy.allow_seed_years and candidate.source_data_year != requested_year:
             reasons.append("policy_requires_exact_year")

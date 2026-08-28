@@ -21,6 +21,7 @@ import pandas as pd
 
 from core.base_year_candidate_resolver import POLICIES_BY_ID, resolve_base_year_candidates
 from core.base_year_variable_policy import DERIVED, policy_family_for_variable
+from core.road_module1_provenance import source_lineage
 
 
 CANONICAL_KEY_COLUMNS = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
@@ -137,7 +138,11 @@ def normalise_authoritative_fallback(
     return _canonical_fallback(fallback_rows, economy, requested_base_year)
 
 
-def _candidate_key(candidate: Mapping[str, Any], fallback_keys: set[tuple[str, ...]]) -> tuple[str, ...]:
+def _candidate_key(
+    candidate: Mapping[str, Any],
+    fallback_keys: set[tuple[str, ...]],
+    source_package: str,
+) -> tuple[str, ...]:
     if _required_text(candidate.get("candidate_origin"), "candidate_origin") != "original":
         raise ValueError("Candidates must declare candidate_origin='original'; shifted/generated rows are rejected.")
     row_key = candidate.get("row_key")
@@ -179,6 +184,16 @@ def _candidate_key(candidate: Mapping[str, Any], fallback_keys: set[tuple[str, .
     )
     if payload_classification != candidate_classification:
         raise ValueError("Candidate payload Source Classification must match candidate source_classification.")
+    declared_lineage = str(candidate.get("source_lineage", "") or "").strip()
+    expected_lineage = (
+        "verified_9th_outlook"
+        if source_lineage(payload.get("Source"), source_package) == "9th_outlook"
+        else ""
+    )
+    if declared_lineage != expected_lineage:
+        raise ValueError(
+            "Candidate source_lineage does not match the explicit source/package lineage mapping."
+        )
     return key
 
 
@@ -213,7 +228,7 @@ def _selected_row(fallback_row: pd.Series, selected: Any, result: Any, requested
     row["Derivation Method"] = {
         "exact": "direct_observation",
         "earlier": "prior_observation_seed",
-        "future": "future_observation_seed",
+        "future": "future_year_seed",
     }[result.direction]
     return row
 
@@ -280,7 +295,7 @@ def _derive_stock_shares(rows: list[dict[str, Any]], fallback: pd.DataFrame, req
                 "Comment": "Stock Share derived from resolved Stock.",
                 "Source Data Year": "",
                 "Source Classification": "structural_assumption",
-                "Base Year Treatment": "derived",
+                "Base Year Treatment": "transformed",
                 "Derivation Method": "stock_share_from_stock",
             }
         )
@@ -354,7 +369,7 @@ def generate_resolved_base_year_package(
         if candidate_id in candidate_ids:
             raise ValueError(f"Duplicate candidate identity across package: {candidate_id!r}.")
         candidate_ids.add(candidate_id)
-        key = _candidate_key(candidate, fallback_keys)
+        key = _candidate_key(candidate, fallback_keys, source_package_name)
         grouped.setdefault(key, []).append(candidate)
 
     output_rows: list[dict[str, Any]] = []
