@@ -183,18 +183,13 @@ automatically approved defaults. The combined snapshot preserves row-level
 fields and could transform the values through unit conversion, non-road splits,
 aggregation, estimation and ESTO reconciliation.
 
-For a future recovery build:
-
-1. extract only required files into a temporary or reviewed local workspace;
-2. join on the full archived key `(economy, date, medium, measure, vehicle_type,
-   transport_type, drive, fuel)`;
-3. require deterministic lineage evidence before attaching an archived label;
-4. describe transformed values as seeded/reconciled/derived rather than direct
-   observations;
-5. use “archived provenance not yet linked” instead of “source unknown” for
-   proven 9th Outlook rows whose detailed source has not yet been imported; and
-6. preserve all current numeric values and canonical keys until a separately
-   reviewed source update explicitly changes them.
+Do not plan or run a bulk row-by-row provenance recovery. Leave current legacy
+records unchanged and replace them gradually through normal reviewed source
+updates. If a specific value needs investigation, extract only the required
+archive files into a temporary or reviewed local workspace and look it up using
+the full archived key `(economy, date, medium, measure, vehicle_type,
+transport_type, drive, fuel)`. Preserve the current numeric value and canonical
+key unless that investigation leads to a separately reviewed source update.
 
 Do not commit the multi-gigabyte archive or wholesale combined-data snapshot to
 this repository. `combined_data_DATE20230902.csv` is an older comparison copy
@@ -506,7 +501,6 @@ Deployment details and the My Drive OAuth boundary are recorded in
 - Output files changed: Documentation only.
 - Validation checks run: Full interface test suite and documentation diff
   review.
-- Notes/limitations: A future versioned crosswalk must distinguish exact source
-  rows, technical assumptions, transformed/reconciled values and generated
-  derivatives. Classification-schema or resolver-eligibility changes remain a
-  separate explicit decision.
+- Notes/limitations: No bulk crosswalk or retrospective sourcing project is
+  planned. Legacy rows remain available for targeted archive investigation and
+  should be replaced gradually through normal reviewed source updates.

@@ -190,19 +190,12 @@ comparison but is not the primary reference: it has fewer rows and source
 labels, and many shared keys changed value or dataset label before the 2025
 snapshot.
 
-The next bounded provenance phase should:
-
-1. define a versioned crosswalk from current Module 1 source keys to the 2025
-   archived keys without changing canonical row keys or values;
-2. replace generic user-facing “unknown” wording with “archived provenance not
-   yet linked” for proven 9th Outlook lineage;
-3. propagate specific archived `dataset`/`comment` detail only for deterministic
-   matches, recording reconciliation or derivation where applicable;
-4. keep genuinely unconnected rows separate from recoverable 9th Outlook rows;
-5. add audit categories for archived-exact, archived-transformed,
-   archived-detail-needed and genuinely-unlinked rows; and
-6. validate entirely with temporary extracts and synthetic fixtures before any
-   new immutable production package is considered.
+No bulk provenance-recovery or row-by-row crosswalk is planned. The current
+legacy records should remain as they are and be replaced gradually when better
+sources are supplied through normal reviewed updates. If a particular legacy
+value ever needs investigation, use the archived transport data system and its
+full source key on demand. That targeted lookup is expected to require much less
+work than pre-emptively sourcing every historic row.
 
 ## Current source-quality audit
 
