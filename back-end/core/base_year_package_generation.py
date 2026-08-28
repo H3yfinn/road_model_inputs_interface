@@ -128,6 +128,15 @@ def _canonical_fallback(
     return frame.sort_values(CANONICAL_KEY_COLUMNS, kind="stable").reset_index(drop=True)
 
 
+def normalise_authoritative_fallback(
+    fallback_rows: pd.DataFrame | Sequence[Mapping[str, Any]],
+    economy: str,
+    requested_base_year: int,
+) -> pd.DataFrame:
+    """Validate and copy a complete canonical fallback without resolving it."""
+    return _canonical_fallback(fallback_rows, economy, requested_base_year)
+
+
 def _candidate_key(candidate: Mapping[str, Any], fallback_keys: set[tuple[str, ...]]) -> tuple[str, ...]:
     if _required_text(candidate.get("candidate_origin"), "candidate_origin") != "original":
         raise ValueError("Candidates must declare candidate_origin='original'; shifted/generated rows are rejected.")
@@ -210,7 +219,7 @@ def _selected_row(fallback_row: pd.Series, selected: Any, result: Any, requested
 
 
 def _derive_stock_shares(rows: list[dict[str, Any]], fallback: pd.DataFrame, requested_base_year: int) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    output = pd.DataFrame(rows)
+    output = pd.DataFrame(rows, columns=CANONICAL_LONG_COLUMNS)
     stock = output[output["Variable"].eq("Stock")].copy()
     stock["Value"] = pd.to_numeric(stock["Value"], errors="raise")
     derived: list[tuple[dict[str, Any], dict[str, Any]]] = []
@@ -218,22 +227,50 @@ def _derive_stock_shares(rows: list[dict[str, Any]], fallback: pd.DataFrame, req
     for _, fallback_row in share_fallback.iterrows():
         branch = str(fallback_row["Branch Path"])
         scenario = str(fallback_row["Scenario"])
+        if str(fallback_row["Derivation Method"]) != "stock_share_from_stock":
+            row = fallback_row.to_dict()
+            audit = {
+                **{column: row[column] for column in RESOLUTION_KEY_COLUMNS},
+                "requested_base_year": requested_base_year,
+                "status": "fallback",
+                "strategy": "authoritative_fallback",
+                "resolver_policy_id": "",
+                "policy_override_applied": False,
+                "candidate_id": "",
+                "source_id": "",
+                "selected_source_data_year": "",
+                "selected_source_classification": "",
+                "base_year_treatment": row["Base Year Treatment"],
+                "selection_reason": "stock_share_has_no_explicit_stock_derivation",
+                "rejection_count": 0,
+                "rejections": "[]",
+            }
+            derived.append((row, audit))
+            continue
         parent = branch.rsplit("\\", 1)[0] if "\\" in branch else ""
-        sibling_branches = share_fallback.loc[
+        sibling_rows = share_fallback.loc[
             share_fallback["Scenario"].eq(scenario)
             & share_fallback["Branch Path"].astype(str).map(lambda value: value.rsplit("\\", 1)[0] if "\\" in value else "").eq(parent),
-            "Branch Path",
-        ].astype(str).tolist()
+        ]
+        if not sibling_rows["Derivation Method"].astype(str).eq("stock_share_from_stock").all():
+            raise ValueError(
+                f"Stock Share sibling group {scenario!r}/{parent!r} mixes explicit Stock derivation with fallback rows."
+            )
+        sibling_branches = sibling_rows["Branch Path"].astype(str).tolist()
 
         def branch_stock(target: str) -> float:
             mask = stock["Scenario"].eq(scenario) & (
                 stock["Branch Path"].eq(target) | stock["Branch Path"].astype(str).str.startswith(target + "\\")
             )
+            if not mask.any():
+                raise ValueError(f"Stock Share derivation has no Stock row at or below {scenario!r}/{target!r}.")
             return float(stock.loc[mask, "Value"].sum())
 
         numerator = branch_stock(branch)
         denominator = sum(branch_stock(sibling) for sibling in sibling_branches)
-        value = 0.0 if denominator == 0 else numerator / denominator * 100.0
+        if denominator == 0:
+            raise ValueError(f"Stock Share derivation has a zero Stock denominator for {scenario!r}/{parent!r}.")
+        value = numerator / denominator * 100.0
         row = fallback_row.to_dict()
         row.update(
             {

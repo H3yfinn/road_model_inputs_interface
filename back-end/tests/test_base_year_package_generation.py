@@ -71,8 +71,14 @@ def build_fixture():
     rows = [
         fallback_row("Demand\\Passenger road\\Motorcycles", "Stock", 10),
         fallback_row("Demand\\Passenger road\\LPVs", "Stock", 30),
-        fallback_row("Demand\\Passenger road\\Motorcycles", "Stock Share", 25),
-        fallback_row("Demand\\Passenger road\\LPVs", "Stock Share", 75),
+        fallback_row(
+            "Demand\\Passenger road\\Motorcycles", "Stock Share", 25,
+            **{"Derivation Method": "stock_share_from_stock"},
+        ),
+        fallback_row(
+            "Demand\\Passenger road\\LPVs", "Stock Share", 75,
+            **{"Derivation Method": "stock_share_from_stock"},
+        ),
         fallback_row("Demand\\Passenger road\\Motorcycles\\ICE", "Mileage", 1),
         fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Mileage", 2),
         fallback_row("Demand\\Passenger road\\LPVs\\BEV", "Mileage", 3),
@@ -126,6 +132,34 @@ def test_opt_in_generation_selects_exact_earlier_future_and_derives_stock_share(
     assert set(shares["Derivation Method"]) == {"stock_share_from_stock"}
     assert set(audit[audit["Variable"].eq("Stock Share")]["status"]) == {"derived"}
     assert not any(candidate_row["row_key"][-1] == "Stock Share" for candidate_row in candidates)
+
+
+def test_stock_share_without_explicit_stock_derivation_preserves_fallback(tmp_path):
+    rows = [
+        fallback_row("Demand\\Passenger road\\LPVs", "Stock", 30),
+        fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Stock Share", 100),
+    ]
+
+    paths = generate(tmp_path, rows, [])
+    resolved = pd.read_csv(paths["resolved_csv"])
+    audit = pd.read_csv(paths["audit_csv"])
+
+    share = resolved[resolved["Variable"].eq("Stock Share")].iloc[0]
+    share_audit = audit[audit["Variable"].eq("Stock Share")].iloc[0]
+    assert share["Value"] == 100
+    assert share["Derivation Method"] == "legacy_unrecorded"
+    assert share_audit["status"] == "fallback"
+    assert share_audit["selection_reason"] == "stock_share_has_no_explicit_stock_derivation"
+
+
+def test_explicit_stock_share_derivation_requires_stock_basis(tmp_path):
+    row = fallback_row(
+        "Demand\\Passenger road\\LPVs", "Stock Share", 100,
+        **{"Derivation Method": "stock_share_from_stock"},
+    )
+
+    with pytest.raises(ValueError, match="has no Stock row"):
+        generate(tmp_path, [row], [])
 
 
 def test_no_candidates_preserves_authoritative_fallback_row_and_does_not_mutate_input(tmp_path):

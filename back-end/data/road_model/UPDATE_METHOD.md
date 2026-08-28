@@ -199,8 +199,10 @@ and must not override the 2025 snapshot merely because it is locally available.
 
 ## Stock Share Derivation
 
-`Stock Share` rows are derived from base-year `Stock` rows after the source
-merge. They should not be maintained as ordinary source rows.
+The five vehicle-type `Stock Share` rows are derived from base-year `Stock`
+rows after the source merge. More detailed technology/size Stock Share rows do
+not have matching canonical Stock detail and remain authoritative source or
+fallback rows; they must not be silently zeroed or relabelled as derived.
 
 Final overrides can still replace derived `Stock Share` values after derivation.
 
@@ -454,8 +456,10 @@ Deployment details and the My Drive OAuth boundary are recorded in
     These 23 researcher/source or model-judgement inputs may use exact year,
     latest eligible earlier year, or only when neither exists the earliest
     eligible future year.
-  - `derived`: `Stock Share` only. It is recalculated from resolved `Stock` and
-    must not be resolved or shifted independently.
+  - `derived`: `Stock Share` only. It must not be resolved or shifted
+    independently. The generator recalculates rows carrying the explicit
+    `stock_share_from_stock` marker and preserves other detailed shares from
+    the authoritative fallback.
 - Recategorizations or mappings: Native observations are selected exact-year,
   then latest eligible earlier, then earliest eligible future. Earlier values
   are `carried_forward`; future values are `carried_backward`; an exact-year
@@ -509,9 +513,11 @@ Deployment details and the My Drive OAuth boundary are recorded in
   broaden an exact-year policy or eligibility.
 - Fallback and derivation: If a canonical key has no eligible candidate, its
   fallback row is copied unchanged. `legacy_unknown` is still ineligible.
-  `Stock Share` is never resolved independently; candidates for it fail and its
-  rows are derived from the resolved `Stock` totals for sibling vehicle-type
-  branches.
+  `Stock Share` is never resolved independently; candidates for it fail. Rows
+  explicitly marked `stock_share_from_stock` are derived from resolved `Stock`
+  totals for sibling vehicle-type branches. Other detailed Stock Share rows
+  are copied from the authoritative fallback because canonical Stock inputs do
+  not exist at that hierarchy.
 - Validation boundary: Candidate payload keys must match the fallback key,
   payload year must equal source-data year, classifications must agree, values
   must be finite, and generated/shifted candidate origins are rejected. Output
@@ -535,6 +541,63 @@ Deployment details and the My Drive OAuth boundary are recorded in
   extraction, immutable-version promotion/index updates, UI integration and
   additional eligible classifications remain out of scope and require separate
   review.
+
+## Checked-in source candidate extraction
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Added
+  `back-end/core/base_year_candidate_extraction.py`, a read-only adapter from
+  the current priority-ranked source pool into the opt-in review-package
+  generator. It is not connected to normal defaults/static builds, API startup,
+  package discovery, the researcher UI or production promotion.
+- Source inputs: An explicit checked-in static fallback CSV for one economy and
+  requested year, plus the rows returned before
+  `load_processed_source_inputs()` generates fallback rows. The adapter does
+  not inspect Drive, archives, researcher submissions, generated packages,
+  supplemental-source folders or inactive specialist folders.
+- Update method: Call `generate_checked_in_source_review_package()` with an
+  explicit economy, requested base year, source-package version, review package
+  version and caller-owned output directory. Source rows are mapped only to
+  canonical fallback keys. The source-row year must equal structured
+  `Source Data Year`; shifted/projected rows, missing-year rows and derived
+  variables are audit-only exclusions. Existing source priority resolves
+  duplicate key/year evidence after eligible native rows are considered;
+  same-priority value conflicts fail.
+- Provenance policy: Explicit metadata still wins. The version-scoped 9th
+  Outlook bridge mapping may supply 2022 and archive guidance, but the row
+  remains `legacy_unknown` and therefore resolver-ineligible. Extraction never
+  upgrades a legacy or assumption row to `native_observation` and never treats
+  a derived/generated row as external evidence.
+- Fallback normalisation: The current 20USA/2022 static CSV has five identical
+  duplicate Stock Share pairs consisting of a legacy copy and one explicit
+  `stock_share_from_stock` copy. The adapter retains only the explicit derived
+  row. Any differing value/control metadata, non-Stock-Share duplicate or
+  ambiguous derivation fails validation.
+- Outputs: In addition to the resolved CSV, resolution audit and manifest, the
+  caller-owned directory receives original-candidate JSON and a candidate-
+  extraction audit CSV. The manifest records their filenames, SHA-256 checksums
+  and extraction counts. Protected production/source/static paths remain
+  refused.
+- Validation checks: Synthetic tests cover explicit native and known 9th
+  Outlook rows, missing/shifted/derived exclusions, deterministic source
+  priority, conflicts, malformed fallback duplicates, no input mutation,
+  manifest checksums and temporary end-to-end generation. A read-only
+  20USA/2022 run inspected 81,127 ranked rows: 330 matched canonical keys, 290
+  became `legacy_unknown` candidates, 34 Stock Share source rows and 6
+  missing-year rows were excluded. Resolution selected zero candidates, kept
+  502 fallback rows (including 29 detailed Stock Share rows) and derived the 5
+  explicitly marked vehicle-type Stock Share rows, producing 507 unique keys.
+  Only those five derived percentages changed by recalculation/rounding; no
+  non-Stock-Share or detailed Stock Share value changed beyond CSV
+  serialization tolerance.
+- Notes/limitations: This is review-package generation, not promotion. Current
+  checked-in sources provide no eligible native candidate in the 20USA run, and
+  eligibility was intentionally not broadened. The checked-in 16RUS static
+  package starts at 2022, so it cannot be silently used as an exact 2021
+  fallback; a reviewed 2021 fallback requires a separate human decision.
+  Supplemental-source extraction, immutable promotion/index changes and UI
+  integration remain out of scope.
 
 ## Archived 9th Outlook provenance discovery
 
