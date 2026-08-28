@@ -76,7 +76,7 @@ def test_generate_staged_review_writes_only_to_new_output_and_returns_summaries(
     }
     assert (output / "supplemental_provenance_inventory.csv").exists()
     assert (output / "review_run_summary.json").exists()
-    assert summary["drive_submission_review"]["included"] is False
+    assert summary["researcher_submission_review"]["included"] is False
 
 
 def test_generate_staged_review_refuses_nonempty_output_before_generation(tmp_path, monkeypatch):
@@ -146,37 +146,41 @@ def test_main_returns_nonzero_and_reports_safe_failure(tmp_path, capsys):
     assert "must be new or empty" in captured.err
 
 
-def test_generate_staged_review_runs_drive_review_only_when_explicitly_requested(tmp_path, monkeypatch):
+def test_generate_staged_review_runs_submission_review_only_when_explicitly_requested(tmp_path, monkeypatch):
     monkeypatch.setattr(script, "generate_checked_in_source_review_package", _fake_package_generator)
     monkeypatch.setattr(script, "build_supplemental_provenance_inventory", _fake_supplemental_inventory)
     calls = []
 
-    def fake_drive_review(*, destination, include_drive_submissions, drive_folder_id):
-        calls.append((destination, include_drive_submissions, drive_folder_id))
+    def fake_submission_review(
+        *, destination, include_researcher_submissions, researcher_submissions_folder_id,
+    ):
+        calls.append((destination, include_researcher_submissions, researcher_submissions_folder_id))
         return {
             "included": True,
             "reviewed_submission_count": 2,
             "quarantined_submission_count": 1,
-            "artifacts": {"decisions_csv": str(destination / "drive_submission_review" / "decisions.csv")},
+            "artifacts": {
+                "decisions_csv": str(destination / "researcher_submission_review" / "decisions.csv")
+            },
         }
 
-    monkeypatch.setattr(script, "_review_drive_submissions", fake_drive_review)
+    monkeypatch.setattr(script, "_review_researcher_submissions", fake_submission_review)
     output = tmp_path / "review"
     summary = script.generate_staged_review(
         economy="20USA",
         base_year=2022,
         output_dir=output,
         package_version="review_only_test",
-        include_drive_submissions=True,
-        drive_folder_id="explicit-folder",
+        include_researcher_submissions=True,
+        researcher_submissions_folder_id="explicit-folder",
     )
 
     assert calls == [(output.resolve(), True, "explicit-folder")]
-    assert summary["drive_submission_review"]["included"] is True
-    assert summary["drive_submission_review"]["reviewed_submission_count"] == 2
+    assert summary["researcher_submission_review"]["included"] is True
+    assert summary["researcher_submission_review"]["reviewed_submission_count"] == 2
 
 
-def test_drive_review_adapter_uses_existing_read_only_batch_workflow(tmp_path, monkeypatch):
+def test_submission_review_adapter_uses_existing_read_only_batch_workflow(tmp_path, monkeypatch):
     calls = []
 
     def fake_batch_review(**kwargs):
@@ -191,14 +195,14 @@ def test_drive_review_adapter_uses_existing_read_only_batch_workflow(tmp_path, m
         }
 
     monkeypatch.setattr(batch_review, "review_new_archived_submissions", fake_batch_review)
-    summary = script._review_drive_submissions(
+    summary = script._review_researcher_submissions(
         destination=tmp_path,
-        include_drive_submissions=True,
-        drive_folder_id="explicit-folder",
+        include_researcher_submissions=True,
+        researcher_submissions_folder_id="explicit-folder",
     )
 
     assert calls == [{
-        "output_dir": tmp_path / "drive_submission_review",
+        "output_dir": tmp_path / "researcher_submission_review",
         "static_bundle_dir": script.STATIC_BUNDLE_ROOT,
         "drive_folder_id": "explicit-folder",
     }]
@@ -284,7 +288,7 @@ def test_generate_all_economies_records_one_failure_and_continues(tmp_path, monk
     ]
 
 
-def test_main_all_economies_passes_explicit_drive_option(tmp_path, monkeypatch, capsys):
+def test_main_all_economies_passes_explicit_researcher_submission_option(tmp_path, monkeypatch, capsys):
     captured = {}
 
     def fake_all(**kwargs):
@@ -297,13 +301,13 @@ def test_main_all_economies_passes_explicit_drive_option(tmp_path, monkeypatch, 
         "--base-year", "2022",
         "--output-dir", str(tmp_path / "all"),
         "--package-version", "review_only_all",
-        "--include-drive-submissions",
-        "--drive-folder-id", "explicit-folder",
+        "--include-researcher-submissions",
+        "--researcher-submissions-folder-id", "explicit-folder",
     ])
 
     assert exit_code == 0
-    assert captured["include_drive_submissions"] is True
-    assert captured["drive_folder_id"] == "explicit-folder"
+    assert captured["include_researcher_submissions"] is True
+    assert captured["researcher_submissions_folder_id"] == "explicit-folder"
     assert '"mode": "all_economies_staging_only_no_promotion"' in capsys.readouterr().out
 
 
@@ -320,17 +324,17 @@ def test_main_rejects_fallback_csv_for_all_economies(tmp_path, capsys):
     assert "available only with --economy" in capsys.readouterr().err
 
 
-def test_main_rejects_drive_folder_without_explicit_drive_opt_in(tmp_path, capsys):
+def test_main_rejects_submission_folder_without_explicit_submission_opt_in(tmp_path, capsys):
     exit_code = script.main([
         "--economy", "20USA",
         "--base-year", "2022",
         "--output-dir", str(tmp_path / "review"),
         "--package-version", "review_only_test",
-        "--drive-folder-id", "explicit-folder",
+        "--researcher-submissions-folder-id", "explicit-folder",
     ])
 
     assert exit_code == 2
-    assert "requires --include-drive-submissions" in capsys.readouterr().err
+    assert "requires --include-researcher-submissions" in capsys.readouterr().err
 
 
 def test_main_returns_nonzero_after_all_economy_partial_failure(tmp_path, monkeypatch, capsys):

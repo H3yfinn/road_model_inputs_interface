@@ -60,20 +60,20 @@ def _write_summary(destination: Path, summary: dict[str, object]) -> Path:
     return path
 
 
-def _review_drive_submissions(
+def _review_researcher_submissions(
     *,
     destination: Path,
-    include_drive_submissions: bool,
-    drive_folder_id: str | None,
+    include_researcher_submissions: bool,
+    researcher_submissions_folder_id: str | None,
 ) -> dict[str, object]:
-    if not include_drive_submissions:
-        return {"included": False, "message": "Drive submission review was not requested."}
+    if not include_researcher_submissions:
+        return {"included": False, "message": "Researcher-submission review was not requested."}
     from scripts.review_researcher_submission_batch import review_new_archived_submissions
 
     review = review_new_archived_submissions(
-        output_dir=destination / "drive_submission_review",
+        output_dir=destination / "researcher_submission_review",
         static_bundle_dir=STATIC_BUNDLE_ROOT,
-        drive_folder_id=drive_folder_id,
+        drive_folder_id=researcher_submissions_folder_id,
     )
     return {
         "included": True,
@@ -139,15 +139,15 @@ def generate_staged_review(
     package_version: str,
     source_package_version: str = CURRENT_SOURCE_PACKAGE_VERSION,
     fallback_csv: str | Path | None = None,
-    include_drive_submissions: bool = False,
-    drive_folder_id: str | None = None,
+    include_researcher_submissions: bool = False,
+    researcher_submissions_folder_id: str | None = None,
 ) -> dict[str, object]:
-    """Generate one economy review plus optional Drive submission review."""
+    """Generate one economy review plus optional researcher-submission review."""
     destination = _unused_output_dir(output_dir)
-    drive_summary = _review_drive_submissions(
+    submission_summary = _review_researcher_submissions(
         destination=destination,
-        include_drive_submissions=include_drive_submissions,
-        drive_folder_id=drive_folder_id,
+        include_researcher_submissions=include_researcher_submissions,
+        researcher_submissions_folder_id=researcher_submissions_folder_id,
     )
     economy_summary = _generate_economy_package(
         economy=economy,
@@ -168,7 +168,7 @@ def generate_staged_review(
         "resolution_summary": economy_summary["resolution_summary"],
         "candidate_extraction_summary": economy_summary["candidate_extraction_summary"],
         "supplemental_summary": supplemental_summary,
-        "drive_submission_review": drive_summary,
+        "researcher_submission_review": submission_summary,
         "artifacts": {
             **economy_summary["artifacts"],
             "supplemental_inventory_csv": str(supplemental_path),
@@ -184,15 +184,15 @@ def generate_all_economies_staged_review(
     output_dir: str | Path,
     package_version: str,
     source_package_version: str = CURRENT_SOURCE_PACKAGE_VERSION,
-    include_drive_submissions: bool = False,
-    drive_folder_id: str | None = None,
+    include_researcher_submissions: bool = False,
+    researcher_submissions_folder_id: str | None = None,
 ) -> dict[str, object]:
-    """Generate every checked-in economy plus optional Drive submission review."""
+    """Generate every checked-in economy plus optional researcher-submission review."""
     destination = _unused_output_dir(output_dir)
-    drive_summary = _review_drive_submissions(
+    submission_summary = _review_researcher_submissions(
         destination=destination,
-        include_drive_submissions=include_drive_submissions,
-        drive_folder_id=drive_folder_id,
+        include_researcher_submissions=include_researcher_submissions,
+        researcher_submissions_folder_id=researcher_submissions_folder_id,
     )
     economy_summaries: list[dict[str, object]] = []
     economy_failures: list[dict[str, str]] = []
@@ -229,7 +229,7 @@ def generate_all_economies_staged_review(
         "resolution_summary": dict(sorted(resolution_totals.items())),
         "candidate_extraction_summary": dict(sorted(extraction_totals.items())),
         "supplemental_summary": supplemental_summary,
-        "drive_submission_review": drive_summary,
+        "researcher_submission_review": submission_summary,
         "economies": economy_summaries,
         "economy_failures": economy_failures,
         "artifacts": {"supplemental_inventory_csv": str(supplemental_path)},
@@ -242,7 +242,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Generate staged Module 1 review packages, a supplemental provenance audit, and optionally "
-            "download/validate archived Drive submissions. Nothing is promoted or applied automatically."
+            "download/validate archived researcher submissions. Nothing is promoted or applied automatically."
         )
     )
     economy_group = parser.add_mutually_exclusive_group(required=True)
@@ -264,17 +264,20 @@ def _parser() -> argparse.ArgumentParser:
         help="Optional single-economy fallback CSV; not valid with --all-economies.",
     )
     parser.add_argument(
-        "--include-drive-submissions",
+        "--include-researcher-submissions",
         action="store_true",
         help=(
-            "Deliberately download and validate the configured researcher Drive archive, producing review-only "
+            "Deliberately download and validate the configured researcher-submission archive, producing review-only "
             "decisions and override candidates. No submission is applied automatically."
         ),
     )
     parser.add_argument(
-        "--drive-folder-id",
+        "--researcher-submissions-folder-id",
         default=None,
-        help="Optional Drive archive folder ID; otherwise ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID is used.",
+        help=(
+            "Optional researcher-submission archive folder ID; otherwise "
+            "ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID is used."
+        ),
     )
     return parser
 
@@ -282,8 +285,10 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        if args.drive_folder_id and not args.include_drive_submissions:
-            raise ValueError("--drive-folder-id requires --include-drive-submissions.")
+        if args.researcher_submissions_folder_id and not args.include_researcher_submissions:
+            raise ValueError(
+                "--researcher-submissions-folder-id requires --include-researcher-submissions."
+            )
         if args.all_economies:
             if args.fallback_csv:
                 raise ValueError("--fallback-csv is available only with --economy, not --all-economies.")
@@ -292,8 +297,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 output_dir=args.output_dir,
                 package_version=args.package_version,
                 source_package_version=args.source_package_version,
-                include_drive_submissions=args.include_drive_submissions,
-                drive_folder_id=args.drive_folder_id,
+                include_researcher_submissions=args.include_researcher_submissions,
+                researcher_submissions_folder_id=args.researcher_submissions_folder_id,
             )
         else:
             summary = generate_staged_review(
@@ -303,8 +308,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 package_version=args.package_version,
                 source_package_version=args.source_package_version,
                 fallback_csv=args.fallback_csv,
-                include_drive_submissions=args.include_drive_submissions,
-                drive_folder_id=args.drive_folder_id,
+                include_researcher_submissions=args.include_researcher_submissions,
+                researcher_submissions_folder_id=args.researcher_submissions_folder_id,
             )
     except REVIEW_FAILURES as exc:
         print(f"Review package generation failed: {exc}", file=sys.stderr)

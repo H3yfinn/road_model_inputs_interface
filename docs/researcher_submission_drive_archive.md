@@ -22,22 +22,24 @@ python back-end/scripts/generate_module1_review_package.py `
   --base-year 2022 `
   --package-version review_only_all_2022 `
   --output-dir C:\path\to\new_or_empty_staging_directory `
-  --include-drive-submissions
+  --include-researcher-submissions
 ```
 
-The Drive download is performed only when `--include-drive-submissions` is
-present. It uses `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` by default, or an
-explicit `--drive-folder-id`, together with the existing archive credentials.
+The researcher-submission download is performed only when
+`--include-researcher-submissions` is present. It uses
+`ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` by default, or an explicit
+`--researcher-submissions-folder-id`, together with the existing Google Drive
+archive credentials.
 The output directory is a new review batch, so all archive pairs are considered;
 the lower-level checkpointed batch tool remains preferable when continuing an
 established review directory.
 
 This is still review-only. Downloads, quarantine reports, review decisions and
-candidate overrides are written below `drive_submission_review/`, but nothing
-is uploaded, deleted, applied or promoted. The generated economy packages do
-not incorporate those submissions. `--base-year 2022` selects the requested
-model/output year for the checked-in packages; it does not mean that all Drive
-submissions or source evidence are dated 2022.
+candidate overrides are written below `researcher_submission_review/`, but
+nothing is uploaded, deleted, applied or promoted. The generated economy
+packages do not incorporate those submissions. `--base-year 2022` selects the
+requested model/output year for the checked-in packages; it does not mean that
+all Drive submissions or source evidence are dated 2022.
 
 If one economy fails strict package validation, the command continues trying
 the remaining economies, records the failure in `review_run_summary.json`, and

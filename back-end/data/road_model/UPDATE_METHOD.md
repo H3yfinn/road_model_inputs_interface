@@ -709,37 +709,38 @@ Deployment details and the My Drive OAuth boundary are recorded in
   nonzero safe-failure exit. Production-source validation is run only into a
   temporary directory.
 
-## Explicit all-economies and Drive review orchestration
+## Explicit all-economies and researcher-submission review orchestration
 
 - Date: 2026-08-28
 - Author: Codex
 - Change summary: Extended
   `back-end/scripts/generate_module1_review_package.py` with `--all-economies`
-  and an explicit `--include-drive-submissions` option so an operator can stage
-  all checked-in economy packages, the supplemental provenance inventory and
-  the archived-submission review in one run.
+  and an explicit `--include-researcher-submissions` option so an operator can
+  stage all checked-in economy packages, the supplemental provenance inventory
+  and the archived-submission review in one run.
 - Update method: Pass one shared `--base-year`, a review-only package version
-  and a new or empty caller-owned output directory. The Drive step is disabled
-  by default. When deliberately enabled, it uses
-  `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` or an explicit `--drive-folder-id`
+  and a new or empty caller-owned output directory. The researcher-submission
+  step is disabled by default. When deliberately enabled, it uses
+  `ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID` or an explicit
+  `--researcher-submissions-folder-id`
   and the existing archive credentials.
 - Outputs: Economy packages are written below `packages/<ECONOMY>/`, the
-  supplemental inventory remains separate, Drive downloads/review artifacts go
-  below `drive_submission_review/`, and `review_run_summary.json` records the
-  combined counts and artifact paths.
+  supplemental inventory remains separate, researcher-submission downloads and
+  review artifacts go below `researcher_submission_review/`, and
+  `review_run_summary.json` records the combined counts and artifact paths.
 - Year meaning: `--base-year 2022` requests 2022 model/output packages; it does
   not label every Drive submission or source observation as 2022. Archived
   submissions preserve their recorded version, exact baseline checksum and
   source-year provenance.
-- Safety: The Drive branch is download/validation only. It never edits Drive,
-  applies a candidate override, merges a submission into an economy package,
-  promotes outputs, updates the static index, changes source/default values, or
-  touches deployment. A fresh staging directory intentionally reviews every
-  currently visible archive pair.
+- Safety: The researcher-submission branch is download/validation only. It
+  never edits Drive, applies a candidate override, merges a submission into an
+  economy package, promotes outputs, updates the static index, changes
+  source/default values, or touches deployment. A fresh staging directory
+  intentionally reviews every currently visible archive pair.
 - Failure handling: Every checked-in economy is attempted. Strict validation
   failures are recorded in the run summary, later economies continue, and the
   command returns nonzero whenever any economy failed so a partial batch is
   never presented as complete.
-- Validation checks: Mocked Drive tests cover the explicit opt-in boundary and
+- Validation checks: Mocked archive tests cover the explicit opt-in boundary and
   all-economy aggregation. End-to-end package generation is validated only in a
   temporary directory; no live Drive download is required for automated tests.
