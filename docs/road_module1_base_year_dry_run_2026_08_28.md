@@ -62,17 +62,18 @@ derived variables. Package generation preserves them as authoritative derived
 rows with audit reason `generated_derived_control_preserved`; they never become
 source candidates.
 
-## Decision required before interface integration
+## Follow-up implementation
 
-The current generator takes its authoritative key set from the requested-year
-static slice. That is suitable for auditing an existing slice, but it cannot
-construct a new base year:
+At the time of the initial dry run, the generator took its authoritative key set
+from the requested-year static slice. That was suitable for auditing an
+existing slice, but could not construct a new base year:
 
 - 2021 has no slice at all; and
 - future slices contain projection rows rather than the complete Current
   Accounts/base-year contract.
 
-Recommended design:
+The recommended design below is now implemented in the opt-in review-package
+path:
 
 1. Keep a reviewed Current Accounts **base-year template** separate from
    Reference/Target projection series. Initially this would use the complete
@@ -89,6 +90,19 @@ Recommended design:
 5. Validate and review that complete package before activation. Never use a
    previously shifted package as a new source-candidate pool.
 
-This design preserves the user's simple interface experience while avoiding a
-silent policy choice about which projected rows should define a new base year.
-Activation remains a separate model-manager action.
+The generator now writes the resolved Current Accounts slice, the retained
+Reference/Target projection series, and a validated complete package as three
+separate CSVs with manifest checksums and row counts. Projection coverage must
+be continuous and identical in both scenarios from base year + 1, malformed or
+conflicting rows fail, and a shifted output never becomes a candidate source.
+
+A representative 20USA/2024 review package contains 507 Current Accounts rows,
+20,540 projection rows and 21,047 complete-package rows spanning 2024–2060.
+An all-economy 2024 run generated all three package components for 15 economies
+and quarantined six without stopping later economies: the five projection
+conflict economies plus Russia's Current Accounts conflicts.
+The requested 2021 case now reaches the complete template but is deliberately
+quarantined because the checked-in projection series begins in 2023 and cannot
+supply 2022. The Russia and five projected Sales Share conflict groups described
+above remain source-owner review items. Activation and interface discovery
+remain separate model-manager actions.

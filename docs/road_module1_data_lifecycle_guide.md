@@ -107,8 +107,10 @@ Variable, Year)`. The rule order is:
    Year` always wins.
 2. Apply an explicit source-lineage rule only when both the source-name pattern
    and package version match.
-3. For a proven 9th Outlook lineage with no source year, use 2022 and retain
-   `legacy_unknown` unless a source supplied a more specific classification.
+3. For a proven, version-scoped 9th Outlook lineage with no source year, use
+   2022. Canonical display provenance remains honest about the legacy lineage;
+   candidate extraction separately applies the non-native
+   `verified_9th_outlook` eligibility marker.
 4. Mark identified derived/generated rows with their actual derivation rather
    than representing them as external observations.
 5. Leave an uncertain source year blank, retain `legacy_unknown`, and add the
@@ -361,29 +363,43 @@ work.
 
 `back-end/core/base_year_candidate_extraction.py` provides the narrow,
 read-only adapter from the current priority-ranked source pool into the opt-in
-generator. It reads rows before `load_processed_source_inputs()` creates
-base-year fallback rows and maps only source rows whose economy-independent
-scenario/branch/variable key already exists in the requested economy/year's
-canonical fallback. It does not scan Drive, archives, generated defaults,
-researcher submissions, or inactive specialist folders.
+generator. It separates the static package into a complete reviewed Current
+Accounts template and a Reference/Target projection series. The template's
+canonical key set is rebased to the requested year, then original candidates
+are resolved against those keys. Projection rows remain separate and retain
+only years after the requested base year. The adapter does not scan Drive,
+archives, generated defaults, researcher submissions, or inactive specialist
+folders.
 
 The adapter keeps only original rows whose row year equals their structured
 `Source Data Year`. Missing-year rows, shifted/projected rows and derived
 variables are recorded in the extraction audit but cannot become candidates.
-Known 9th Outlook bridge rows receive the documented 2022 fallback and archive
-guidance, but retain `legacy_unknown`; extraction does not make them native or
-resolver-eligible. If more than one ranked source supplies the same key and
-source year, eligible native evidence is considered before legacy evidence,
-then the existing source priority is applied. Conflicting values at the same
-winning priority fail review-package generation.
+Known 9th Outlook bridge rows receive the documented 2022 source year and
+archive guidance. Extraction can mark only the exact version-scoped lineage as
+`verified_9th_outlook`, which makes it seed-eligible without misrepresenting it
+as a native observation. If more than one ranked source supplies the same key
+and source year, eligible native evidence is considered before verified legacy
+evidence, then the existing source priority is applied. Conflicting values at
+the same winning priority fail review-package generation.
 
 Use `generate_checked_in_source_review_package()` with an explicit economy,
 base year, source-package version, review package version and caller-owned
-output directory. It writes the resolved CSV and resolution audit/manifest,
-plus the extracted candidate JSON and candidate-extraction audit CSV. Their
-filenames, checksums and extraction counts are added to the manifest. The same
-protected-path checks apply, and nothing is promoted or added to the static
-index.
+output directory. It writes three data components: the resolved Current
+Accounts CSV, a separate projection-series CSV, and their sorted complete
+package. It also writes the resolution audit/manifest, extracted candidate JSON
+and candidate-extraction audit CSV. The manifest records every component's
+filename, row count and SHA-256 checksum, including the Current Accounts
+template source year and first retained projection year. The same protected-path
+checks apply, and nothing is promoted or added to the static index.
+
+Projection validation requires exactly Reference and Target with identical,
+continuous coverage beginning in the year after the requested base year. It
+rejects non-finite values and conflicting canonical duplicates. Identical
+duplicate Stock Share rows collapse only when exactly one is the explicit
+Stock-derived copy. An empty projection is allowed when the requested base year
+is at the end of the available series. A requested 2021 package currently fails
+clearly because the checked-in projections begin in 2023 and therefore cannot
+supply 2022; the adapter does not invent the missing year.
 
 The current static 20USA 2022 fallback contains five duplicate Stock Share
 keys: each is an identical legacy copy paired with the explicit
@@ -395,20 +411,21 @@ unique canonical key set nor a retained numeric value.
 A temporary 20USA/2022 run on 2026-08-28 inspected 81,127 ranked source rows.
 Of 330 rows matching canonical fallback keys, 290 became candidates, 34 Stock
 Share source rows were excluded and 6 rows lacked a source-data year. All 290
-candidates remained `legacy_unknown`, so the resolver selected none: 502 rows
-used their fallback (including 29 detailed Stock Share rows) and the 5
-explicitly marked vehicle-type Stock Share rows were derived from Stock. The
-output had 507 unique canonical keys. Only those five derived shares changed,
-by normal percentage recalculation/rounding; no non-Stock-Share or detailed
-Stock Share value changed beyond CSV floating-point serialization tolerance.
-This is useful audit evidence, not an argument to broaden eligibility.
+candidates retained legacy (non-native) classification but carried the verified,
+version-scoped 9th Outlook lineage marker, so all 290 were selected. Another
+212 rows used the authoritative Current Accounts template, including 29
+detailed Stock Share rows, and the 5 explicitly marked vehicle-type Stock Share
+rows were derived from Stock. The output had 507 unique canonical keys. This is
+useful audit evidence for the narrow lineage rule, not an argument to broaden
+eligibility to arbitrary legacy rows.
 
-The checked-in 16RUS static package begins at 2022. Russia provenance is treated
-as complete enough for this workflow: preserve the recorded 2022 source year,
-do not attempt a separate 2021-versus-2022 research exercise, and use
-`carried_backward` if that value is packaged for a 2021 base year. The current
-adapter does not manufacture a 2021 fallback, but this is a packaging limitation
-rather than an outstanding provenance decision.
+The checked-in 16RUS Current Accounts template is dated 2022. Russia provenance
+is treated as complete enough for this workflow: preserve the recorded 2022
+source year, do not attempt a separate 2021-versus-2022 research exercise, and use
+`carried_backward` if that value is packaged for a 2021 base year. A complete
+2021 review package still cannot be produced until the projection-series 2022
+gap is resolved; this is a projection coverage limitation rather than an
+outstanding provenance decision.
 
 ### Supplemental provenance inventory
 
@@ -450,11 +467,13 @@ python back-end/scripts/generate_module1_review_package.py `
   --output-dir C:\path\to\new_or_empty_staging_directory
 ```
 
-The command extracts checked-in candidates, runs the resolver, writes the
-resolution package/audits and the separate supplemental provenance inventory,
-then prints a JSON summary. The output directory must be new or empty. Existing
-files are never overwritten, protected data/default/static paths are refused,
-and the command has no promotion or index-update operation.
+The command extracts checked-in candidates, resolves a complete Current
+Accounts template for the requested year, preserves the future Reference/Target
+series separately, writes their validated combined package and audits, and
+writes the separate supplemental provenance inventory. It then prints a JSON
+summary. The output directory must be new or empty. Existing files are never
+overwritten, protected data/default/static paths are refused, and the command
+has no promotion or index-update operation.
 
 To deliberately run the same staged workflow for every economy and include the
 researcher-submission archive review in one operator action, use:

@@ -31,6 +31,7 @@ from core.road_module1_provenance import enrich_module1_provenance, source_linea
 
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "front-end" / "road-module1-static"
+REQUIRED_PROJECTION_SCENARIOS = frozenset({"Reference", "Target"})
 RAW_REQUIRED_COLUMNS = [
     "Branch Path",
     "Variable",
@@ -63,6 +64,13 @@ class CandidateExtraction:
     candidates: tuple[dict[str, Any], ...]
     audit: pd.DataFrame
     summary: dict[str, Any]
+
+
+@dataclass
+class StaticPackageComponents:
+    current_accounts_template: pd.DataFrame
+    projection_series: pd.DataFrame
+    source_template_year: int
 
 
 def _text(value: object) -> str:
@@ -145,6 +153,151 @@ def load_static_fallback(
     return normalise_authoritative_fallback(selected, economy, requested_base_year)
 
 
+def _append_template_fallback_note(comment: object, source_template_year: int) -> str:
+    note = (
+        f"Value retained from the reviewed {source_template_year} Current Accounts template; "
+        "original source-data year is not recorded."
+    )
+    existing = _text(comment)
+    return existing if note in existing else f"{existing} {note}".strip()
+
+
+def _strict_projection_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    """Collapse identical duplicate projection rows and reject disagreements."""
+    if rows.empty:
+        return pd.DataFrame(columns=CANONICAL_LONG_COLUMNS)
+    key_columns = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
+    duplicate_mask = rows.duplicated(key_columns, keep=False)
+    if not duplicate_mask.any():
+        return rows[CANONICAL_LONG_COLUMNS].sort_values(key_columns, kind="stable").reset_index(drop=True)
+    keep_indices = list(rows.index[~duplicate_mask])
+    for key, group in rows[duplicate_mask].groupby(key_columns, sort=True, dropna=False):
+        comparable = group[CANONICAL_LONG_COLUMNS].astype(object)
+        comparable = comparable.where(comparable.notna(), "<NA>").astype(str)
+        if len(comparable.drop_duplicates()) != 1:
+            raise ValueError(f"Projection rows contain conflicting duplicate canonical key {key!r}.")
+        keep_indices.append(group.index[0])
+    return rows.loc[keep_indices, CANONICAL_LONG_COLUMNS].sort_values(
+        key_columns, kind="stable"
+    ).reset_index(drop=True)
+
+
+def _validate_projection_coverage(rows: pd.DataFrame, requested_base_year: int) -> None:
+    if rows.empty:
+        return
+    scenarios = set(rows["Scenario"].astype(str))
+    if scenarios != REQUIRED_PROJECTION_SCENARIOS:
+        raise ValueError(
+            "Projection series must contain exactly Reference and Target scenarios; "
+            f"found {sorted(scenarios)}."
+        )
+    expected_start = requested_base_year + 1
+    scenario_years = {
+        scenario: tuple(sorted(group["Year"].astype(int).unique()))
+        for scenario, group in rows.groupby("Scenario", sort=True)
+    }
+    reference_years = next(iter(scenario_years.values()))
+    if any(years != reference_years for years in scenario_years.values()):
+        raise ValueError(f"Projection scenarios have different year coverage: {scenario_years}.")
+    if reference_years[0] != expected_start:
+        raise ValueError(
+            f"Projection series begins at {reference_years[0]}, but requested base year "
+            f"{requested_base_year} requires coverage from {expected_start}."
+        )
+    expected_years = tuple(range(expected_start, reference_years[-1] + 1))
+    if reference_years != expected_years:
+        missing = sorted(set(expected_years) - set(reference_years))
+        raise ValueError(f"Projection series has missing years: {missing[:10]}.")
+
+
+def _validate_projection_values(rows: pd.DataFrame) -> None:
+    if rows.empty:
+        return
+    values = pd.to_numeric(rows["Value"], errors="coerce")
+    invalid = values.isna() | ~values.map(lambda value: math.isfinite(value) if pd.notna(value) else False)
+    if invalid.any():
+        sample = rows.loc[
+            invalid, ["Economy", "Scenario", "Branch Path", "Variable", "Year", "Value"]
+        ].head(5).to_dict("records")
+        raise ValueError(f"Projection series contains non-finite numeric values. Sample: {sample}")
+    rows["Value"] = values
+
+
+def load_static_package_components(
+    *,
+    fallback_csv: str | Path,
+    economy: str,
+    requested_base_year: int,
+    source_package_version: str,
+) -> StaticPackageComponents:
+    """Load a complete Current Accounts template and separate future projections."""
+    normalised_requested_year = _year(requested_base_year)
+    if normalised_requested_year is None:
+        raise ValueError("Requested base year is required.")
+    requested_base_year = normalised_requested_year
+    path = Path(fallback_csv)
+    if not path.is_file():
+        raise ValueError(f"Fallback CSV does not exist: {path}")
+    rows = pd.read_csv(path)
+    missing = [column for column in CANONICAL_LONG_COLUMNS[:12] if column not in rows.columns]
+    if missing:
+        raise ValueError(f"Fallback CSV is missing canonical columns: {missing}.")
+    found_economies = sorted(rows["Economy"].dropna().astype(str).str.strip().unique())
+    if found_economies != [economy]:
+        raise ValueError(f"Fallback CSV must contain only economy {economy!r}; found {found_economies}.")
+    parsed_years = rows["Year"].map(_year)
+    if parsed_years.isna().any():
+        raise ValueError("Fallback CSV contains a blank Year.")
+    rows["Year"] = parsed_years.astype(int)
+
+    current_accounts = rows[rows["Scenario"].astype(str).str.strip().eq("Current Accounts")].copy()
+    template_years = sorted(current_accounts["Year"].unique())
+    if len(template_years) != 1:
+        raise ValueError(
+            "Fallback CSV must contain exactly one Current Accounts template year; "
+            f"found {template_years}."
+        )
+    source_template_year = int(template_years[0])
+    current_accounts = enrich_module1_provenance(
+        current_accounts,
+        package_version=source_package_version,
+        target_base_year=requested_base_year,
+    )
+    current_accounts = _collapse_duplicate_derived_stock_shares(current_accounts)
+    current_accounts["Year"] = requested_base_year
+    shifted_without_source_year = (
+        current_accounts["Source Data Year"].isna()
+        & current_accounts["Base Year Treatment"].eq("legacy_unrecorded")
+        & (source_template_year != requested_base_year)
+    )
+    current_accounts.loc[shifted_without_source_year, "Comment"] = current_accounts.loc[
+        shifted_without_source_year, "Comment"
+    ].map(lambda value: _append_template_fallback_note(value, source_template_year))
+    current_accounts.loc[shifted_without_source_year, "Base Year Treatment"] = "transformed"
+    current_accounts.loc[shifted_without_source_year, "Derivation Method"] = "base_year_template_fallback"
+    current_accounts = normalise_authoritative_fallback(current_accounts, economy, requested_base_year)
+
+    projection_series = rows[
+        ~rows["Scenario"].astype(str).str.strip().eq("Current Accounts")
+        & rows["Year"].gt(requested_base_year)
+    ].copy()
+    projection_series = enrich_module1_provenance(
+        projection_series,
+        package_version=source_package_version,
+        target_base_year=requested_base_year,
+    )
+    projection_stock_share = projection_series[projection_series["Variable"].eq("Stock Share")]
+    projection_other = projection_series[~projection_series["Variable"].eq("Stock Share")]
+    projection_series = pd.concat(
+        [_collapse_duplicate_derived_stock_shares(projection_stock_share), projection_other],
+        ignore_index=True,
+    )
+    projection_series = _strict_projection_rows(projection_series)
+    _validate_projection_coverage(projection_series, requested_base_year)
+    _validate_projection_values(projection_series)
+    return StaticPackageComponents(current_accounts, projection_series, source_template_year)
+
+
 def _collapse_duplicate_derived_stock_shares(rows: pd.DataFrame) -> pd.DataFrame:
     """Prefer the explicit derived Stock Share copy when its duplicate is identical."""
     key_columns = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
@@ -158,10 +311,15 @@ def _collapse_duplicate_derived_stock_shares(rows: pd.DataFrame) -> pd.DataFrame
         comparable = ["Value", "Scale", "Units", "Input Status", "Shown In Interface"]
         if any(group[column].astype(str).nunique(dropna=False) != 1 for column in comparable):
             raise ValueError(f"Fallback Stock Share duplicates disagree for canonical key {key!r}.")
-        derived = group[group["Derivation Method"].eq("stock_share_from_stock")]
+        derived = group[
+            group["Source"].eq("Module 1 base-year Stock rows")
+            & group["Derivation Method"].isin(
+                {"stock_share_from_stock", "stock_share_seeded_from_base_year_stock"}
+            )
+        ]
         if len(derived) != 1:
             raise ValueError(
-                f"Fallback Stock Share duplicate {key!r} must contain exactly one explicit derived row."
+                f"Fallback Stock Share duplicate {key!r} must contain exactly one explicit Stock-derived source row."
             )
         keep_indices.add(derived.index[0])
     return rows.loc[sorted(keep_indices)].copy()
@@ -364,12 +522,13 @@ def generate_checked_in_source_review_package(
     source_path = Path(fallback_csv) if fallback_csv is not None else (
         STATIC_ROOT / source_package_version / f"{economy}.csv"
     )
-    fallback = load_static_fallback(
+    components = load_static_package_components(
         fallback_csv=source_path,
         economy=economy,
         requested_base_year=requested_base_year,
         source_package_version=source_package_version,
     )
+    fallback = components.current_accounts_template
     extraction = extract_original_candidates(
         fallback_rows=fallback,
         ranked_source_rows=load_checked_in_ranked_source_rows(economy),
@@ -396,6 +555,24 @@ def generate_checked_in_source_review_package(
         encoding="utf-8",
     )
     extraction.audit.to_csv(extraction_audit_path, index=False, lineterminator="\n")
+    projection_path = destination / f"{stem}_projection_series.csv"
+    complete_path = destination / f"{stem}_complete_package.csv"
+    components.projection_series.to_csv(
+        projection_path, index=False, lineterminator="\n", float_format="%.15g"
+    )
+    resolved_current_accounts = pd.read_csv(paths["resolved_csv"])
+    complete = pd.concat(
+        [resolved_current_accounts, components.projection_series], ignore_index=True
+    )[CANONICAL_LONG_COLUMNS]
+    complete = complete.sort_values(
+        ["Economy", "Scenario", "Branch Path", "Variable", "Year"], kind="stable"
+    ).reset_index(drop=True)
+    complete_keys = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
+    duplicate_complete = complete.duplicated(complete_keys, keep=False)
+    if duplicate_complete.any():
+        sample = complete.loc[duplicate_complete, complete_keys].head(5).to_dict("records")
+        raise ValueError(f"Combined package contains duplicate canonical keys. Sample: {sample}")
+    complete.to_csv(complete_path, index=False, lineterminator="\n", float_format="%.15g")
     manifest = json.loads(paths["manifest_json"].read_text(encoding="utf-8"))
     manifest["resolution"]["candidate_extraction"] = {
         **extraction.summary,
@@ -403,6 +580,21 @@ def generate_checked_in_source_review_package(
         "candidates_sha256": hashlib.sha256(candidates_path.read_bytes()).hexdigest(),
         "audit_filename": extraction_audit_path.name,
         "audit_sha256": hashlib.sha256(extraction_audit_path.read_bytes()).hexdigest(),
+    }
+    manifest["package_components"] = {
+        "current_accounts_template_source_year": components.source_template_year,
+        "current_accounts_filename": paths["resolved_csv"].name,
+        "current_accounts_sha256": hashlib.sha256(paths["resolved_csv"].read_bytes()).hexdigest(),
+        "current_accounts_row_count": len(resolved_current_accounts),
+        "projection_filename": projection_path.name,
+        "projection_sha256": hashlib.sha256(projection_path.read_bytes()).hexdigest(),
+        "projection_row_count": len(components.projection_series),
+        "projection_first_year": (
+            None if components.projection_series.empty else int(components.projection_series["Year"].min())
+        ),
+        "complete_package_filename": complete_path.name,
+        "complete_package_sha256": hashlib.sha256(complete_path.read_bytes()).hexdigest(),
+        "complete_package_row_count": len(complete),
     }
     paths["manifest_json"].write_text(
         json.dumps(_json_ready(manifest), indent=2, sort_keys=True, ensure_ascii=False) + "\n",
@@ -412,4 +604,6 @@ def generate_checked_in_source_review_package(
         **paths,
         "candidates_json": candidates_path,
         "candidate_extraction_audit_csv": extraction_audit_path,
+        "projection_csv": projection_path,
+        "complete_package_csv": complete_path,
     }

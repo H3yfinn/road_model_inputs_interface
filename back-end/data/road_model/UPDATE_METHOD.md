@@ -584,46 +584,53 @@ Deployment details and the My Drive OAuth boundary are recorded in
   the current priority-ranked source pool into the opt-in review-package
   generator. It is not connected to normal defaults/static builds, API startup,
   package discovery, the researcher UI or production promotion.
-- Source inputs: An explicit checked-in static fallback CSV for one economy and
-  requested year, plus the rows returned before
+- Source inputs: An explicit checked-in static CSV for one economy, containing
+  one complete Current Accounts template year and the separate Reference/Target
+  projection series, plus the rows returned before
   `load_processed_source_inputs()` generates fallback rows. The adapter does
   not inspect Drive, archives, researcher submissions, generated packages,
   supplemental-source folders or inactive specialist folders.
 - Update method: Call `generate_checked_in_source_review_package()` with an
   explicit economy, requested base year, source-package version, review package
   version and caller-owned output directory. Source rows are mapped only to
-  canonical fallback keys. The source-row year must equal structured
-  `Source Data Year`; shifted/projected rows, missing-year rows and derived
-  variables are audit-only exclusions. Existing source priority resolves
+  canonical Current Accounts template keys. The source-row year must equal
+  structured `Source Data Year`; shifted/projected rows, missing-year rows and
+  derived variables are audit-only exclusions. Existing source priority resolves
   duplicate key/year evidence after eligible native rows are considered;
   same-priority value conflicts fail.
 - Provenance policy: Explicit metadata still wins. The version-scoped 9th
-  Outlook bridge mapping may supply 2022 and archive guidance, but the row
-  remains `legacy_unknown` and therefore resolver-ineligible. Extraction never
-  upgrades a legacy or assumption row to `native_observation` and never treats
-  a derived/generated row as external evidence.
+  Outlook bridge mapping may supply 2022, archive guidance and the separate
+  `verified_9th_outlook` candidate marker. This makes only proven bridge rows
+  seed-eligible without upgrading them to `native_observation`. Extraction
+  never treats a derived/generated row as external evidence.
 - Fallback normalisation: The current 20USA/2022 static CSV has five identical
   duplicate Stock Share pairs consisting of a legacy copy and one explicit
   `stock_share_from_stock` copy. The adapter retains only the explicit derived
   row. Any differing value/control metadata, non-Stock-Share duplicate or
   ambiguous derivation fails validation.
-- Outputs: In addition to the resolved CSV, resolution audit and manifest, the
-  caller-owned directory receives original-candidate JSON and a candidate-
-  extraction audit CSV. The manifest records their filenames, SHA-256 checksums
-  and extraction counts. Protected production/source/static paths remain
-  refused.
+- Package assembly and validation: The complete Current Accounts template is
+  rebased to the requested year and resolved independently of projections.
+  Only Reference/Target rows after that year are retained. Both projection
+  scenarios must have identical continuous coverage beginning at base year + 1;
+  malformed values and conflicting duplicate keys fail. No shifted output is
+  ever added to the candidate pool.
+- Outputs: In addition to the resolved Current Accounts CSV, resolution audit
+  and manifest, the caller-owned directory receives a separate projection CSV,
+  their sorted complete-package CSV, original-candidate JSON and a candidate-
+  extraction audit CSV. The manifest records component filenames, row counts,
+  SHA-256 checksums, Current Accounts template source year and first projection
+  year. Protected production/source/static paths remain refused.
 - Validation checks: Synthetic tests cover explicit native and known 9th
   Outlook rows, missing/shifted/derived exclusions, deterministic source
   priority, conflicts, malformed fallback duplicates, no input mutation,
   manifest checksums and temporary end-to-end generation. A read-only
   20USA/2022 run inspected 81,127 ranked rows: 330 matched canonical keys, 290
-  became `legacy_unknown` candidates, 34 Stock Share source rows and 6
-  missing-year rows were excluded. Resolution selected zero candidates, kept
-  502 fallback rows (including 29 detailed Stock Share rows) and derived the 5
-  explicitly marked vehicle-type Stock Share rows, producing 507 unique keys.
-  Only those five derived percentages changed by recalculation/rounding; no
-  non-Stock-Share or detailed Stock Share value changed beyond CSV
-  serialization tolerance.
+  became non-native candidates with the version-scoped
+  `verified_9th_outlook` lineage marker, 34 Stock Share source rows and 6
+  missing-year rows were excluded. Resolution selected all 290 candidates,
+  retained 212 authoritative-template rows (including 29 detailed Stock Share
+  rows) and derived the 5 explicitly marked vehicle-type Stock Share rows,
+  producing 507 unique keys.
 - Notes/limitations: This is review-package generation, not promotion. Current
   checked-in sources provide no eligible native candidate in the 20USA run, and
   eligibility was intentionally not broadened. Russia is complete enough for
@@ -710,9 +717,10 @@ Deployment details and the My Drive OAuth boundary are recorded in
   defaults to the current checked-in version; an explicit fallback CSV remains
   optional.
 - Outputs: The new or empty caller-owned staging directory receives the
-  canonical review CSV, resolution audit and manifest, extracted candidate JSON
-  and audit, and supplemental provenance inventory CSV. A structured JSON
-  summary is printed for the operator.
+  resolved Current Accounts review CSV, separate Reference/Target projection
+  CSV, validated complete-package CSV, resolution audit and manifest, extracted
+  candidate JSON and audit, and supplemental provenance inventory CSV. A
+  structured JSON summary is printed for the operator.
 - Safety: The command refuses a non-empty directory and inherits the protected
   production/source/static path checks. It has no promotion, static-index,
   Drive, UI or deployment operation.

@@ -9,9 +9,11 @@ import pytest
 from core.base_year_candidate_extraction import (
     extract_original_candidates,
     generate_checked_in_source_review_package,
+    load_static_package_components,
     load_static_fallback,
 )
 from core.base_year_package_generation import CANONICAL_LONG_COLUMNS
+from core.researcher_submission_review import normalise_module1_rows
 from core.road_module1_provenance import CURRENT_SOURCE_PACKAGE_VERSION, NINTH_OUTLOOK_ARCHIVE_URL
 
 
@@ -165,6 +167,140 @@ def test_static_fallback_rejects_conflicting_stock_share_duplicates(tmp_path):
         )
 
 
+def test_static_components_rebase_complete_current_accounts_and_keep_only_future_projections(tmp_path):
+    current_accounts = _fallback()
+    projection_2023 = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+    projection_2023.update(Scenario="Reference", Year=2023)
+    projection_2024 = dict(projection_2023, Year=2024, Value=20.0)
+    projection_2024_target = dict(projection_2024, Scenario="Target")
+    path = tmp_path / "20USA.csv"
+    pd.concat(
+        [current_accounts, pd.DataFrame([projection_2023, projection_2024, projection_2024_target])],
+        ignore_index=True,
+    ).to_csv(path, index=False)
+
+    components = load_static_package_components(
+        fallback_csv=path,
+        economy="20USA",
+        requested_base_year=2023,
+        source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+    )
+
+    assert components.source_template_year == 2022
+    assert set(components.current_accounts_template["Year"]) == {2023}
+    assert set(components.current_accounts_template["Scenario"]) == {"Current Accounts"}
+    assert set(components.projection_series["Year"]) == {2024}
+    shifted = components.current_accounts_template[
+        components.current_accounts_template["Derivation Method"].eq("base_year_template_fallback")
+    ]
+    assert not shifted.empty
+    assert shifted["Source Data Year"].isna().all()
+    assert set(shifted["Base Year Treatment"]) == {"transformed"}
+    assert set(shifted["Derivation Method"]) == {"base_year_template_fallback"}
+    assert shifted["Comment"].str.contains("reviewed 2022 Current Accounts template").all()
+    stock_shares = components.current_accounts_template[
+        components.current_accounts_template["Variable"].eq("Stock Share")
+    ]
+    assert set(stock_shares["Derivation Method"]) == {"stock_share_from_stock"}
+
+
+def test_static_components_reject_conflicting_projection_duplicates(tmp_path):
+    projection = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+    projection.update(Scenario="Reference", Year=2024)
+    conflicting = dict(projection, Value=20.0)
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame([projection, conflicting])], ignore_index=True).to_csv(
+        path, index=False
+    )
+
+    with pytest.raises(ValueError, match="Projection rows contain conflicting duplicate canonical key"):
+        load_static_package_components(
+            fallback_csv=path,
+            economy="20USA",
+            requested_base_year=2023,
+            source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+        )
+
+
+def test_static_components_reject_projection_gap_after_earlier_base_year(tmp_path):
+    rows = []
+    for scenario in ("Reference", "Target"):
+        row = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+        row.update(Scenario=scenario, Year=2023)
+        rows.append(row)
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame(rows)], ignore_index=True).to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="requires coverage from 2022"):
+        load_static_package_components(
+            fallback_csv=path,
+            economy="20USA",
+            requested_base_year=2021,
+            source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+        )
+
+
+def test_static_components_reject_fractional_requested_base_year(tmp_path):
+    path = tmp_path / "20USA.csv"
+    _fallback().to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="integer year"):
+        load_static_package_components(
+            fallback_csv=path,
+            economy="20USA",
+            requested_base_year=2022.5,
+            source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+        )
+
+
+def test_static_components_reject_non_numeric_projection_value(tmp_path):
+    rows = []
+    for scenario in ("Reference", "Target"):
+        row = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", "not-a-number")
+        row.update(Scenario=scenario, Year=2023)
+        rows.append(row)
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame(rows)], ignore_index=True).to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="non-finite numeric values"):
+        load_static_package_components(
+            fallback_csv=path,
+            economy="20USA",
+            requested_base_year=2022,
+            source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+        )
+
+
+def test_static_components_collapse_identical_explicit_derived_projection_stock_share(tmp_path):
+    source_copy = _fallback_row(r"Demand\Passenger road\Cars", "Stock Share", 40.0)
+    source_copy.update(Scenario="Reference", Year=2040, Source="road_module1_source_20USA.csv")
+    derived_copy = dict(source_copy)
+    derived_copy.update(
+        Source="Module 1 base-year Stock rows",
+        Comment="Stock Share derived from resolved Stock.",
+        **{
+            "Source Classification": "structural_assumption",
+            "Base Year Treatment": "transformed",
+            "Derivation Method": "stock_share_from_stock",
+        },
+    )
+    target_copy = dict(derived_copy, Scenario="Target")
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame([source_copy, derived_copy, target_copy])], ignore_index=True).to_csv(
+        path, index=False
+    )
+
+    components = load_static_package_components(
+        fallback_csv=path,
+        economy="20USA",
+        requested_base_year=2039,
+        source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+    )
+
+    assert len(components.projection_series) == 2
+    assert set(components.projection_series["Derivation Method"]) == {"stock_share_from_stock"}
+
+
 def test_extracts_explicit_original_native_candidate_and_preserves_source_year():
     result = _extract([
         _source_row(r"Demand\Passenger road\Cars", "Mileage", 2020, 10.0, source_year=2020)
@@ -277,7 +413,12 @@ def test_conflicting_eligible_rows_at_same_priority_fail():
 
 def test_review_package_writes_extraction_artifacts_and_checksums(tmp_path, monkeypatch):
     fallback_path = tmp_path / "fallback.csv"
-    _fallback().to_csv(fallback_path, index=False)
+    projection = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 25.0)
+    projection.update(Scenario="Reference", Year=2023)
+    target_projection = dict(projection, Scenario="Target")
+    pd.concat([_fallback(), pd.DataFrame([projection, target_projection])], ignore_index=True).to_csv(
+        fallback_path, index=False
+    )
     rows = pd.DataFrame([
         _source_row(r"Demand\Passenger road\Cars", "Mileage", 2020, 10.0, source_year=2020),
         _source_row(r"Demand\Passenger road\Cars\bev", "Stock", 2022, 40.0, source_year=2022),
@@ -300,19 +441,30 @@ def test_review_package_writes_extraction_artifacts_and_checksums(tmp_path, monk
     )
 
     assert set(paths) == {
-        "resolved_csv", "audit_csv", "manifest_json", "candidates_json", "candidate_extraction_audit_csv"
+        "resolved_csv", "audit_csv", "manifest_json", "candidates_json",
+        "candidate_extraction_audit_csv", "projection_csv", "complete_package_csv",
     }
     manifest = json.loads(paths["manifest_json"].read_text(encoding="utf-8"))
     extraction = manifest["resolution"]["candidate_extraction"]
     assert extraction["candidate_count"] == 3
     assert extraction["candidates_sha256"] == hashlib.sha256(paths["candidates_json"].read_bytes()).hexdigest()
     assert extraction["audit_sha256"] == hashlib.sha256(paths["candidate_extraction_audit_csv"].read_bytes()).hexdigest()
+    components = manifest["package_components"]
+    assert components["current_accounts_template_source_year"] == 2022
+    assert components["projection_row_count"] == 2
+    assert components["projection_first_year"] == 2023
+    assert components["complete_package_sha256"] == hashlib.sha256(
+        paths["complete_package_csv"].read_bytes()
+    ).hexdigest()
     resolved = pd.read_csv(paths["resolved_csv"])
     mileage = resolved[resolved["Variable"].eq("Mileage")].iloc[0]
     assert mileage["Value"] == 10.0
     shares = resolved[resolved["Variable"].eq("Stock Share")].set_index("Branch Path")["Value"]
     assert shares[r"Demand\Passenger road\Cars"] == 40.0
     assert shares[r"Demand\Passenger road\2W"] == 60.0
+    complete = pd.read_csv(paths["complete_package_csv"])
+    assert set(complete["Scenario"]) == {"Current Accounts", "Reference", "Target"}
+    assert len(normalise_module1_rows(complete, legacy_values_are_internal=False)) == len(complete)
 
 
 def test_extraction_does_not_mutate_inputs():
