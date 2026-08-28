@@ -243,4 +243,3 @@ Before changing this pipeline:
 - [`new model/multinode_road_module1_repo_guide.md`](new%20model/multinode_road_module1_repo_guide.md)
 - [`researcher_change_review_and_promotion_guide.md`](researcher_change_review_and_promotion_guide.md)
 - [`researcher_submission_drive_archive.md`](researcher_submission_drive_archive.md)
-
