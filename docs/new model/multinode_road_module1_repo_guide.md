@@ -414,6 +414,26 @@ Future-year rows may be present for viewing, optional future assumptions, or
 future UI expansion. They are not required for the current researcher workflow
 unless the variable explicitly says so.
 
+### Base-year variable policy families
+
+The deterministic base-year resolver uses one compact variable-level registry
+in `back-end/core/base_year_variable_policy.py`. Names are matched exactly to
+the canonical `Variable` column in
+`back-end/data/road_model/config/road_module1_static_contract.csv`; no current
+variable needs a `Branch Path` exception. The coverage check fails when a new
+canonical variable has not been deliberately classified.
+
+| Family | Meaning | Current variables |
+|---|---|---|
+| `exact_year_required` | Energy-balance reconciliation controls must match the requested base year; they cannot use an earlier or future seed. | All seven `Reconciliation Weight ...` and `Reconciliation Bound ...` variables. |
+| `seed_eligible` | An original researcher/source input may use the requested year, the latest eligible earlier year, or—only when neither exists—the earliest eligible future year. | Stock, mileage, fuel economy, sales shares, survival/vintage assumptions, PHEV use, passenger/freight projection assumptions, turnover bounds, and vehicle-equivalent weights/bounds. |
+| `derived` | Recalculate from already resolved inputs; do not shift independently. | `Stock Share`, derived from resolved `Stock`. |
+
+This classification does not make a source eligible by itself. The resolver's
+existing source-classification rules and deterministic tie-breaking remain
+unchanged. Source quality tiers, age thresholds, and eligibility for structural
+or model assumptions require a separate reviewed integration decision.
+
 One future option is allowing researchers to fill future-year values for
 variables such as sales shares or fuel economy improvements. Those values could
 then be used by `leap_road_model` to project future stock and energy before

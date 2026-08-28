@@ -355,10 +355,22 @@ Deployment details and the My Drive OAuth boundary are recorded in
 - Source inputs: Explicit original candidate records only. A record includes a
   stable candidate ID, canonical row key, source identity, source-data year,
   source classification, and configured quality/source-priority identifiers.
-- Update method: Select the variable policy outside the resolver. Use
-  `energy_balance_exact_year` for energy-balance anchors and `seed_eligible`
-  only where an approved caller mapping explicitly permits observation seeding.
-  Do not feed a previously shifted/generated candidate back into the resolver.
+- Update method: Select the variable policy through
+  `back-end/core/base_year_variable_policy.py`. The registry matches exact
+  canonical `Variable` names and validates its coverage against
+  `config/road_module1_static_contract.csv`. Do not feed a previously
+  shifted/generated candidate back into the resolver.
+- Variable policy mapping:
+  - `exact_year_required`: the seven `Reconciliation Weight ...` and
+    `Reconciliation Bound ...` variables. These use the resolver's
+    `energy_balance_exact_year` policy and cannot shift years.
+  - `seed_eligible`: `Stock`, `Mileage`, `Fuel Economy`, `Sales Share`,
+    `Survival Rate`, `Vintage Profile Share`, `PHEV Electric Driving Share`,
+    the passenger/freight projection assumptions, turnover bounds, and vehicle
+    equivalent weights/bounds. These may use exact year, latest eligible
+    earlier year, or only when neither exists the earliest eligible future year.
+  - `derived`: `Stock Share` only. It is recalculated from resolved `Stock` and
+    must not be resolved or shifted independently.
 - Recategorizations or mappings: Native observations are selected exact-year,
   then latest eligible earlier, then earliest eligible future. Earlier values
   are `carried_forward`; future values are `carried_backward`; an exact-year
@@ -374,7 +386,13 @@ Deployment details and the My Drive OAuth boundary are recorded in
   configured quality tier, configured source priority, or candidate-ID tie
   break.
 - Validation checks run: Synthetic resolver tests cover deterministic ranking,
-  policy ineligibility, provenance, reversibility, and invalid inputs.
-- Notes/limitations: No production variable-to-policy assignment has been
-  inferred. That mapping, source quality tiers, and any age threshold require a
-  reviewed modelling decision before the resolver is connected to generation.
+  policy ineligibility, provenance, reversibility, and invalid inputs. Registry
+  tests cover exact/seed/derived lookups, strict canonical spelling, malformed
+  definitions, duplicates/conflicts, deterministic inventory, and full current
+  contract coverage.
+- Notes/limitations: This checkpoint classifies variables only. It does not
+  connect the resolver to generation, regenerate packages, add source quality
+  tiers or age thresholds, change resolver ranking, or broaden eligible source
+  classifications. Some assumption sources are currently classified as
+  `structural_assumption` or `model_assumption`; whether those classifications
+  become resolver-eligible remains a separate explicit integration decision.
