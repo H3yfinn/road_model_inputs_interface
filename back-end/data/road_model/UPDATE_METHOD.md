@@ -761,6 +761,51 @@ Deployment details and the My Drive OAuth boundary are recorded in
   failures are recorded in the run summary, later economies continue, and the
   command returns nonzero whenever any economy failed so a partial batch is
   never presented as complete.
+- Conflict review artifacts: A duplicate-source failure produces two
+  formula-safe CSVs below `quarantine/<ECONOMY>/`. The compact review CSV has one
+  row per canonical conflict and ten purpose-specific columns, including
+  candidate options, reviewer choice, reviewer source and reviewer reason. The
+  evidence CSV preserves every underlying conflicting row. Artifact paths and
+  SHA-256 checksums plus group/row counts are recorded on that economy's failure
+  entry. These files collect a decision only; they never update
+  source/default/static data or promote a package.
 - Validation checks: Mocked archive tests cover the explicit opt-in boundary and
   all-economy aggregation. End-to-end package generation is validated only in a
   temporary directory; no live Drive download is required for automated tests.
+
+## Static scenario/workbook conflict prevention
+
+- Date: 2026-08-28
+- Author: Codex
+- Change summary: Corrected build-time causes behind the five short-code
+  Reference Sales Share quarantines and prevented mixed source scenarios from
+  being silently relabelled as Current Accounts. Added compact conflict-review
+  and full evidence artifacts for any future duplicate-source quarantine.
+- Workbook selection: Compact and canonical economy codes now both map to the
+  expected LEAP token (`02BD` and `02_BD` -> `02_BD`). Matched workbook rows are
+  filtered to the requested economy's accepted LEAP region names even when an
+  ALL_ECONS workbook is the fallback. If it contains no matching region, the
+  existing processed-source fallback is used.
+- Current Accounts construction: Genuine Current Accounts rows are preferred
+  for each `(Branch Path, Variable)` key. A non-Current-Accounts row is used only
+  where that key has no Current Accounts row. Identical repeats collapse;
+  disagreeing fallback scenarios fail before static output is written.
+- Legacy compatibility: A blank Source Data Year no longer causes 12-column
+  legacy canonical rows to disappear during long-to-wide pivoting.
+- Quarantine outputs: Failed all-economy staging writes a ten-column,
+  one-row-per-group review CSV and a separate formula-safe evidence CSV. The run
+  summary records both paths and group/row counts. Neither applies a decision.
+- Validation: All five affected economy-specific Reference workbooks loaded
+  1,558 rows for 2023–2060 with zero duplicate canonical keys. A complete
+  21-economy static build in a temporary root passed contract checks and wrote
+  20,031 rows per economy with zero duplicate canonical keys.
+- Safety and remaining decision: No checked-in backend output or frontend static
+  file was regenerated. The temporary build differs materially from the current
+  22,212-row bundle. It adds no keys and removes 2,156 unique keys per economy:
+  28 out-of-contract Current Accounts Mileage/Fuel Economy keys and their 2,128
+  correction-factor descendants. Shared Current Accounts values are unchanged;
+  shared projection Sales Share changes range from 0 to 735 rows per economy.
+  Those projection changes must be reviewed before an authorised regeneration.
+  Supplying explicit source-workbook 2022
+  Reference/Target rows for requested base year 2021 is recommended over
+  carrying/interpolating values, but remains a model-manager policy decision.

@@ -32,6 +32,33 @@ from core.road_module1_provenance import enrich_module1_provenance, source_linea
 
 STATIC_ROOT = Path(__file__).resolve().parents[2] / "front-end" / "road-module1-static"
 REQUIRED_PROJECTION_SCENARIOS = frozenset({"Reference", "Target"})
+CONFLICT_REPORT_COLUMNS = [
+    "Conflict Group",
+    "Package Component",
+    "Scenario",
+    "Branch Path",
+    "Variable",
+    "Year",
+    "Candidate Value",
+    "Source",
+    "Source Data Year",
+    "Comment",
+    "Conflict Reason",
+    "Reviewer Choice (select/correct)",
+    "Reviewer Note (cite source/reason)",
+]
+CONFLICT_REVIEW_COLUMNS = [
+    "Conflict Group",
+    "Package Component",
+    "Scenario",
+    "Branch Path",
+    "Variable",
+    "Year",
+    "Candidate Options",
+    "Reviewer Choice (value/correction)",
+    "Reviewer Source",
+    "Reviewer Note (reason)",
+]
 RAW_REQUIRED_COLUMNS = [
     "Branch Path",
     "Variable",
@@ -162,6 +189,24 @@ def _append_template_fallback_note(comment: object, source_template_year: int) -
     return existing if note in existing else f"{existing} {note}".strip()
 
 
+def _read_static_rows(fallback_csv: str | Path, economy: str) -> pd.DataFrame:
+    path = Path(fallback_csv)
+    if not path.is_file():
+        raise ValueError(f"Fallback CSV does not exist: {path}")
+    rows = pd.read_csv(path)
+    missing = [column for column in CANONICAL_LONG_COLUMNS[:12] if column not in rows.columns]
+    if missing:
+        raise ValueError(f"Fallback CSV is missing canonical columns: {missing}.")
+    found_economies = sorted(rows["Economy"].dropna().astype(str).str.strip().unique())
+    if found_economies != [economy]:
+        raise ValueError(f"Fallback CSV must contain only economy {economy!r}; found {found_economies}.")
+    parsed_years = rows["Year"].map(_year)
+    if parsed_years.isna().any():
+        raise ValueError("Fallback CSV contains a blank Year.")
+    rows["Year"] = parsed_years.astype(int)
+    return rows
+
+
 def _strict_projection_rows(rows: pd.DataFrame) -> pd.DataFrame:
     """Collapse identical duplicate projection rows and reject disagreements."""
     if rows.empty:
@@ -223,6 +268,115 @@ def _validate_projection_values(rows: pd.DataFrame) -> None:
     rows["Value"] = values
 
 
+def build_static_package_conflict_report(
+    *,
+    fallback_csv: str | Path,
+    economy: str,
+    requested_base_year: int,
+    source_package_version: str,
+) -> pd.DataFrame:
+    """Return concise evidence for duplicate groups that strict package loading rejects."""
+    normalised_requested_year = _year(requested_base_year)
+    if normalised_requested_year is None:
+        raise ValueError("Requested base year is required.")
+    rows = _read_static_rows(fallback_csv, economy)
+    rows = enrich_module1_provenance(
+        rows,
+        package_version=source_package_version,
+        target_base_year=normalised_requested_year,
+    )
+    components = [
+        (
+            "Current Accounts template",
+            rows[rows["Scenario"].astype(str).str.strip().eq("Current Accounts")].copy(),
+        ),
+        (
+            "Reference/Target projection",
+            rows[
+                ~rows["Scenario"].astype(str).str.strip().eq("Current Accounts")
+                & rows["Year"].gt(normalised_requested_year)
+            ].copy(),
+        ),
+    ]
+    key_columns = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
+    conflict_groups: list[tuple[str, tuple[object, ...], pd.DataFrame, str]] = []
+    for component_name, component_rows in components:
+        duplicate_rows = component_rows[component_rows.duplicated(key_columns, keep=False)]
+        for key, group in duplicate_rows.groupby(key_columns, sort=True, dropna=False):
+            try:
+                _collapse_duplicate_derived_stock_shares(group)
+            except ValueError:
+                pass
+            else:
+                if group["Variable"].eq("Stock Share").all():
+                    continue
+            if component_name == "Reference/Target projection":
+                comparable = group[CANONICAL_LONG_COLUMNS].astype(object)
+                comparable = comparable.where(comparable.notna(), "<NA>").astype(str)
+                if len(comparable.drop_duplicates()) == 1:
+                    continue
+            reason = (
+                "Duplicate Current Accounts canonical key requires an authoritative source choice."
+                if component_name == "Current Accounts template"
+                else "Projection rows disagree for the same canonical key."
+            )
+            conflict_groups.append((component_name, key, group, reason))
+
+    report_rows: list[dict[str, object]] = []
+    for group_number, (component_name, _key, group, reason) in enumerate(conflict_groups, start=1):
+        group_id = f"conflict-{group_number:04d}"
+        for _, row in group.sort_values(["Source", "Value"], kind="stable").iterrows():
+            report_rows.append({
+                "Conflict Group": group_id,
+                "Package Component": component_name,
+                "Scenario": row["Scenario"],
+                "Branch Path": row["Branch Path"],
+                "Variable": row["Variable"],
+                "Year": row["Year"],
+                "Candidate Value": row["Value"],
+                "Source": row["Source"],
+                "Source Data Year": row["Source Data Year"],
+                "Comment": row["Comment"],
+                "Conflict Reason": reason,
+                "Reviewer Choice (select/correct)": "",
+                "Reviewer Note (cite source/reason)": "",
+            })
+    return pd.DataFrame(report_rows, columns=CONFLICT_REPORT_COLUMNS)
+
+
+def summarise_static_package_conflicts(report: pd.DataFrame) -> pd.DataFrame:
+    """Reduce detailed conflict evidence to one simple reviewer decision row per group."""
+    if report.empty:
+        return pd.DataFrame(columns=CONFLICT_REVIEW_COLUMNS)
+    missing = [column for column in CONFLICT_REPORT_COLUMNS if column not in report.columns]
+    if missing:
+        raise ValueError(f"Conflict evidence is missing columns: {missing}.")
+    summary_rows: list[dict[str, object]] = []
+    for group_id, group in report.groupby("Conflict Group", sort=True):
+        first = group.iloc[0]
+        options: list[str] = []
+        for _, row in group.iterrows():
+            source = _text(row["Source"]) or "source not recorded"
+            source_year = _year(row["Source Data Year"])
+            year_note = "" if source_year is None else f"; data year {source_year}"
+            option = f"{_text(row['Candidate Value'])} [{source}{year_note}]"
+            if option not in options:
+                options.append(option)
+        summary_rows.append({
+            "Conflict Group": group_id,
+            "Package Component": first["Package Component"],
+            "Scenario": first["Scenario"],
+            "Branch Path": first["Branch Path"],
+            "Variable": first["Variable"],
+            "Year": first["Year"],
+            "Candidate Options": " | ".join(options),
+            "Reviewer Choice (value/correction)": "",
+            "Reviewer Source": "",
+            "Reviewer Note (reason)": "",
+        })
+    return pd.DataFrame(summary_rows, columns=CONFLICT_REVIEW_COLUMNS)
+
+
 def load_static_package_components(
     *,
     fallback_csv: str | Path,
@@ -235,20 +389,7 @@ def load_static_package_components(
     if normalised_requested_year is None:
         raise ValueError("Requested base year is required.")
     requested_base_year = normalised_requested_year
-    path = Path(fallback_csv)
-    if not path.is_file():
-        raise ValueError(f"Fallback CSV does not exist: {path}")
-    rows = pd.read_csv(path)
-    missing = [column for column in CANONICAL_LONG_COLUMNS[:12] if column not in rows.columns]
-    if missing:
-        raise ValueError(f"Fallback CSV is missing canonical columns: {missing}.")
-    found_economies = sorted(rows["Economy"].dropna().astype(str).str.strip().unique())
-    if found_economies != [economy]:
-        raise ValueError(f"Fallback CSV must contain only economy {economy!r}; found {found_economies}.")
-    parsed_years = rows["Year"].map(_year)
-    if parsed_years.isna().any():
-        raise ValueError("Fallback CSV contains a blank Year.")
-    rows["Year"] = parsed_years.astype(int)
+    rows = _read_static_rows(fallback_csv, economy)
 
     current_accounts = rows[rows["Scenario"].astype(str).str.strip().eq("Current Accounts")].copy()
     template_years = sorted(current_accounts["Year"].unique())

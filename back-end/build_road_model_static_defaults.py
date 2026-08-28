@@ -43,7 +43,9 @@ from core.road_module1_defaults import (
     TRANSPORT_LEAP_EXPORT_HEADER_ROW,
     TRANSPORT_LEAP_EXPORT_SHEET,
     _wide_defaults_to_long,
+    _transport_leap_source_regions,
     find_transport_leap_export_path,
+    get_economy_info,
     list_default_economies,
     list_default_versions,
     load_default_filled_inputs,
@@ -172,8 +174,10 @@ def _load_projected_sales_share_for_scenario(economy_code: str, scenario: str) -
     sales_df = sales_df[
         sales_df["Scenario"].fillna("").astype(str).str.strip().eq(str(scenario))
     ].copy()
+    economy_regions = _transport_leap_source_regions(get_economy_info(economy_code))
+    sales_df = sales_df[sales_df["Region"].fillna("").astype(str).str.strip().isin(economy_regions)].copy()
     if sales_df.empty:
-        return pd.DataFrame(columns=MODULE1_LONG_COLUMNS)
+        return _load_projected_sales_share_from_processed_source(economy_code, scenario=scenario)
 
     year_by_column = {}
     for column in sales_df.columns:
@@ -610,6 +614,51 @@ def _round_static_display_values(long_df: pd.DataFrame) -> pd.DataFrame:
     return rounded[MODULE1_LONG_COLUMNS].copy()
 
 
+def _normalise_current_accounts_defaults(
+    defaults_df: pd.DataFrame,
+    economy: str,
+    contract: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Prefer Current Accounts rows and reject ambiguous fallback-scenario collapse."""
+    prepared = defaults_df.copy()
+    source_scenarios = sorted(
+        prepared.get("Scenario", pd.Series(dtype=object)).dropna().astype(str).str.strip().unique()
+    )
+    if "Scenario" in prepared.columns:
+        scenario_text = prepared["Scenario"].fillna("").astype(str).str.strip()
+        current_accounts = prepared[scenario_text.eq("Current Accounts")].copy()
+        if not current_accounts.empty:
+            key_columns = ["Branch Path", "Variable"]
+            preferred_keys = set(map(tuple, current_accounts[key_columns].astype(str).to_numpy()))
+            fallback = prepared[~scenario_text.eq("Current Accounts")].copy()
+            fallback_keys = fallback[key_columns].astype(str).apply(tuple, axis=1)
+            fallback = fallback[~fallback_keys.isin(preferred_keys)]
+            prepared = pd.concat([current_accounts, fallback], ignore_index=True)
+    prepared["Scenario"] = "Current Accounts"
+    long_rows = _wide_defaults_to_long(prepared, economy=economy)
+    if contract is not None:
+        long_rows = _filter_to_static_contract(long_rows, contract)
+    if long_rows.empty:
+        return long_rows
+    key_columns = ["Economy", "Scenario", "Branch Path", "Variable", "Year"]
+    duplicate_mask = long_rows.duplicated(key_columns, keep=False)
+    if not duplicate_mask.any():
+        return long_rows
+    keep_indices = list(long_rows.index[~duplicate_mask])
+    for key, group in long_rows[duplicate_mask].groupby(key_columns, sort=True, dropna=False):
+        comparable = group[MODULE1_LONG_COLUMNS].astype(object)
+        comparable = comparable.where(comparable.notna(), "<NA>").astype(str)
+        if len(comparable.drop_duplicates()) != 1:
+            raise ValueError(
+                "Static Current Accounts construction cannot collapse disagreeing source scenarios "
+                f"{source_scenarios} for canonical key {key!r}."
+            )
+        keep_indices.append(group.index[0])
+    return long_rows.loc[keep_indices, MODULE1_LONG_COLUMNS].sort_values(
+        key_columns, kind="stable"
+    ).reset_index(drop=True)
+
+
 def write_frontend_static_bundle(
     output_root: Path,
     static_root: Path,
@@ -636,11 +685,11 @@ def write_frontend_static_bundle(
             version=version,
             output_root=output_root,
         )
-        if "Scenario" in defaults_df.columns:
-            defaults_df = defaults_df.copy()
-            defaults_df["Scenario"] = "Current Accounts"
-
-        long_defaults_df = _wide_defaults_to_long(defaults_df, economy=economy_code)
+        long_defaults_df = _normalise_current_accounts_defaults(
+            defaults_df,
+            economy=economy_code,
+            contract=static_contract,
+        )
 
         projected_sales_df = _load_projected_sales_share_long_rows(economy_code)
         if not projected_sales_df.empty:

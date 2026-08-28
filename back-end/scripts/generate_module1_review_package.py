@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -22,7 +23,12 @@ PROTECTED_OUTPUT_ROOTS = (
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from core.base_year_candidate_extraction import generate_checked_in_source_review_package
+from core.base_year_candidate_extraction import (
+    build_static_package_conflict_report,
+    generate_checked_in_source_review_package,
+    summarise_static_package_conflicts,
+)
+from core.researcher_submission_review import write_reviewer_csv
 from core.road_module1_provenance import CURRENT_SOURCE_PACKAGE_VERSION
 from core.supplemental_provenance_inventory import build_supplemental_provenance_inventory
 
@@ -131,6 +137,39 @@ def _checked_in_economies(source_package_version: str) -> list[str]:
     return economies
 
 
+def _write_economy_conflict_report(
+    *,
+    destination: Path,
+    economy: str,
+    base_year: int,
+    source_package_version: str,
+) -> dict[str, object] | None:
+    source_csv = STATIC_BUNDLE_ROOT / source_package_version / f"{economy}.csv"
+    report = build_static_package_conflict_report(
+        fallback_csv=source_csv,
+        economy=economy,
+        requested_base_year=base_year,
+        source_package_version=source_package_version,
+    )
+    if report.empty:
+        return None
+    review = summarise_static_package_conflicts(report)
+    quarantine_dir = destination / "quarantine" / economy
+    quarantine_dir.mkdir(parents=True, exist_ok=True)
+    review_path = quarantine_dir / f"{economy}_{base_year}_source_conflict_review.csv"
+    evidence_path = quarantine_dir / f"{economy}_{base_year}_source_conflict_evidence.csv"
+    write_reviewer_csv(review, review_path)
+    write_reviewer_csv(report, evidence_path)
+    return {
+        "conflict_review_csv": str(review_path),
+        "conflict_review_sha256": hashlib.sha256(review_path.read_bytes()).hexdigest(),
+        "conflict_evidence_csv": str(evidence_path),
+        "conflict_evidence_sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+        "conflict_group_count": int(report["Conflict Group"].nunique()),
+        "conflict_row_count": len(report),
+    }
+
+
 def generate_staged_review(
     *,
     economy: str,
@@ -195,7 +234,7 @@ def generate_all_economies_staged_review(
         researcher_submissions_folder_id=researcher_submissions_folder_id,
     )
     economy_summaries: list[dict[str, object]] = []
-    economy_failures: list[dict[str, str]] = []
+    economy_failures: list[dict[str, object]] = []
     resolution_totals: Counter[str] = Counter()
     extraction_totals: Counter[str] = Counter()
     economies = _checked_in_economies(source_package_version)
@@ -209,7 +248,20 @@ def generate_all_economies_staged_review(
                 source_package_version=source_package_version,
             )
         except REVIEW_FAILURES as exc:
-            economy_failures.append({"economy": economy, "error": str(exc)})
+            failure: dict[str, object] = {"economy": economy, "error": str(exc)}
+            try:
+                quarantine = _write_economy_conflict_report(
+                    destination=destination,
+                    economy=economy,
+                    base_year=base_year,
+                    source_package_version=source_package_version,
+                )
+            except REVIEW_FAILURES as report_exc:
+                failure["conflict_report_error"] = str(report_exc)
+            else:
+                if quarantine is not None:
+                    failure["quarantine_artifacts"] = quarantine
+            economy_failures.append(failure)
             continue
         resolution_totals.update(economy_summary["resolution_summary"])
         extraction = economy_summary["candidate_extraction_summary"]

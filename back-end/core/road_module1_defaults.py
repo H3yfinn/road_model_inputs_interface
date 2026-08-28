@@ -2026,8 +2026,9 @@ def _iter_transport_leap_all_econs_candidates(scenario: str | None = None) -> It
 
 def _economy_to_leap_import_token(economy: str | None) -> str:
     economy_text = str(economy or "").strip().upper()
-    if len(economy_text) >= 5 and economy_text[:2].isdigit():
-        return f"{economy_text[:2]}_{economy_text[2:]}"
+    match = re.fullmatch(r"(\d{2})_?([A-Z]{2,3})", economy_text)
+    if match:
+        return f"{match.group(1)}_{match.group(2)}"
     return economy_text
 
 
@@ -3412,6 +3413,10 @@ def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: 
         ("Derivation Method", "derivation_method", "legacy_unrecorded"),
     ]:
         df[internal_column] = df.get(long_column, default)
+    # A blank source year is valid legacy provenance. Pivot indexes drop NA
+    # groups, so use an empty-string sentinel and restore normal blank handling
+    # downstream rather than silently dropping every legacy row.
+    df["source_data_year"] = df["source_data_year"].where(df["source_data_year"].notna(), "")
     index_cols = [
         "Branch Path", "Variable", "Scenario", "Region", "Scale", "Units", "Source", "Comment",
         "source_data_year", "source_classification", "base_year_treatment", "derivation_method",

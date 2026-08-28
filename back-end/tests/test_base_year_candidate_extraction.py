@@ -7,10 +7,14 @@ import pandas as pd
 import pytest
 
 from core.base_year_candidate_extraction import (
+    CONFLICT_REPORT_COLUMNS,
+    CONFLICT_REVIEW_COLUMNS,
+    build_static_package_conflict_report,
     extract_original_candidates,
     generate_checked_in_source_review_package,
     load_static_package_components,
     load_static_fallback,
+    summarise_static_package_conflicts,
 )
 from core.base_year_package_generation import CANONICAL_LONG_COLUMNS
 from core.researcher_submission_review import normalise_module1_rows
@@ -220,6 +224,92 @@ def test_static_components_reject_conflicting_projection_duplicates(tmp_path):
             requested_base_year=2023,
             source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
         )
+
+
+def test_static_conflict_report_lists_every_candidate_with_simple_review_fields(tmp_path):
+    projection = _fallback_row(r"Demand\Passenger road\Cars", "Sales Share", 10.0)
+    projection.update(Scenario="Reference", Year=2024, Source="source-a.csv")
+    conflicting = dict(projection, Value=20.0, Source="source-b.csv")
+    path = tmp_path / "20USA.csv"
+    pd.concat([_fallback(), pd.DataFrame([projection, conflicting])], ignore_index=True).to_csv(
+        path, index=False
+    )
+
+    report = build_static_package_conflict_report(
+        fallback_csv=path,
+        economy="20USA",
+        requested_base_year=2023,
+        source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+    )
+
+    assert list(report.columns) == CONFLICT_REPORT_COLUMNS
+    assert len(report) == 2
+    assert report["Conflict Group"].nunique() == 1
+    assert set(report["Candidate Value"]) == {10.0, 20.0}
+    assert set(report["Source"]) == {"source-a.csv", "source-b.csv"}
+    assert report["Reviewer Choice (select/correct)"].eq("").all()
+    assert report["Reviewer Note (cite source/reason)"].eq("").all()
+
+
+def test_static_conflict_report_omits_safe_stock_share_duplicate(tmp_path):
+    path = tmp_path / "20USA.csv"
+    _fallback().to_csv(path, index=False)
+
+    report = build_static_package_conflict_report(
+        fallback_csv=path,
+        economy="20USA",
+        requested_base_year=2022,
+        source_package_version=CURRENT_SOURCE_PACKAGE_VERSION,
+    )
+
+    assert report.empty
+    assert list(report.columns) == CONFLICT_REPORT_COLUMNS
+
+
+def test_static_conflict_summary_has_one_simple_row_per_decision(tmp_path):
+    evidence = pd.DataFrame([
+        {
+            "Conflict Group": "conflict-0001",
+            "Package Component": "Reference/Target projection",
+            "Scenario": "Reference",
+            "Branch Path": r"Demand\Passenger road\Cars",
+            "Variable": "Sales Share",
+            "Year": 2025,
+            "Candidate Value": 10.0,
+            "Source": "source-a.csv",
+            "Source Data Year": 2022,
+            "Comment": "first",
+            "Conflict Reason": "Projection rows disagree for the same canonical key.",
+            "Reviewer Choice (select/correct)": "",
+            "Reviewer Note (cite source/reason)": "",
+        },
+        {
+            "Conflict Group": "conflict-0001",
+            "Package Component": "Reference/Target projection",
+            "Scenario": "Reference",
+            "Branch Path": r"Demand\Passenger road\Cars",
+            "Variable": "Sales Share",
+            "Year": 2025,
+            "Candidate Value": 20.0,
+            "Source": "source-b.csv",
+            "Source Data Year": pd.NA,
+            "Comment": "second",
+            "Conflict Reason": "Projection rows disagree for the same canonical key.",
+            "Reviewer Choice (select/correct)": "",
+            "Reviewer Note (cite source/reason)": "",
+        },
+    ], columns=CONFLICT_REPORT_COLUMNS)
+
+    review = summarise_static_package_conflicts(evidence)
+
+    assert list(review.columns) == CONFLICT_REVIEW_COLUMNS
+    assert len(review) == 1
+    assert review.iloc[0]["Candidate Options"] == (
+        "10.0 [source-a.csv; data year 2022] | 20.0 [source-b.csv]"
+    )
+    assert review.iloc[0]["Reviewer Choice (value/correction)"] == ""
+    assert review.iloc[0]["Reviewer Source"] == ""
+    assert review.iloc[0]["Reviewer Note (reason)"] == ""
 
 
 def test_static_components_reject_projection_gap_after_earlier_base_year(tmp_path):

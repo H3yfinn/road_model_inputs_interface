@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -274,6 +275,7 @@ def test_generate_all_economies_records_one_failure_and_continues(tmp_path, monk
         }
 
     monkeypatch.setattr(script, "_generate_economy_package", fake_economy_package)
+    monkeypatch.setattr(script, "_write_economy_conflict_report", lambda **kwargs: None)
     summary = script.generate_all_economies_staged_review(
         base_year=2022,
         output_dir=tmp_path / "all",
@@ -286,6 +288,81 @@ def test_generate_all_economies_records_one_failure_and_continues(tmp_path, monk
     assert summary["economy_failures"] == [
         {"economy": "16RUS", "error": "duplicate canonical key"},
     ]
+
+
+def test_generate_all_economies_links_conflict_report_for_failed_economy(tmp_path, monkeypatch):
+    monkeypatch.setattr(script, "_checked_in_economies", lambda source_package_version: ["16RUS"])
+    monkeypatch.setattr(script, "build_supplemental_provenance_inventory", _fake_supplemental_inventory)
+    monkeypatch.setattr(
+        script,
+        "_generate_economy_package",
+        lambda **kwargs: (_ for _ in ()).throw(ValueError("duplicate canonical key")),
+    )
+    report_details = {
+        "conflict_review_csv": str(tmp_path / "conflict_review.csv"),
+        "conflict_review_sha256": "review-sha",
+        "conflict_evidence_csv": str(tmp_path / "conflict_evidence.csv"),
+        "conflict_evidence_sha256": "evidence-sha",
+        "conflict_group_count": 66,
+        "conflict_row_count": 132,
+    }
+    monkeypatch.setattr(
+        script,
+        "_write_economy_conflict_report",
+        lambda **kwargs: report_details,
+    )
+
+    summary = script.generate_all_economies_staged_review(
+        base_year=2022,
+        output_dir=tmp_path / "all",
+        package_version="review_only_all",
+    )
+
+    assert summary["economy_failures"] == [{
+        "economy": "16RUS",
+        "error": "duplicate canonical key",
+        "quarantine_artifacts": report_details,
+    }]
+
+
+def test_economy_conflict_artifacts_are_compact_and_formula_safe(tmp_path, monkeypatch):
+    evidence = pd.DataFrame([{
+        "Conflict Group": "conflict-0001",
+        "Package Component": "Current Accounts template",
+        "Scenario": "Current Accounts",
+        "Branch Path": r"Demand\Passenger road\Cars",
+        "Variable": "Mileage",
+        "Year": 2022,
+        "Candidate Value": 10.0,
+        "Source": "=unsafe-source",
+        "Source Data Year": 2022,
+        "Comment": "+unsafe-comment",
+        "Conflict Reason": "Duplicate key.",
+        "Reviewer Choice (select/correct)": "",
+        "Reviewer Note (cite source/reason)": "",
+    }])
+    monkeypatch.setattr(script, "build_static_package_conflict_report", lambda **kwargs: evidence)
+
+    details = script._write_economy_conflict_report(
+        destination=tmp_path,
+        economy="20USA",
+        base_year=2022,
+        source_package_version="test-version",
+    )
+
+    assert details["conflict_group_count"] == 1
+    assert len(details["conflict_review_sha256"]) == 64
+    assert len(details["conflict_evidence_sha256"]) == 64
+    review = pd.read_csv(details["conflict_review_csv"], keep_default_na=False)
+    assert list(review.columns) == [
+        "Conflict Group", "Package Component", "Scenario", "Branch Path", "Variable", "Year",
+        "Candidate Options", "Reviewer Choice (value/correction)", "Reviewer Source",
+        "Reviewer Note (reason)",
+    ]
+    assert len(review) == 1
+    evidence_text = Path(details["conflict_evidence_csv"]).read_text(encoding="utf-8")
+    assert "'=unsafe-source" in evidence_text
+    assert "'+unsafe-comment" in evidence_text
 
 
 def test_main_all_economies_passes_explicit_researcher_submission_option(tmp_path, monkeypatch, capsys):

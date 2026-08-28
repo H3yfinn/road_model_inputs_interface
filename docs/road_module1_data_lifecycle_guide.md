@@ -511,6 +511,29 @@ economy does not prevent later economies from being staged, but it is recorded
 under `economy_failures` and the command returns a nonzero exit code so partial
 output cannot be mistaken for a complete build.
 
+When strict generation finds conflicting duplicate source rows, the failed
+economy's entry links two formula-safe quarantine artifacts. The primary
+`*_source_conflict_review.csv` has one row per decision and only ten columns:
+the canonical key, readable candidate options, reviewer choice, reviewer source
+and reviewer reason. The separate `*_source_conflict_evidence.csv` retains every
+underlying source/comment row for audit. Neither file applies a choice. A
+reviewer should enter an authoritative value or correction, cite the supporting
+source, and explain the reason; a later, separately approved source update is
+still required. The failure entry records both SHA-256 checksums and the
+group/evidence-row counts.
+
+The 2026-08-28 conflict investigation found two deterministic static-build
+defects. Compact codes such as `02BD` did not map to workbook token `02_BD`, so
+five economies used an unfiltered ALL_ECONS Reference workbook. Static
+Current Accounts construction also relabelled every source scenario before
+checking disagreements. The loader now normalises both compact and underscored
+tokens, filters workbook rows to the requested economy region, prefers genuine
+Current Accounts rows for the Current Accounts template, and rejects ambiguous
+fallback-scenario rows. Legacy canonical files with blank Source Data Year also
+remain present through long-to-wide conversion rather than disappearing from a
+pivot. These are build-code fixes only; the checked-in static bundle has not
+been regenerated or activated.
+
 ## What the researcher interface should see
 
 Researchers receive an already selected, validated package. Their editing

@@ -236,6 +236,122 @@ def test_specialist_projected_sales_rows_enter_expanded_canonical_contract(tmp_p
     assert rows.iloc[0]["Value"] == 20.0
 
 
+@pytest.mark.parametrize(
+    "economy, expected",
+    [("02BD", "02_BD"), ("02_BD", "02_BD"), ("20USA", "20_USA")],
+)
+def test_transport_export_token_normalises_short_and_canonical_economy_codes(economy, expected):
+    import core.road_module1_defaults as defaults
+
+    assert defaults._economy_to_leap_import_token(economy) == expected
+
+
+def test_projected_sales_share_workbook_is_filtered_to_requested_economy(monkeypatch, tmp_path):
+    import build_road_model_static_defaults as builder
+
+    workbook = tmp_path / "transport_leap_export_combined_ALL_ECONS_Reference_20260615.xlsx"
+    workbook.touch()
+    monkeypatch.setattr(builder, "find_transport_leap_export_path", lambda **kwargs: workbook)
+    monkeypatch.setattr(
+        builder.pd,
+        "read_excel",
+        lambda *args, **kwargs: pd.DataFrame([
+            {
+                "Branch Path": r"Demand\Passenger road\LPVs\BEV",
+                "Variable": "Sales Share",
+                "Scenario": "Reference",
+                "Region": "Brunei Darussalam",
+                "Scale": "%",
+                "Units": "Share",
+                "2023": 10.0,
+            },
+            {
+                "Branch Path": r"Demand\Passenger road\LPVs\BEV",
+                "Variable": "Sales Share",
+                "Scenario": "Reference",
+                "Region": "Australia",
+                "Scale": "%",
+                "Units": "Share",
+                "2023": 90.0,
+            },
+        ]),
+    )
+
+    rows = builder._load_projected_sales_share_for_scenario("02BD", "Reference")
+
+    assert len(rows) == 1
+    assert rows.iloc[0]["Value"] == 10.0
+    assert rows.iloc[0]["Source"] == workbook.name
+
+
+def test_current_accounts_static_normalisation_collapses_only_identical_source_scenarios():
+    import build_road_model_static_defaults as builder
+
+    common = {
+        "Branch Path": r"Demand\Passenger road\Cars",
+        "Variable": "Mileage",
+        "Region": "Russia",
+        "Scale": "",
+        "Units": "Kilometres",
+        "source_name": "source.csv",
+        "notes": "same evidence",
+        "2022": 10.0,
+    }
+    defaults = pd.DataFrame([
+        {**common, "Scenario": "Current Accounts"},
+        {**common, "Scenario": "Reference"},
+    ])
+
+    rows = builder._normalise_current_accounts_defaults(defaults, economy="16RUS")
+
+    assert len(rows) == 1
+    assert rows.iloc[0]["Scenario"] == "Current Accounts"
+
+
+def test_current_accounts_static_normalisation_prefers_current_accounts_source_scenario():
+    import build_road_model_static_defaults as builder
+
+    common = {
+        "Branch Path": r"Demand\Passenger road\Cars",
+        "Variable": "Mileage",
+        "Region": "Russia",
+        "Scale": "",
+        "Units": "Kilometres",
+        "source_name": "source.csv",
+        "notes": "same evidence",
+    }
+    defaults = pd.DataFrame([
+        {**common, "Scenario": "Current Accounts", "2022": 10.0},
+        {**common, "Scenario": "Reference", "2022": 20.0},
+    ])
+
+    rows = builder._normalise_current_accounts_defaults(defaults, economy="16RUS")
+
+    assert len(rows) == 1
+    assert rows.iloc[0]["Value"] == 10.0
+
+
+def test_current_accounts_static_normalisation_rejects_disagreeing_fallback_scenarios():
+    import build_road_model_static_defaults as builder
+
+    common = {
+        "Branch Path": r"Demand\Passenger road\Cars",
+        "Variable": "Mileage",
+        "Region": "Russia",
+        "Scale": "",
+        "Units": "Kilometres",
+        "source_name": "source.csv",
+        "notes": "same evidence",
+    }
+    defaults = pd.DataFrame([
+        {**common, "Scenario": "Reference", "2022": 10.0},
+        {**common, "Scenario": "Target", "2022": 20.0},
+    ])
+
+    with pytest.raises(ValueError, match="cannot collapse disagreeing source scenarios"):
+        builder._normalise_current_accounts_defaults(defaults, economy="16RUS")
+
+
 def test_values_keys_order_and_results_are_unchanged_and_idempotent():
     source = pd.DataFrame([
         _row(),
@@ -295,6 +411,23 @@ def test_canonical_long_round_trip_preserves_all_provenance_fields():
     expected = enriched.loc[0, provenance_columns]
     actual = restored.loc[0, provenance_columns]
     assert actual.tolist() == expected.tolist()
+
+
+def test_legacy_long_rows_without_source_year_survive_wide_conversion():
+    import core.road_module1_defaults as defaults
+
+    legacy = pd.DataFrame([{
+        key: value for key, value in _row().items()
+        if key not in {
+            "Source Data Year", "Source Classification", "Base Year Treatment", "Derivation Method",
+        }
+    }])
+
+    wide = defaults._long_defaults_to_ui_wide(legacy, "20USA", "United States")
+
+    assert len(wide) == 1
+    assert wide.iloc[0]["2022"] == 12_500_000.0
+    assert wide.iloc[0]["source_data_year"] == ""
 
 
 def test_source_quality_audit_counts_and_optional_temp_output(tmp_path):

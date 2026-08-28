@@ -47,10 +47,12 @@ All other economies have five identical 2022 Stock Share duplicates representing
 the source copy and the explicit Stock-derived copy. The loader retains the one
 explicitly derived row only when their comparable values agree.
 
-The conflicting Russia and projected Sales Share rows require source-owner
-review. Row order, file order or “latest occurrence” must not decide them because
-the current static rows do not contain enough provenance to prove which value is
-authoritative.
+Later source-path inspection showed these conflicts are packaging defects, not
+independent source-owner choices. The five short economy codes missed their
+economy-specific Reference workbooks and fell back to an unfiltered
+`ALL_ECONS` workbook. Russia combined original Current Accounts and Reference
+rows after relabelling both as Current Accounts. Row order remains an invalid
+way to resolve either defect.
 
 ## Implementation defect corrected during validation
 
@@ -77,8 +79,8 @@ path:
 
 1. Keep a reviewed Current Accounts **base-year template** separate from
    Reference/Target projection series. Initially this would use the complete
-   2022 Current Accounts key set, with Russia handled only after its conflicts
-   are reviewed.
+   2022 Current Accounts key set, with source scenarios separated before any
+   Current Accounts relabelling.
 2. For a requested base year, keep that template's canonical row keys and resolve
    each seed-eligible value from original candidates. Preserve the selected
    source year and mark `native`, `carried_forward` or `carried_backward`.
@@ -101,8 +103,33 @@ A representative 20USA/2024 review package contains 507 Current Accounts rows,
 An all-economy 2024 run generated all three package components for 15 economies
 and quarantined six without stopping later economies: the five projection
 conflict economies plus Russia's Current Accounts conflicts.
+The follow-up conflict inventory gives reviewers a compact one-row-per-group
+sheet plus full evidence. Russia has 66 groups / 132 evidence rows across Fuel
+Economy and Sales Share. Each of the other five economies has 809 projected
+Sales Share groups / 8,143 evidence rows across the retained 2025–2060 series;
+this confirms why the compact decision sheet must remain separate from raw
+evidence.
 The requested 2021 case now reaches the complete template but is deliberately
 quarantined because the checked-in projection series begins in 2023 and cannot
 supply 2022. The Russia and five projected Sales Share conflict groups described
-above remain source-owner review items. Activation and interface discovery
-remain separate model-manager actions.
+above are now prevented in code: short and canonical economy codes resolve the
+same workbook token, ALL_ECONS fallback rows are filtered to the requested
+region, and Current Accounts construction prefers true Current Accounts rows,
+uses other scenarios only for missing keys, and rejects any remaining
+disagreement. A temporary all-economy static build wrote 21 files with 20,031
+rows each and zero duplicate canonical keys. It was not promoted: its key/value
+diff from the existing 22,212-row checked-in bundle still requires review before
+any authorised regeneration. The diff has no added keys and removes 2,156
+unique keys per economy: 28 Current Accounts Mileage/Fuel Economy keys now
+outside the maintained static contract and their 2,128 projected correction-
+factor descendants. Shared Current Accounts values do not change. Shared-value
+changes are confined to projected Sales Share (0–735 rows per economy),
+including the intended short-code Reference workbook corrections plus other
+projection differences that still need review.
+
+The remaining 2021 projection choice is genuinely policy-relevant. The safest
+technical option is to retain explicit 2022 Reference/Target Sales Share rows
+already present in the source workbooks, because carrying 2021 Current Accounts
+or interpolating 2022 would invent assumptions. This option still requires
+model-manager confirmation before implementation. Activation and interface
+discovery remain separate actions.
