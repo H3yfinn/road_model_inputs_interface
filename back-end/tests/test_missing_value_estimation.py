@@ -180,14 +180,16 @@ def test_review_package_is_complete_checksummed_and_never_overwritten(tmp_path):
     text_cells = reviewer.astype("string").fillna("").stack()
     assert not text_cells.str.startswith(("=", "+", "-", "@")).any()
     comparison_html = (output_dir / "proposal_comparison.html").read_text(encoding="utf-8")
-    assert "Proposal comparison scatterplot" in comparison_html
-    assert 'id="economy-select"' in comparison_html
-    assert 'id="variable-select"' in comparison_html
-    assert 'id="proposal-select"' in comparison_html
+    assert "Proposal comparison scatterplots" in comparison_html
+    assert 'id="economy-nav"' in comparison_html
+    assert 'data-proposal-overview="all-proposals"' in comparison_html
+    assert "renderEconomySection" in comparison_html
+    assert 'id="economy-select"' not in comparison_html
+    assert 'id="proposal-select"' not in comparison_html
     assert "#1565c0" in comparison_html
     assert "#e53935" in comparison_html
     assert "km/vehicle/year" in comparison_html
-    assert "const proposedValue=factor*proposal" in comparison_html
+    assert 'scale.factor*proposal["Proposed Value"]' in comparison_html
     assert audit.iloc[0]["Proposal ID"] in comparison_html
     assert manifest["proposal_row_count"] == 2
     for artifact in manifest["artifacts"].values():

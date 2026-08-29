@@ -131,9 +131,9 @@ The output directory must not already exist. It contains:
 - `proposal_evidence.csv` — the inputs behind each decision;
 - `cross_validation_predictions.csv` — every masked-row prediction;
 - `cross_validation_summary.csv` — method comparison; and
-- `proposal_comparison.html` — an interactive dashboard-style scatterplot for
-  comparing each proposal with exact-branch peers and related same-economy
-  estimate inputs; and
+- `proposal_comparison.html` — a single-page set of interactive dashboard-style
+  scatterplots comparing every proposal with exact-branch peers and related
+  same-economy estimate inputs; and
 - `estimation_manifest.json` — source and artifact SHA-256 checksums, counts and
   selected strategies.
 
@@ -146,21 +146,26 @@ fractional years.
 
 ### Visual review
 
-Open `proposal_comparison.html` and choose the economy, variable and datapoint.
-It reuses the dashboard's spread-dot visual language:
+Open `proposal_comparison.html` to see every proposal on one scrollable page.
+Economy jump links lead to one section per affected economy, with separate
+Mileage and Fuel Economy charts. Charts with many datapoints use the full page
+width so their branch labels remain legible; compact charts can share a row.
+No selector is required to discover or compare the proposals. The page reuses
+the dashboard's spread-dot visual language:
 
-- a red diamond and dotted horizontal line show the proposed value;
+- red diamonds show all proposed values;
 - blue circles show the exact same branch in other economies; and
 - green triangles show related same-economy values used by the selected
   Mileage method.
 
-Hover text retains the economy, complete branch, value and evidence role. The
-summary below the chart repeats the proposal, method, input count and
-cross-validation median error. Stored Mileage values are expanded from their
-`Thousands` scale to km/vehicle/year. Fuel Economy is labelled in MJ/100 km and
-the page explicitly explains that lower means more efficient. The chart uses the
-same pinned Plotly CDN approach as the generated model dashboard; the CSV and
-manifest evidence remain usable if the chart library is temporarily offline.
+Hover text retains the proposal ID, economy, complete branch, value and evidence
+role. Proposal hover text also reports the method, input count,
+cross-validation median error and review comment. Stored Mileage values are
+expanded from their `Thousands` scale to km/vehicle/year. Fuel Economy is
+labelled in MJ/100 km and the page explicitly explains that lower means more
+efficient. The chart uses the same pinned Plotly CDN approach as the generated
+model dashboard; the CSV and manifest evidence remain usable if the chart
+library is temporarily offline.
 
 ## What this case study does and does not establish
 
