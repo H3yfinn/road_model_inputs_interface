@@ -50,6 +50,7 @@ from core.road_module1_defaults import (
     list_default_economies,
     list_default_versions,
     load_default_filled_inputs,
+    validate_module1_value_for_variable,
     write_all_economy_packages,
 )
 
@@ -627,6 +628,27 @@ def _round_static_display_values(long_df: pd.DataFrame) -> pd.DataFrame:
     return rounded[MODULE1_LONG_COLUMNS].copy()
 
 
+def _validate_static_values(long_df: pd.DataFrame, economy_code: str) -> None:
+    """Reject non-numeric or contract-invalid values before static publication."""
+    violations: list[dict[str, object]] = []
+    for row in long_df[["Scenario", "Branch Path", "Variable", "Year", "Value"]].to_dict("records"):
+        numeric = pd.to_numeric(pd.Series([row["Value"]]), errors="coerce").iloc[0]
+        message = (
+            f"{row['Variable']} must be a finite number."
+            if pd.isna(numeric)
+            else validate_module1_value_for_variable(str(row["Variable"]), float(numeric))
+        )
+        if message:
+            violations.append({**row, "Validation Error": message})
+            if len(violations) == 10:
+                break
+    if violations:
+        raise ValueError(
+            f"Static bundle contains invalid Module 1 values for {economy_code}. "
+            f"Sample: {violations}"
+        )
+
+
 def _normalise_current_accounts_defaults(
     defaults_df: pd.DataFrame,
     economy: str,
@@ -735,6 +757,7 @@ def write_frontend_static_bundle(
             economy_code=economy_code,
         )
         long_defaults_df = _round_static_display_values(long_defaults_df)
+        _validate_static_values(long_defaults_df, economy_code)
 
         economy_row_keys[economy_code] = set(
             zip(

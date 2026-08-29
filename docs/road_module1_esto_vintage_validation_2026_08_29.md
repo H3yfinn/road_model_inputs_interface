@@ -105,6 +105,11 @@ before source-priority resolution, records the excluded source row as
 to compete normally. This changes neither source files nor the fallback policy;
 it prevents an invalid source value from masking an existing valid candidate.
 
+Static publication now applies the same per-variable value contract after
+rounding and before writing an economy CSV. A non-numeric value, zero
+`Mileage`, or zero `Fuel Economy` therefore fails the build with a bounded row
+sample instead of producing a bundle that fails later in Module 2.
+
 ## Activation status
 
 The code contract, interface selector, package generator, and model adapter are
