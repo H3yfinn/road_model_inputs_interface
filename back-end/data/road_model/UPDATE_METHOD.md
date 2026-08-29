@@ -889,3 +889,32 @@ Deployment details and the My Drive OAuth boundary are recorded in
   normalised sparse selections.
 - Safety: This remains staging-only and developer-only. It does not change ESTO
   energy-balance anchors, source/default/static data, Drive or active model data.
+
+## Cross-validated missing operating-value proposals
+
+- Date: 2026-08-29
+- Author: Codex
+- Purpose: Produce auditable last-resort proposals for required non-positive
+  Current Accounts `Mileage` and `Fuel Economy` rows without presenting the
+  estimates as observations.
+- Method: Mask each known positive target row in turn and compare simple
+  candidate methods. Use exact-branch cross-economy medians for Fuel Economy.
+  For Mileage, prefer other fuel branches for the same economy and exact drive,
+  then the same economy/vehicle/size, then cross-economy peers. Select by median
+  absolute percentage error and then 90th-percentile error.
+- Command: Run `back-end/scripts/estimate_missing_module1_values.py` with an
+  explicit static-version directory, integer base year and new review-output
+  directory. See
+  `docs/road_module1_missing_value_estimation_case_study_2026_08_29.md`.
+- Outputs: A compact 17-column proposal sheet with explicit reviewer decision
+  and note fields, a full proposal audit, complete
+  estimate/context evidence, raw cross-validation predictions, summary metrics
+  and a checksum manifest.
+- Provenance: Proposals are `model_assumption` with source data year 2022 and
+  explicit derivation/replacement guidance. A later base-year test must retain
+  2022 and use `carried_forward`, not relabel the estimate as native.
+- Safety: The command is review-only, refuses an existing output directory and
+  never applies or promotes values. Application is a separate exact-key step
+  that may replace only a non-positive value. No checked-in source/default/static
+  package, active model input/output, Drive file, secret or deployment setting
+  was changed for the case study.

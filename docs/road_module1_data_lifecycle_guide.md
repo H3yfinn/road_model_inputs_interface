@@ -67,6 +67,14 @@ original source evidence
 The browser is an editor and model hand-off. Google Drive is an immutable
 submission archive. Neither is the source of truth for approved defaults.
 
+When a required operating value has no defensible positive observation, use a
+reviewed model-derived estimate rather than disguising it as native data. The
+staging-only workflow and a worked 188-row example are documented in
+[`road_module1_missing_value_estimation_case_study_2026_08_29.md`](road_module1_missing_value_estimation_case_study_2026_08_29.md).
+It compares candidate methods by masked-known-value cross-validation, preserves
+the concrete evidence and source year, and never promotes a proposal
+automatically.
+
 ## Roles and visible workflows
 
 | Role | Normal surface | What it should show | What it must not do |
