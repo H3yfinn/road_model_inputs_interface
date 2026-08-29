@@ -13,6 +13,7 @@ from core.missing_value_estimation import (
     estimate_missing_values,
     normalise_estimation_pool,
 )
+from core.missing_value_review_html import build_proposal_comparison_html
 from scripts.estimate_missing_module1_values import generate_review_package
 
 
@@ -178,9 +179,32 @@ def test_review_package_is_complete_checksummed_and_never_overwritten(tmp_path):
     assert reviewer["Reviewer Note"].isna().all()
     text_cells = reviewer.astype("string").fillna("").stack()
     assert not text_cells.str.startswith(("=", "+", "-", "@")).any()
+    comparison_html = (output_dir / "proposal_comparison.html").read_text(encoding="utf-8")
+    assert "Proposal comparison scatterplot" in comparison_html
+    assert 'id="economy-select"' in comparison_html
+    assert 'id="variable-select"' in comparison_html
+    assert 'id="proposal-select"' in comparison_html
+    assert "#1565c0" in comparison_html
+    assert "#e53935" in comparison_html
+    assert "km/vehicle/year" in comparison_html
+    assert "const proposedValue=factor*proposal" in comparison_html
+    assert audit.iloc[0]["Proposal ID"] in comparison_html
     assert manifest["proposal_row_count"] == 2
     for artifact in manifest["artifacts"].values():
         path = output_dir / artifact["filename"]
         assert artifact["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
     with pytest.raises(ValueError, match="must not already exist"):
         generate_review_package(static_dir=static_dir, base_year=2022, output_dir=output_dir)
+
+
+def test_comparison_html_escapes_embedded_script_content():
+    result = estimate_missing_values(
+        _pool(), base_year=2022, min_peer_economies=2, min_adjustment_rows=1,
+    )
+    proposals = result.proposals.copy()
+    proposals.loc[proposals.index[0], "Comment"] = "safe </script><script>alert(1)</script>"
+
+    html = build_proposal_comparison_html(proposals, result.evidence)
+
+    assert "</script><script>alert(1)</script>" not in html
+    assert "\\u003c/script>" in html

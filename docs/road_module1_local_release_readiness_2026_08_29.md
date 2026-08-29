@@ -10,12 +10,12 @@ with fake services and temporary directories.
 
 ## Completed local checks
 
-- The interface full suite passed after the missing-value work: 270 tests.
+- The interface full suite passed after the missing-value work: 271 tests.
 - The model full suite passed after the dashboard-context correction: 263 tests.
-- The focused missing-value estimator suite passed: 8 tests, including strict
+- The focused missing-value estimator suite passed: 9 tests, including strict
   integer-year validation, exact-key-only application, insufficient-evidence
   failure, non-overwriting atomic publication, checksums, compact reviewer
-  columns and formula-safe generated cells.
+  columns, formula-safe generated cells and safe comparison-chart generation.
 - The focused archive, batch-review and run-router suite passed: 63 tests. This
   covers staged pair publication, pair filenames/checksums/IDs/row counts,
   exact recorded baselines, malformed-pair quarantine, continuation after an

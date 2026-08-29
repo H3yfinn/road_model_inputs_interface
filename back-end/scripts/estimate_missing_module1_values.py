@@ -23,6 +23,7 @@ from core.missing_value_estimation import (
     estimate_missing_values,
     load_static_estimation_pool,
 )
+from core.missing_value_review_html import build_proposal_comparison_html
 
 
 def _sha256(path: Path) -> str:
@@ -49,6 +50,7 @@ def generate_review_package(
             "evidence": staging / "proposal_evidence.csv",
             "cross_validation": staging / "cross_validation_predictions.csv",
             "cross_validation_summary": staging / "cross_validation_summary.csv",
+            "comparison_chart": staging / "proposal_comparison.html",
         }
         result.proposals.reindex(columns=REVIEW_COLUMNS).to_csv(
             artifacts["proposals"], index=False, lineterminator="\n", float_format="%.15g"
@@ -62,6 +64,9 @@ def generate_review_package(
         )
         result.cross_validation_summary.to_csv(
             artifacts["cross_validation_summary"], index=False, lineterminator="\n", float_format="%.15g"
+        )
+        artifacts["comparison_chart"].write_text(
+            build_proposal_comparison_html(result.proposals, result.evidence), encoding="utf-8"
         )
         manifest = {
             "schema_version": 1,

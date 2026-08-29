@@ -131,6 +131,9 @@ The output directory must not already exist. It contains:
 - `proposal_evidence.csv` — the inputs behind each decision;
 - `cross_validation_predictions.csv` — every masked-row prediction;
 - `cross_validation_summary.csv` — method comparison; and
+- `proposal_comparison.html` — an interactive dashboard-style scatterplot for
+  comparing each proposal with exact-branch peers and related same-economy
+  estimate inputs; and
 - `estimation_manifest.json` — source and artifact SHA-256 checksums, counts and
   selected strategies.
 
@@ -140,6 +143,24 @@ a reviewed proposal is a separate operation that accepts only an exact
 canonical key whose existing value is non-positive. It refuses absent keys,
 duplicate proposals, positive-value replacement, non-finite estimates and
 fractional years.
+
+### Visual review
+
+Open `proposal_comparison.html` and choose the economy, variable and datapoint.
+It reuses the dashboard's spread-dot visual language:
+
+- a red diamond and dotted horizontal line show the proposed value;
+- blue circles show the exact same branch in other economies; and
+- green triangles show related same-economy values used by the selected
+  Mileage method.
+
+Hover text retains the economy, complete branch, value and evidence role. The
+summary below the chart repeats the proposal, method, input count and
+cross-validation median error. Stored Mileage values are expanded from their
+`Thousands` scale to km/vehicle/year. Fuel Economy is labelled in MJ/100 km and
+the page explicitly explains that lower means more efficient. The chart uses the
+same pinned Plotly CDN approach as the generated model dashboard; the CSV and
+manifest evidence remain usable if the chart library is temporarily offline.
 
 ## What this case study does and does not establish
 

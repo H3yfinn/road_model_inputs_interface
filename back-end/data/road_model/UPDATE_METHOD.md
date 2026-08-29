@@ -907,9 +907,9 @@ Deployment details and the My Drive OAuth boundary are recorded in
   directory. See
   `docs/road_module1_missing_value_estimation_case_study_2026_08_29.md`.
 - Outputs: A compact 17-column proposal sheet with explicit reviewer decision
-  and note fields, a full proposal audit, complete
-  estimate/context evidence, raw cross-validation predictions, summary metrics
-  and a checksum manifest.
+  and note fields, a full proposal audit, complete estimate/context evidence,
+  raw cross-validation predictions, summary metrics, a dashboard-style
+  proposal-versus-evidence scatterplot and a checksum manifest.
 - Provenance: Proposals are `model_assumption` with source data year 2022 and
   explicit derivation/replacement guidance. A later base-year test must retain
   2022 and use `carried_forward`, not relabel the estimate as native.
