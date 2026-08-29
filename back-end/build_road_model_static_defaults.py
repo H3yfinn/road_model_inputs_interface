@@ -24,7 +24,7 @@ import pandas as pd
 import yaml
 
 from core.road_module1_provenance import enrich_module1_provenance
-from core.esto_vintage_registry import load_esto_vintage_registry
+from core.esto_vintage_registry import build_available_vintage_index, load_esto_vintage_registry
 
 from core.road_module1_defaults import (
     BASE_YEAR,
@@ -776,20 +776,8 @@ def write_frontend_static_bundle(
         versions_index.append(version_record)
 
     available_version_names = {item["version"] for item in versions_index}
-    available_vintages = [
-        {
-            "esto_vintage": item.esto_vintage,
-            "base_year": item.base_year,
-            "is_preliminary": item.is_preliminary,
-            "package_version": item.package_version,
-            "label": item.label,
-        }
-        for item in vintage_by_version.values()
-        if item.package_version in available_version_names
-    ]
-    default_vintage = next(
-        (item["esto_vintage"] for item in available_vintages if item["package_version"] == version),
-        max((item["esto_vintage"] for item in available_vintages), default=None),
+    available_vintages, default_vintage = build_available_vintage_index(
+        list(vintage_by_version.values()), available_version_names,
     )
 
     index_payload = {

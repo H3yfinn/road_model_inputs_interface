@@ -15,7 +15,9 @@ REGISTRY_PATH = (
     / "config"
     / "esto_vintage_registry.csv"
 )
-REGISTRY_COLUMNS = ("esto_vintage", "base_year", "is_preliminary", "package_version")
+REGISTRY_COLUMNS = (
+    "esto_vintage", "base_year", "is_preliminary", "is_default", "package_version",
+)
 _VERSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
 
@@ -24,6 +26,7 @@ class EstoVintage:
     esto_vintage: int
     base_year: int
     is_preliminary: bool
+    is_default: bool
     package_version: str
 
     @property
@@ -39,10 +42,10 @@ def _strict_year(value: str, field: str, row_number: int) -> int:
     return int(text)
 
 
-def _strict_bool(value: str, row_number: int) -> bool:
+def _strict_bool(value: str, field: str, row_number: int) -> bool:
     text = str(value).strip().lower()
     if text not in {"true", "false"}:
-        raise ValueError(f"is_preliminary on registry row {row_number} must be True or False.")
+        raise ValueError(f"{field} on registry row {row_number} must be True or False.")
     return text == "true"
 
 
@@ -69,7 +72,8 @@ def load_esto_vintage_registry(path: Path = REGISTRY_PATH) -> list[EstoVintage]:
                 EstoVintage(
                     esto_vintage=vintage,
                     base_year=base_year,
-                    is_preliminary=_strict_bool(row["is_preliminary"], row_number),
+                    is_preliminary=_strict_bool(row["is_preliminary"], "is_preliminary", row_number),
+                    is_default=_strict_bool(row["is_default"], "is_default", row_number),
                     package_version=package_version,
                 )
             )
@@ -80,4 +84,31 @@ def load_esto_vintage_registry(path: Path = REGISTRY_PATH) -> list[EstoVintage]:
         values = [getattr(record, field) for record in records]
         if len(values) != len(set(values)):
             raise ValueError(f"ESTO vintage registry contains duplicate {field} values.")
+    defaults = [record for record in records if record.is_default]
+    if len(defaults) != 1:
+        raise ValueError("ESTO vintage registry must contain exactly one default vintage.")
     return sorted(records, key=lambda record: record.esto_vintage)
+
+
+def build_available_vintage_index(
+    records: list[EstoVintage], available_versions: set[str],
+) -> tuple[list[dict[str, object]], int | None]:
+    """Return publishable vintage metadata without permitting default drift."""
+    default_record = next(record for record in records if record.is_default)
+    available = [
+        {
+            "esto_vintage": record.esto_vintage,
+            "base_year": record.base_year,
+            "is_preliminary": record.is_preliminary,
+            "package_version": record.package_version,
+            "label": record.label,
+        }
+        for record in records
+        if record.package_version in available_versions
+    ]
+    if available and default_record.package_version not in available_versions:
+        raise ValueError(
+            "Vintage packages are present but the configured default package is missing: "
+            f"{default_record.package_version}."
+        )
+    return available, default_record.esto_vintage if available else None

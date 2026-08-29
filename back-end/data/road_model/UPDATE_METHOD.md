@@ -66,7 +66,7 @@ year. The strict mapping is maintained in
 
 | ESTO vintage | Model base year | Status |
 |---|---:|---|
-| 2024 | 2022 | Final |
+| 2024 | 2022 | Final — configured default |
 | 2025 | 2023 | Final |
 | 2026 | 2024 | Preliminary |
 
@@ -74,6 +74,11 @@ Each vintage maps to one distinct generated package version. The static index
 only advertises a vintage after that package exists, so an incomplete staging
 run cannot create a broken choice in the interface. Do not edit `index.json`
 or static CSVs to add a vintage manually.
+
+Exactly one registry row must have `is_default=True`. The configured default is
+ESTO 2024 / base year 2022. If any vintage packages are present during static
+index generation but that default package is absent, the build fails rather
+than silently choosing a different vintage.
 
 Changing vintage in the browser loads the matching package and base year. Any
 current edits are saved as a separate browser draft and are not copied between
@@ -162,6 +167,13 @@ The build then applies the pure normaliser in
 - blank dates and legacy-looking filenames are not evidence by themselves;
 - uncertain lineage stays blank/`legacy_unknown` and receives “original source
   detail not yet recorded” guidance;
+- named lifecycle curves and lifecycle/control defaults are explicitly
+  structural or model assumptions. Their calendar source year remains blank
+  because it is not applicable; their derivation method and replacement
+  guidance are recorded instead;
+- `manually_entered_missing_rows.csv` values retain their explicit 2022 row
+  year as `Source Data Year=2022`, remain `legacy_unknown`, and continue to ask
+  for a better original dataset citation;
 - proven, version-scoped 9th Outlook lineage points users to the archived
   transport data system for investigation on demand, while retaining
   `legacy_unknown` internally and staying non-native unless explicit source

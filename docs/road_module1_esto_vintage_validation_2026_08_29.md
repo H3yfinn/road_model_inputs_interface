@@ -6,7 +6,7 @@ This validation built and checked the three registered ESTO-vintage packages:
 
 | ESTO vintage | Base year | Package version |
 |---:|---:|---|
-| 2024 | 2022 | `v2026_08_29_esto_2024` |
+| 2024 (configured default) | 2022 | `v2026_08_29_esto_2024` |
 | 2025 | 2023 | `v2026_08_29_esto_2025` |
 | 2026 (preliminary) | 2024 | `v2026_08_29_esto_2026` |
 
@@ -62,7 +62,7 @@ These counts cover dated Current Accounts rows across all economies. Each
 selected row retains its original source year and whether it was carried
 forward or backward; a shifted package is never reused as an original source.
 
-## Provenance issue requiring a policy decision
+## Provenance policy resolved after validation
 
 The 2022 packages contain 3,394 Current Accounts rows classified
 `legacy_unknown` / `legacy_unrecorded`. They occur in every economy:
@@ -81,13 +81,20 @@ rows, and model-assumption defaults. However, they are not all documented as
 9th Outlook observations, so assigning 2022 to every row would create false
 precision and would contradict the conservative provenance rule.
 
-Recommended policy: classify lifecycle curves, turnover controls, and growth
+The reviewed policy is to classify lifecycle curves, turnover controls, and growth
 adjustments explicitly as structural/model assumptions for which a data year
 may be not applicable; separately record 2022 for the manual Fuel Economy and
 Mileage rows whose checked-in row and comment explicitly identify a 2022
 value, while retaining the request for better source detail. Do not label all
-3,394 rows as 9th Outlook data. This policy should be approved before the
-packages are promoted.
+3,394 rows as 9th Outlook data. This policy is implemented in explicit,
+version-scoped source-provenance rules and will apply when the packages are
+regenerated.
+
+An in-memory post-policy recheck across the same 21 staged 2022 economy
+packages preserved every canonical key and numeric value. It produced zero
+`legacy_unrecorded` treatments, identified 3,192 structural-assumption rows and
+126 model-assumption rows with no fabricated source year, and recorded 2022 on
+the 76 manual Fuel Economy/Mileage fallback rows.
 
 ## Activation status
 
@@ -95,6 +102,6 @@ The code contract, interface selector, package generator, and model adapter are
 validated. The three vintage packages remain staging artifacts and are not
 discoverable in the production interface. Activation still requires an
 authorised regeneration/promotion of the generated backend outputs and static
-bundle, followed by an interface smoke test. The provenance decision above
-should be resolved first unless the reviewer explicitly accepts the known
-legacy classifications for an initial release.
+bundle, followed by an interface smoke test. ESTO 2024 / base year 2022 is the
+configured initial default; the build will refuse to publish vintage choices
+if that default package is missing.

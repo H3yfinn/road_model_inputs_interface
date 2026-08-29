@@ -6,6 +6,8 @@ Researchers choose among available ESTO vintages using the **Data vintage**
 dropdown in the top-right of the interface. They do not type or independently
 choose a base year. The current mappings are ESTO 2024 → base year 2022, ESTO
 2025 → base year 2023, and ESTO 2026 (preliminary) → base year 2024.
+ESTO 2024 / base year 2022 is the configured default for now; the other two
+remain explicit user choices.
 
 Each choice loads a separate canonical Module 1 package. Native data for the
 selected base year is preferred; where policy permits and native data is not
@@ -25,6 +27,9 @@ the authoritative mapping. Its validation rejects fractional years, duplicate
 vintages/base years/package versions, unsafe package names, and any mapping
 other than `base year = ESTO vintage - 2`. Only completely generated package
 versions are included in the static index and shown in the dropdown.
+Exactly one registry row is the default. A static build containing any vintage
+package fails if the configured default package is missing, so the interface
+cannot silently fall forward to a different vintage.
 
 ## Purpose
 
@@ -117,6 +122,20 @@ Record the derivation, not a fictitious external source. For example, `Stock
 Share` is derived from resolved `Stock`; preserve the upstream source and
 derivation method.
 
+### Structural and model assumptions
+
+Lifecycle survival curves, base-year vintage profiles, turnover controls, and
+growth adjustments are assumptions rather than year-specific observations.
+They retain their named source file, use `structural_assumption` or
+`model_assumption`, record an explicit derivation method, and leave `Source Data
+Year` blank instead of inventing 2022. The interface asks for replacement when
+better documented evidence becomes available.
+
+Rows from `manually_entered_missing_rows.csv` are different: their checked-in
+row and comment identify a 2022 value. They therefore record `Source Data
+Year=2022` but remain `legacy_unknown` and retain the request for a better
+original dataset citation.
+
 ### Researcher change
 
 The note should include the dataset/document, source year, link/reference where
@@ -131,15 +150,17 @@ Variable, Year)`. The rule order is:
 
 1. Preserve and validate explicit structured metadata. An explicit `Source Data
    Year` always wins.
-2. Apply an explicit source-lineage rule only when both the source-name pattern
-   and package version match.
-3. For a proven, version-scoped 9th Outlook lineage with no source year, use
+2. Mark identified derived/generated rows with their actual derivation rather
+   than representing them as external observations.
+3. Apply an explicit source-lineage rule only when both the source-name pattern
+   and package version match. For a proven, version-scoped 9th Outlook lineage
+   with no source year, use
    2022. Canonical display provenance remains honest about the legacy lineage;
    candidate extraction separately applies the non-native
    `verified_9th_outlook` eligibility marker.
-4. Mark identified derived/generated rows with their actual derivation rather
-   than representing them as external observations.
-5. Leave an uncertain source year blank, retain `legacy_unknown`, and add the
+4. Apply explicit, version-scoped rules for named assumptions and documented
+   manual 2022 fallbacks as described above.
+5. Leave any other uncertain source year blank, retain `legacy_unknown`, and add the
    honest missing-detail guidance.
 
 The checked-in mapping is intentionally narrow. For

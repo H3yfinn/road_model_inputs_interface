@@ -5,7 +5,9 @@ import pytest
 
 from core.road_module1_provenance import (
     CURRENT_SOURCE_PACKAGE_VERSION,
+    ASSUMPTION_GUIDANCE,
     LEGACY_GUIDANCE,
+    MANUAL_2022_GUIDANCE,
     NINTH_OUTLOOK_ARCHIVE_URL,
     NINTH_OUTLOOK_GUIDANCE,
     LineageRule,
@@ -70,6 +72,51 @@ def test_unknown_blank_date_stays_blank_and_requests_legacy_detail():
     assert pd.isna(result.loc[0, "Source Data Year"])
     assert result.loc[0, "Source Classification"] == "legacy_unknown"
     assert LEGACY_GUIDANCE in result.loc[0, "Comment"]
+
+
+@pytest.mark.parametrize(
+    "source, variable, classification, method",
+    [
+        (
+            "vehicle_survival_modified_00_APEC.xlsx", "Survival Rate",
+            "structural_assumption", "lifecycle_survival_assumption",
+        ),
+        (
+            "vintage_modelled_from_survival_00_APEC.xlsx", "Vintage Profile Share",
+            "structural_assumption", "base_year_vintage_profile_assumption",
+        ),
+        (
+            "apec_lifecycle_profile_factors.csv", "Turnover Rate Bound Lower",
+            "model_assumption", "lifecycle_turnover_parameter",
+        ),
+        (
+            "model_assumption_defaults.csv", "Freight GDP Elasticity Adjustment",
+            "model_assumption", "model_assumption_default",
+        ),
+    ],
+)
+def test_named_assumption_sources_do_not_fabricate_a_calendar_year(
+    source, variable, classification, method,
+):
+    result = _enrich([_row(Source=source, Variable=variable)])
+    assert pd.isna(result.loc[0, "Source Data Year"])
+    assert result.loc[0, "Source Classification"] == classification
+    assert result.loc[0, "Base Year Treatment"] == "transformed"
+    assert result.loc[0, "Derivation Method"] == method
+    assert ASSUMPTION_GUIDANCE in result.loc[0, "Comment"]
+    counts = dict(audit_module1_source_quality(result).itertuples(index=False, name=None))
+    assert counts["legacy_detail_needed"] == 0
+
+
+def test_manual_missing_rows_record_2022_but_still_request_better_source_detail():
+    result = _enrich([_row(Source="manually_entered_missing_rows.csv", Variable="Mileage")])
+    assert result.loc[0, "Source Data Year"] == 2022
+    assert result.loc[0, "Source Classification"] == "legacy_unknown"
+    assert result.loc[0, "Base Year Treatment"] == "transformed"
+    assert result.loc[0, "Derivation Method"] == "manual_2022_fallback"
+    assert MANUAL_2022_GUIDANCE in result.loc[0, "Comment"]
+    counts = dict(audit_module1_source_quality(result).itertuples(index=False, name=None))
+    assert counts["legacy_detail_needed"] == 1
 
 
 def test_explicit_russia_2022_remains_2022_and_is_carried_backward_to_2021():

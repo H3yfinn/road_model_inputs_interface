@@ -42,6 +42,14 @@ NINTH_OUTLOOK_GUIDANCE = (
     f"transport data system and can be investigated on demand: {NINTH_OUTLOOK_ARCHIVE_URL}. "
     "The displayed value may also reflect subsequent aggregation, disaggregation, or model reconciliation."
 )
+ASSUMPTION_GUIDANCE = (
+    "This is a structural/model assumption rather than a year-specific observation; "
+    "replace it when better documented evidence becomes available."
+)
+MANUAL_2022_GUIDANCE = (
+    "Manually filled 2022 fallback — the row records the known value year, but the "
+    "original dataset citation should be improved when better source detail is available."
+)
 CURRENT_SOURCE_PACKAGE_VERSION = "v2026_06_05_road_module1_sources"
 
 
@@ -53,6 +61,19 @@ class LineageRule:
     source_glob: str
     package_versions: frozenset[str]
     lineage: str
+    fallback_source_data_year: int | None = None
+
+
+@dataclass(frozen=True)
+class SourceProvenanceRule:
+    """Explicit provenance for a named non-observational or manual source."""
+
+    rule_id: str
+    source_glob: str
+    package_versions: frozenset[str]
+    source_classification: str
+    derivation_method: str
+    guidance: str
     fallback_source_data_year: int | None = None
 
 
@@ -77,6 +98,34 @@ DEFAULT_LINEAGE_RULES = (
         package_versions=frozenset({CURRENT_SOURCE_PACKAGE_VERSION}),
         lineage="9th_outlook",
         fallback_source_data_year=2022,
+    ),
+)
+
+DEFAULT_SOURCE_PROVENANCE_RULES = (
+    SourceProvenanceRule(
+        "survival_curve_structural_assumption", "vehicle_survival_modified_00_APEC.xlsx",
+        frozenset({CURRENT_SOURCE_PACKAGE_VERSION}), "structural_assumption",
+        "lifecycle_survival_assumption", ASSUMPTION_GUIDANCE,
+    ),
+    SourceProvenanceRule(
+        "vintage_profile_structural_assumption", "vintage_modelled_from_survival_00_APEC.xlsx",
+        frozenset({CURRENT_SOURCE_PACKAGE_VERSION}), "structural_assumption",
+        "base_year_vintage_profile_assumption", ASSUMPTION_GUIDANCE,
+    ),
+    SourceProvenanceRule(
+        "lifecycle_parameter_model_assumption", "apec_lifecycle_profile_factors.csv",
+        frozenset({CURRENT_SOURCE_PACKAGE_VERSION}), "model_assumption",
+        "lifecycle_turnover_parameter", ASSUMPTION_GUIDANCE,
+    ),
+    SourceProvenanceRule(
+        "projection_adjustment_model_assumption", "model_assumption_defaults.csv",
+        frozenset({CURRENT_SOURCE_PACKAGE_VERSION}), "model_assumption",
+        "model_assumption_default", ASSUMPTION_GUIDANCE,
+    ),
+    SourceProvenanceRule(
+        "manual_missing_row_2022_fallback", "manually_entered_missing_rows.csv",
+        frozenset({CURRENT_SOURCE_PACKAGE_VERSION}), "legacy_unknown",
+        "manual_2022_fallback", MANUAL_2022_GUIDANCE, 2022,
     ),
 )
 
@@ -117,6 +166,22 @@ def _matching_lineage_rule(
     ]
     if len(matches) > 1:
         raise ValueError(f"Source {source!r} matches multiple provenance lineage rules.")
+    return matches[0] if matches else None
+
+
+def _matching_source_provenance_rule(
+    source: str,
+    package_version: str,
+    rules: Iterable[SourceProvenanceRule],
+) -> SourceProvenanceRule | None:
+    source_parts = [part.strip() for part in source.split(";") if part.strip()]
+    matches = [
+        rule for rule in rules
+        if package_version in rule.package_versions
+        and any(fnmatchcase(part, rule.source_glob) for part in source_parts)
+    ]
+    if len(matches) > 1:
+        raise ValueError(f"Source {source!r} matches multiple source provenance rules.")
     return matches[0] if matches else None
 
 
@@ -162,6 +227,7 @@ def enrich_module1_provenance(
     package_version: str,
     target_base_year: int | None = None,
     lineage_rules: Iterable[LineageRule] = DEFAULT_LINEAGE_RULES,
+    source_provenance_rules: Iterable[SourceProvenanceRule] = DEFAULT_SOURCE_PROVENANCE_RULES,
 ) -> pd.DataFrame:
     """Return canonical-long rows with conservative, idempotent provenance.
 
@@ -176,6 +242,7 @@ def enrich_module1_provenance(
 
     base_year = _normalise_year(target_base_year, "target_base_year")
     normalised_rules = tuple(lineage_rules)
+    normalised_source_rules = tuple(source_provenance_rules)
     for rule in normalised_rules:
         if not isinstance(rule, LineageRule):
             raise ValueError("Each lineage rule must be a LineageRule.")
@@ -184,6 +251,22 @@ def enrich_module1_provenance(
         if rule.lineage != "9th_outlook":
             raise ValueError(f"Unsupported provenance lineage {rule.lineage!r}.")
         _normalise_year(rule.fallback_source_data_year, f"{rule.rule_id}.fallback_source_data_year")
+    for rule in normalised_source_rules:
+        if not isinstance(rule, SourceProvenanceRule):
+            raise ValueError("Each source provenance rule must be a SourceProvenanceRule.")
+        if (
+            not rule.rule_id.strip() or not rule.source_glob.strip()
+            or not rule.package_versions or not rule.derivation_method.strip()
+            or not rule.guidance.strip()
+        ):
+            raise ValueError("Source provenance rules require identifiers, matching, and guidance fields.")
+        if rule.source_classification not in VALID_SOURCE_CLASSIFICATIONS:
+            raise ValueError(
+                f"Unsupported Source Classification {rule.source_classification!r} in {rule.rule_id}."
+            )
+        _normalise_year(
+            rule.fallback_source_data_year, f"{rule.rule_id}.fallback_source_data_year"
+        )
 
     enriched_rows: list[dict[str, object]] = []
     for _, raw_row in df.iterrows():
@@ -201,6 +284,9 @@ def enrich_module1_provenance(
 
         derived = _derived_kind(raw_row)
         lineage_rule = _matching_lineage_rule(source, package_version, normalised_rules)
+        source_rule = _matching_source_provenance_rule(
+            source, package_version, normalised_source_rules
+        )
         source_year = explicit_year
 
         if derived is not None:
@@ -215,6 +301,22 @@ def enrich_module1_provenance(
                 source_year = lineage_rule.fallback_source_data_year
             classification = classification or "legacy_unknown"
             comment = _append_guidance(comment, NINTH_OUTLOOK_GUIDANCE, source)
+        elif source_rule is not None:
+            if source_year is None:
+                source_year = source_rule.fallback_source_data_year
+            if classification in {"", "legacy_unknown"}:
+                classification = source_rule.source_classification
+            derivation = (
+                derivation if derivation not in {"", "legacy_unrecorded"}
+                else source_rule.derivation_method
+            )
+            comment = _append_guidance(comment, source_rule.guidance, source)
+            if (
+                treatment in {"", "legacy_unrecorded"}
+                and _text(row.get("Scenario")) == "Current Accounts"
+                and source_rule.source_classification in {"structural_assumption", "model_assumption"}
+            ):
+                treatment = "transformed"
         else:
             classification = classification or "legacy_unknown"
             if not source or classification == "legacy_unknown":
@@ -263,7 +365,10 @@ def audit_module1_source_quality(
     treatment = df["Base Year Treatment"].fillna("").astype(str).str.strip()
     derivation = df["Derivation Method"].fillna("").astype(str).str.strip()
     derived_generated = ~derivation.isin(
-        {"", "legacy_unrecorded", "prior_observation_seed", "future_year_seed"}
+        {
+            "", "legacy_unrecorded", "prior_observation_seed", "future_year_seed",
+            "manual_2022_fallback",
+        }
     )
     archived_reference_available = comment.str.contains(
         NINTH_OUTLOOK_ARCHIVE_URL, case=False, regex=False
