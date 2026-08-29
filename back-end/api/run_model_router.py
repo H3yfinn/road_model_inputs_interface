@@ -61,6 +61,7 @@ _MODULE1_INPUT_DIR = _ROAD_MODEL_REPO / "input_data" / "module1_defaults"
 _ROAD_SCENARIOS_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "scenarios.yaml"
 _ROAD_ECONOMIES_CONFIG = _ROAD_MODEL_REPO / "codebase" / "config" / "economies.yaml"
 _STATIC_BUNDLE_DIR = _INTERFACE_DIR / "front-end" / "road-module1-static"
+_ESTO_VINTAGE_DIR_ENV = "ROAD_MODEL_ESTO_VINTAGE_DIR"
 
 # In-memory registry of active subprocess handles keyed by run_id.
 _active_runs: dict[str, tuple[asyncio.subprocess.Process, str, bool]] = {}
@@ -149,6 +150,54 @@ def _validate_esto_vintage_selection(
             f"ESTO vintage {esto_vintage}, base year {base_year}, and package version {version!r} do not match."
         )
     return expected.esto_vintage
+
+
+def _resolve_esto_csv_for_vintage(esto_vintage: int | None) -> Path | None:
+    """Resolve a registered vintage to one validated operator-controlled table."""
+    if esto_vintage is None:
+        return None
+
+    records = {item.esto_vintage: item for item in load_esto_vintage_registry()}
+    record = records.get(int(esto_vintage))
+    if record is None:
+        raise ValueError(f"ESTO vintage {esto_vintage!r} is not registered.")
+
+    configured_dir = os.getenv(_ESTO_VINTAGE_DIR_ENV, "").strip()
+    if configured_dir:
+        root = Path(configured_dir).expanduser().resolve()
+        suffix = "_PRELIMINARY" if record.is_preliminary else ""
+        filename = f"00APEC_{record.esto_vintage}_low_with_subtotals{suffix}.csv"
+        candidate = (root / filename).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("Resolved ESTO table escaped the configured vintage directory.") from exc
+    elif record.is_default:
+        candidate = (_ROAD_MODEL_REPO / "input_data" / "esto_transport_2000_2022.csv").resolve()
+    else:
+        raise ValueError(
+            f"ESTO vintage {record.esto_vintage} requires {_ESTO_VINTAGE_DIR_ENV} "
+            "to point to the maintained read-only ESTO table directory."
+        )
+
+    if not candidate.is_file():
+        raise ValueError(f"ESTO vintage {record.esto_vintage} table was not found: {candidate}")
+    with candidate.open(newline="", encoding="utf-8-sig") as stream:
+        header = next(csv.reader(stream), [])
+    required = {"economy", "flows", "products", "is_subtotal"}
+    missing = required - set(header)
+    if missing:
+        raise ValueError(
+            f"ESTO vintage {record.esto_vintage} table is missing columns: {sorted(missing)}"
+        )
+    years = [int(column) for column in header if re.fullmatch(r"\d{4}", str(column))]
+    if not years or max(years) != record.base_year:
+        actual = max(years) if years else "none"
+        raise ValueError(
+            f"ESTO vintage {record.esto_vintage} must end at base year "
+            f"{record.base_year}; table ends at {actual}."
+        )
+    return candidate
 
 
 def _validate_submitted_base_year_rows(rows: list[dict[str, Any]], base_year: int) -> None:
@@ -611,6 +660,7 @@ async def start_road_model_run(payload: RunModelRequest):
                 f"Static package base year {static_base_year} does not match submitted base year {base_year}."
             )
         esto_vintage = _validate_esto_vintage_selection(version, base_year, payload.esto_vintage)
+        esto_csv = _resolve_esto_csv_for_vintage(esto_vintage)
         _validate_submitted_base_year_rows(payload.rows, base_year)
         csv_path = _write_module1_csv(
             payload.rows, payload.economy, version, base_year, esto_vintage,
@@ -658,6 +708,8 @@ async def start_road_model_run(payload: RunModelRequest):
         "--scenarios",
         *projection_scenarios,
     ]
+    if esto_csv is not None:
+        cmd.extend(["--esto-csv", str(esto_csv)])
     if payload.enable_visualisations:
         cmd.append("--vis")
     if lifecycle_factors_path and lifecycle_factors_path.exists():

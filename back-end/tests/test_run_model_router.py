@@ -131,6 +131,43 @@ def test_unregistered_package_rejects_claimed_vintage():
         router_mod._validate_esto_vintage_selection("v_legacy", 2022, 2024)
 
 
+def test_resolve_esto_csv_for_vintage_validates_filename_schema_and_final_year(tmp_path, monkeypatch):
+    import api.run_model_router as router_mod
+
+    path = tmp_path / "00APEC_2025_low_with_subtotals.csv"
+    path.write_text(
+        "economy,flows,products,is_subtotal,2022,2023\n"
+        "20USA,15.02 Road,19 Total,TRUE,1,2\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ROAD_MODEL_ESTO_VINTAGE_DIR", str(tmp_path))
+
+    assert router_mod._resolve_esto_csv_for_vintage(2025) == path.resolve()
+
+
+def test_resolve_esto_csv_for_vintage_rejects_wrong_final_year(tmp_path, monkeypatch):
+    import api.run_model_router as router_mod
+
+    path = tmp_path / "00APEC_2025_low_with_subtotals.csv"
+    path.write_text(
+        "economy,flows,products,is_subtotal,2022\n"
+        "20USA,15.02 Road,19 Total,TRUE,1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ROAD_MODEL_ESTO_VINTAGE_DIR", str(tmp_path))
+
+    with pytest.raises(ValueError, match="must end at base year 2023"):
+        router_mod._resolve_esto_csv_for_vintage(2025)
+
+
+def test_non_default_vintage_requires_configured_read_only_directory(monkeypatch):
+    import api.run_model_router as router_mod
+
+    monkeypatch.delenv("ROAD_MODEL_ESTO_VINTAGE_DIR", raising=False)
+    with pytest.raises(ValueError, match="ROAD_MODEL_ESTO_VINTAGE_DIR"):
+        router_mod._resolve_esto_csv_for_vintage(2025)
+
+
 def test_static_bundle_base_year_reads_new_metadata(tmp_path, monkeypatch):
     import json
     import api.run_model_router as router_mod

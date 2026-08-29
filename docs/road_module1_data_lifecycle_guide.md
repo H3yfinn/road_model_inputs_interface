@@ -31,6 +31,16 @@ Exactly one registry row is the default. A static build containing any vintage
 package fails if the configured default package is missing, so the interface
 cannot silently fall forward to a different vintage.
 
+For local/server model runs, the operator sets `ROAD_MODEL_ESTO_VINTAGE_DIR` to
+the read-only directory containing the maintained files named
+`00APEC_<vintage>_low_with_subtotals.csv` (with `_PRELIMINARY` for a registry
+entry marked preliminary). The backend derives the filename only from the
+validated registry, checks the ESTO schema and final year, and passes that same
+table to model history and base-year reconciliation. Researchers never enter a
+filesystem path. The default ESTO 2024 choice can continue to use the existing
+repo-local 2000–2022 deployment snapshot when the directory is not configured;
+newer choices fail clearly rather than silently using the wrong energy year.
+
 ## Purpose
 
 This is the central human/AI guide to how Road Module 1 data moves from
