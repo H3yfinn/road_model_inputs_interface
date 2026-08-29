@@ -555,6 +555,36 @@ summary. The output directory must be new or empty. Existing files are never
 overwritten, protected data/default/static paths are refused, and the command
 has no promotion or index-update operation.
 
+### Staging-only multi-vintage release command
+
+After the per-economy review logic and source data have been accepted, use the
+separate release-staging command to build every vintage in
+`esto_vintage_registry.csv` as one local, inspectable set:
+
+```powershell
+python back-end/scripts/stage_road_module1_vintage_release.py `
+  --output-root C:\path\to\new_backend_staging `
+  --static-root C:\path\to\new_static_staging
+```
+
+Both destinations are required, must not already exist, and must be separate
+non-nested directories outside protected source/default/static/model paths.
+The command first regenerates the corrected source-backed Current Accounts
+fallback in a temporary directory. For every registered vintage and economy,
+it then invokes the existing checked-in-candidate resolver, validates the
+complete canonical package (including integer years, canonical keys, economy,
+base-year slice, projection boundary and per-variable value contract), and
+writes identical checksum-verified copies to the staged backend and frontend
+shapes. Per-economy resolution audits remain beside the backend package;
+per-version manifests and one release manifest record row counts and SHA-256
+checksums. The staged frontend `index.json` exposes only the complete registered
+set and preserves the registry's configured default.
+
+This command has no Drive option and no deployment or promotion behavior. A
+failure leaves neither requested destination visible, so a partial vintage set
+cannot be mistaken for a finished release. The normal hard-coded publication
+command remains unchanged.
+
 To deliberately run the same staged workflow for every economy and include the
 researcher-submission archive review in one operator action, use:
 

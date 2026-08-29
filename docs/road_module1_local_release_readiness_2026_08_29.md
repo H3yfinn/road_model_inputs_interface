@@ -81,15 +81,51 @@ passed 63 of 63 runs.
 
 ## Remaining local release checklist
 
-1. Generate the three immutable backend/static package versions through the
-   normal publication gate and inspect their manifests/checksums. Do not copy a
-   shifted generated package back into the source layer.
-2. Repeat the local browser smoke test for selector switching, draft isolation,
-   comment/source guidance, acknowledgement and one full model run.
+1. Run the staging-only vintage release command below and inspect its
+   manifests/checksums. It regenerates a corrected source fallback, resolves
+   every registered vintage from original checked-in candidates, and writes
+   the three immutable backend/static package versions only to explicit new
+   directories. It never copies a shifted generated package into the source
+   layer.
+2. Repeat the local browser smoke test against the staged static root for
+   selector switching, draft isolation, comment/source guidance,
+   acknowledgement and one full model run.
 3. Review the final generated-package diffs and provenance display.
 4. Only then perform a separately authorised deployment; verify the
    deployed index and one economy from each vintage without changing Drive
    archive contents.
+
+Run from the interface repository root with two new, caller-owned directories:
+
+```powershell
+python back-end/scripts/stage_road_module1_vintage_release.py `
+  --output-root C:\path\to\new_backend_staging `
+  --static-root C:\path\to\new_static_staging
+```
+
+The command refuses existing destinations, nested roots, checked-in data,
+normal backend outputs, the generated frontend bundle, active model inputs and
+model results. It builds behind temporary sibling directories, validates every
+complete canonical package, writes per-version and release manifests with
+SHA-256 checksums, and exposes the requested staging roots only after all
+registered economies and vintages pass. It does not access Drive, deploy, or
+update any production/static default.
+
+The first real command run exposed a late legacy LEAP-workbook overlay that
+replaced four reviewed positive `12NZ` Mileage/Fuel Economy estimates with
+invalid zeros after source-priority selection. The overlay now applies the same
+per-variable value contract as publication: an invalid base-year overlay is
+reported and skipped, preserving the valid ranked-source fallback and its
+provenance; valid workbook values continue to overlay normally.
+
+A clean rerun staged all 21 economies for all three vintages, passed the static
+row contract, wrote checksum-matched backend/static packages, and preserved
+ESTO 2024 as the configured default. The local artifacts are at:
+
+```text
+C:\Users\Work\AppData\Local\Temp\road_vintage_release_20260829_final\backend_packages
+C:\Users\Work\AppData\Local\Temp\road_vintage_release_20260829_final\frontend_static
+```
 
 ## Deliberately deferred
 

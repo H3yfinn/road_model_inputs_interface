@@ -2273,9 +2273,30 @@ def overlay_transport_leap_export_values(
         if selected_source_row is None:
             continue
 
+        base_year_value = selected_source_row.get(str(BASE_YEAR), pd.NA)
+        if not pd.isna(base_year_value):
+            validation_message = validate_module1_value_for_variable(variable, base_year_value)
+            if validation_message:
+                overlay_report_rows.append(
+                    {
+                        "status": "skipped_invalid_value",
+                        "Branch Path": branch_path,
+                        "Variable": variable,
+                        "Scenario": target_scenario,
+                        "Region": economy.name,
+                        "source_region": selected_source_row["Region"],
+                        "source_scenario": selected_source_row["Scenario"],
+                        "years_overlaid": "",
+                        "details": f"{BASE_YEAR}: {validation_message}",
+                    }
+                )
+                continue
+
         years_overlaid = []
         for year_col in YEAR_COLUMNS:
             if year_col not in workbook_df.columns or pd.isna(selected_source_row[year_col]):
+                continue
+            if validate_module1_value_for_variable(variable, selected_source_row[year_col]):
                 continue
             overlaid_df.at[idx, year_col] = float(selected_source_row[year_col])
             years_overlaid.append(year_col)
