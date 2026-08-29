@@ -58,6 +58,30 @@ python back-end\build_road_model_static_defaults.py
 Static CSVs are generated outputs and should be recreated from the source
 package, not edited as source data.
 
+## ESTO Vintage Packages
+
+The researcher interface exposes a data-vintage choice, not a free-form base
+year. The strict mapping is maintained in
+`config/esto_vintage_registry.csv`:
+
+| ESTO vintage | Model base year | Status |
+|---|---:|---|
+| 2024 | 2022 | Final |
+| 2025 | 2023 | Final |
+| 2026 | 2024 | Preliminary |
+
+Each vintage maps to one distinct generated package version. The static index
+only advertises a vintage after that package exists, so an incomplete staging
+run cannot create a broken choice in the interface. Do not edit `index.json`
+or static CSVs to add a vintage manually.
+
+Changing vintage in the browser loads the matching package and base year. Any
+current edits are saved as a separate browser draft and are not copied between
+vintages; the user is warned before switching and can return to restore the
+draft. A run request must provide the exact registered vintage, base year, and
+package version combination or the backend rejects it before writing model
+inputs.
+
 ## Source Files
 
 The active source folders under `back-end/data/road_model/` are:

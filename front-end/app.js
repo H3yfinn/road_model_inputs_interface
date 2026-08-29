@@ -17,6 +17,7 @@ const State = {
     balancedTree: null,
     roadModule1: {
         version: null,
+        estoVintage: null,
         economy: null,
         baseYear: null,
         scenario: 'Target',
@@ -182,6 +183,8 @@ const DOM = {
     compactIcon: document.getElementById('compact-icon'),
     roadModule1Main: document.getElementById('road-module1-main'),
     roadVersionSelect: document.getElementById('road-version-select'),
+    roadEstoVintageWrapper: document.getElementById('road-esto-vintage-wrapper'),
+    roadEstoVintageSelect: document.getElementById('road-esto-vintage-select'),
     roadEconomySelect: document.getElementById('road-economy-select'),
     roadLoadDefaults: document.getElementById('road-load-defaults'),
     roadUseBuiltinProvidedValues: document.getElementById('road-use-builtin-provided-values'),
@@ -573,6 +576,9 @@ function setupRoadModule1() {
             await autoLoadRoadModule1OnSelectionChange();
         });
     }
+    if (DOM.roadEstoVintageSelect) {
+        DOM.roadEstoVintageSelect.addEventListener('change', handleRoadEstoVintageChange);
+    }
     DOM.roadEconomySelect.addEventListener('change', async () => {
         if (roadModule1SuppressAutoLoad) return;
         await autoLoadRoadModule1OnSelectionChange();
@@ -662,6 +668,40 @@ function getRoadStaticIndexDefaultVersion(indexData, versions) {
     return '';
 }
 
+function getRoadStaticEstoVintages(indexData) {
+    const availableVersions = new Set(getRoadStaticIndexVersions(indexData));
+    const seenVintages = new Set();
+    const seenBaseYears = new Set();
+    const seenPackages = new Set();
+    return (Array.isArray(indexData?.esto_vintages) ? indexData.esto_vintages : [])
+        .map(item => {
+            const estoVintage = Number(item?.esto_vintage);
+            const baseYear = Number(item?.base_year);
+            const packageVersion = String(item?.package_version || '').trim();
+            if (!Number.isInteger(estoVintage) || !Number.isInteger(baseYear)) return null;
+            if (baseYear !== estoVintage - 2 || !availableVersions.has(packageVersion)) return null;
+            if (typeof item?.is_preliminary !== 'boolean') return null;
+            if (seenVintages.has(estoVintage) || seenBaseYears.has(baseYear) || seenPackages.has(packageVersion)) return null;
+            seenVintages.add(estoVintage);
+            seenBaseYears.add(baseYear);
+            seenPackages.add(packageVersion);
+            const suffix = item.is_preliminary ? ' (Preliminary)' : '';
+            return {
+                estoVintage,
+                baseYear,
+                packageVersion,
+                isPreliminary: item.is_preliminary,
+                label: `ESTO ${estoVintage} — Base year ${baseYear}${suffix}`
+            };
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.estoVintage - right.estoVintage);
+}
+
+function getRoadStaticVintageForVersion(indexData, version) {
+    return getRoadStaticEstoVintages(indexData).find(item => item.packageVersion === version) || null;
+}
+
 function getRoadStaticEconomyBaseYear(indexData, version, economy) {
     const entry = (indexData?.versions || []).find(item => item?.version === version);
     const economyEntry = (entry?.economies || []).find(item => item?.economy === economy);
@@ -748,6 +788,7 @@ async function loadRoadModule1DefaultsFromStaticBundle(version, economy) {
     return {
         key_columns: ROAD_MODULE1_LONG_KEY_COLUMNS,
         base_year: getRoadStaticEconomyBaseYear(staticIndex, version, economy),
+        esto_vintage: getRoadStaticVintageForVersion(staticIndex, version)?.estoVintage || null,
         rows
     };
 }
@@ -1125,6 +1166,14 @@ async function populateRoadModule1Selectors() {
                 DOM.roadVersionSelect.add(new Option(version, version));
             });
             DOM.roadVersionSelect.value = getRoadStaticIndexDefaultVersion(staticIndex, versions);
+            const vintages = getRoadStaticEstoVintages(staticIndex);
+            if (vintages.length > 0 && !vintages.some(item => item.packageVersion === DOM.roadVersionSelect.value)) {
+                const requestedDefault = Number(staticIndex.default_esto_vintage);
+                const defaultVintage = vintages.find(item => item.estoVintage === requestedDefault)
+                    || vintages[vintages.length - 1];
+                DOM.roadVersionSelect.value = defaultVintage.packageVersion;
+            }
+            populateRoadEstoVintageSelector(staticIndex, DOM.roadVersionSelect.value);
             await populateRoadModule1Economies(DOM.roadVersionSelect.value);
             roadModule1SuppressAutoLoad = false;
             await autoLoadRoadModule1OnSelectionChange();
@@ -1138,6 +1187,66 @@ async function populateRoadModule1Selectors() {
     }
 
     seedRoadModule1FallbackSelectors();
+    await autoLoadRoadModule1OnSelectionChange();
+}
+
+function populateRoadEstoVintageSelector(staticIndex, selectedVersion) {
+    if (!DOM.roadEstoVintageSelect || !DOM.roadEstoVintageWrapper) return;
+    const vintages = getRoadStaticEstoVintages(staticIndex);
+    DOM.roadEstoVintageSelect.innerHTML = '';
+    vintages.forEach(item => DOM.roadEstoVintageSelect.add(new Option(item.label, String(item.estoVintage))));
+    const selected = vintages.find(item => item.packageVersion === selectedVersion);
+    if (selected) DOM.roadEstoVintageSelect.value = String(selected.estoVintage);
+    DOM.roadEstoVintageWrapper.classList.toggle('hidden', vintages.length === 0);
+    DOM.roadEstoVintageWrapper.classList.toggle('flex', vintages.length > 0);
+}
+
+function canSaveRoadModule1Drafts() {
+    if (typeof localStorage === 'undefined') return false;
+    const probeKey = 'roadModule1Draft:storage-probe';
+    try {
+        localStorage.setItem(probeKey, '1');
+        localStorage.removeItem(probeKey);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function handleRoadEstoVintageChange() {
+    if (roadModule1SuppressAutoLoad) return;
+    const staticIndex = await fetchRoadModule1StaticIndex();
+    const vintages = getRoadStaticEstoVintages(staticIndex);
+    const selected = vintages.find(item => String(item.estoVintage) === DOM.roadEstoVintageSelect.value);
+    const previousVersion = getSelectedRoadModule1Version();
+    if (!selected) {
+        populateRoadEstoVintageSelector(staticIndex, previousVersion);
+        showCustomToast('That ESTO vintage is not available.', 'error');
+        return;
+    }
+    if (selected.packageVersion === previousVersion) return;
+    if (hasRoadResearcherChanges()) {
+        const draftSaved = saveRoadModule1DraftNow();
+        const storageMessage = draftSaved
+            ? 'Your current edits have been saved as a separate browser draft for this vintage. They will not be copied to the new vintage. Switch back to restore them.'
+            : 'Browser draft storage is unavailable. Download your filled CSV before switching if you need to retain these edits.';
+        const accepted = await showCustomConfirm(
+            'Switch ESTO vintage?',
+            `${storageMessage}\n\nLoad ${selected.label}?`,
+            { confirmText: 'Switch Vintage', cancelText: 'Stay Here' }
+        );
+        if (!accepted) {
+            populateRoadEstoVintageSelector(staticIndex, previousVersion);
+            return;
+        }
+    }
+    roadModule1SuppressAutoLoad = true;
+    try {
+        DOM.roadVersionSelect.value = selected.packageVersion;
+        await populateRoadModule1Economies(selected.packageVersion);
+    } finally {
+        roadModule1SuppressAutoLoad = false;
+    }
     await autoLoadRoadModule1OnSelectionChange();
 }
 
@@ -1208,6 +1317,7 @@ function serializeRoadModule1Draft() {
     return {
         savedAt: new Date().toISOString(),
         version: State.roadModule1.version,
+        estoVintage: State.roadModule1.estoVintage,
         economy: State.roadModule1.economy,
         scenario: State.roadModule1.scenario,
         scenarios: State.roadModule1.scenarios,
@@ -1241,16 +1351,17 @@ function readRoadModule1Draft(version, economy) {
 
 function saveRoadModule1DraftNow() {
     const draftKey = getRoadModule1DraftKey();
-    if (!draftKey || !State.roadModule1.rows.length) return;
-    if (typeof localStorage === 'undefined') return;
+    if (!draftKey || !State.roadModule1.rows.length || !canSaveRoadModule1Drafts()) return false;
 
     try {
         const draft = serializeRoadModule1Draft();
         localStorage.setItem(draftKey, JSON.stringify(draft));
         State.roadModule1.lastDraftSavedAt = draft.savedAt;
         if (DOM.roadClearDraft) DOM.roadClearDraft.disabled = false;
+        return true;
     } catch (error) {
         console.warn('Failed to save Road model draft:', error);
+        return false;
     }
 }
 
@@ -1486,6 +1597,7 @@ async function loadRoadModule1Defaults() {
         const loadSourceLabel = 'packaged static defaults';
 
         State.roadModule1.version = version;
+        State.roadModule1.estoVintage = response.esto_vintage;
         State.roadModule1.economy = economy;
         State.roadModule1.baseYear = response.base_year;
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
@@ -1577,6 +1689,7 @@ async function loadRoadModule1BuiltinProvidedValues() {
     try {
         const response = await loadRoadModule1DefaultsFromStaticBundle(version, economy);
         State.roadModule1.version = version;
+        State.roadModule1.estoVintage = response.esto_vintage;
         State.roadModule1.economy = economy;
         State.roadModule1.baseYear = response.base_year;
         State.roadModule1.keyColumns = ROAD_MODULE1_REQUIRED_KEY_COLUMNS;
@@ -5228,6 +5341,7 @@ async function runRoadModel() {
                 economy: State.roadModule1.economy,
                 version: State.roadModule1.version,
                 base_year: State.roadModule1.baseYear,
+                esto_vintage: State.roadModule1.estoVintage,
                 rows: completedLongRows,
                 scenarios: projectionScenarios,
                 enable_visualisations: true,

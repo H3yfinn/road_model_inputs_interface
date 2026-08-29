@@ -28,3 +28,20 @@ def test_source_reason_guidance_is_visible_and_repeated_before_run():
     assert "dataset or document, source year, link or reference" in index_source
     assert "no source / reason note" in app_source
     assert "The run can continue" in app_source
+
+
+def test_esto_vintage_selector_is_simple_and_warns_before_switching_edits():
+    app_source = APP_JS.read_text(encoding="utf-8")
+    index_source = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="road-esto-vintage-select"' in index_source
+    assert "Changing it loads a separate input package" in index_source
+    assert "Switch ESTO vintage?" in app_source
+    assert "They will not be copied to the new vintage" in app_source
+    assert "saveRoadModule1DraftNow()" in app_source
+    assert "baseYear !== estoVintage - 2" in app_source
+
+
+def test_run_payload_records_selected_esto_vintage():
+    app_source = APP_JS.read_text(encoding="utf-8")
+    assert "esto_vintage: State.roadModule1.estoVintage" in app_source

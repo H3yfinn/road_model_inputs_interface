@@ -1,5 +1,31 @@
 # Road Module 1 data lifecycle and provenance guide
 
+## Choosing an ESTO vintage
+
+Researchers choose among available ESTO vintages using the **Data vintage**
+dropdown in the top-right of the interface. They do not type or independently
+choose a base year. The current mappings are ESTO 2024 → base year 2022, ESTO
+2025 → base year 2023, and ESTO 2026 (preliminary) → base year 2024.
+
+Each choice loads a separate canonical Module 1 package. Native data for the
+selected base year is preferred; where policy permits and native data is not
+available, the resolver selects an eligible dated candidate and retains its
+source year and whether it was carried forward or backward. Developer-reviewed
+manual candidate selections remain sparse, audited, and outside the researcher
+interface.
+
+Browser edits are kept separate by package version and economy. Before a user
+switches vintage, the interface saves the current draft and explains that the
+edits will not be transferred. Switching back offers the saved draft for
+restoration. If browser storage is unavailable, the warning tells the user to
+download the filled CSV first.
+
+The checked-in `back-end/data/road_model/config/esto_vintage_registry.csv` is
+the authoritative mapping. Its validation rejects fractional years, duplicate
+vintages/base years/package versions, unsafe package names, and any mapping
+other than `base year = ESTO vintage - 2`. Only completely generated package
+versions are included in the static index and shown in the dropdown.
+
 ## Purpose
 
 This is the central human/AI guide to how Road Module 1 data moves from

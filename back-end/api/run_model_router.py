@@ -30,6 +30,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
 from core.logger import get_logger
+from core.esto_vintage_registry import load_esto_vintage_registry
 from core.researcher_submission_review import (
     DRIVE_FILE_SCOPE,
     archive_submission_to_drive,
@@ -129,6 +130,25 @@ def _static_bundle_base_year(economy: str, version: str) -> int | None:
             if economy_item.get("economy") == compact and economy_item.get("base_year") is not None:
                 return int(economy_item["base_year"])
     return None
+
+
+def _validate_esto_vintage_selection(
+    version: str, base_year: int, esto_vintage: int | None,
+) -> int | None:
+    """Require a vintage/base-year match for registered packages and reject forged mappings."""
+    registered = {item.package_version: item for item in load_esto_vintage_registry()}
+    expected = registered.get(version)
+    if expected is None:
+        if esto_vintage is not None:
+            raise ValueError(f"Package version {version!r} is not registered to an ESTO vintage.")
+        return None
+    if esto_vintage is None:
+        raise ValueError(f"Package version {version!r} requires its recorded ESTO vintage.")
+    if int(esto_vintage) != expected.esto_vintage or int(base_year) != expected.base_year:
+        raise ValueError(
+            f"ESTO vintage {esto_vintage}, base year {base_year}, and package version {version!r} do not match."
+        )
+    return expected.esto_vintage
 
 
 def _validate_submitted_base_year_rows(rows: list[dict[str, Any]], base_year: int) -> None:
@@ -242,7 +262,10 @@ def _write_lifecycle_factors_csv(turnover_config: dict[str, Any], dest_dir: Path
     return csv_path
 
 
-def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str, base_year: int | None = None) -> Path:
+def _write_module1_csv(
+    rows: list[dict[str, Any]], economy: str, version: str,
+    base_year: int | None = None, esto_vintage: int | None = None,
+) -> Path:
     """Write completed Module 1 rows as CSV into leap_road_model's input_data directory."""
     economy_canonical = _to_canonical_economy(economy)
     version = validate_version(version)
@@ -265,6 +288,7 @@ def _write_module1_csv(rows: list[dict[str, Any]], economy: str, version: str, b
             json.dumps({
                 "base_year": int(base_year),
                 "base_year_provenance": "recorded",
+                "esto_vintage": int(esto_vintage) if esto_vintage is not None else None,
                 "package_version": version,
                 "economy": economy_canonical,
             }, indent=2),
@@ -434,6 +458,7 @@ class RunModelRequest(BaseModel):
     version: str
     rows: list[dict[str, Any]]
     base_year: int | None = None
+    esto_vintage: int | None = None
     scenarios: list[str] | None = None
     enable_visualisations: bool = True
     turnover_config: dict[str, Any] | None = None
@@ -585,8 +610,11 @@ async def start_road_model_run(payload: RunModelRequest):
             raise ValueError(
                 f"Static package base year {static_base_year} does not match submitted base year {base_year}."
             )
+        esto_vintage = _validate_esto_vintage_selection(version, base_year, payload.esto_vintage)
         _validate_submitted_base_year_rows(payload.rows, base_year)
-        csv_path = _write_module1_csv(payload.rows, payload.economy, version, base_year)
+        csv_path = _write_module1_csv(
+            payload.rows, payload.economy, version, base_year, esto_vintage,
+        )
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to write Module 1 CSV: {exc}") from exc
 
@@ -601,6 +629,8 @@ async def start_road_model_run(payload: RunModelRequest):
             researcher_identity=payload.researcher_identity,
             original_filename=payload.original_filename,
             baseline_path=_baseline_static_csv_path(payload.economy, version),
+            base_year=base_year,
+            esto_vintage=esto_vintage,
         )
         if archive_result.get("success"):
             logger.info(f"Researcher submission archived before road run: {archive_result.get('submission_id')}")

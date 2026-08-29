@@ -1,0 +1,4 @@
+esto_vintage,base_year,is_preliminary,package_version
+2024,2022,False,v2026_08_29_esto_2024
+2025,2023,False,v2026_08_29_esto_2025
+2026,2024,True,v2026_08_29_esto_2026

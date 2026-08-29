@@ -250,6 +250,7 @@ def test_drive_archive_stages_then_publishes_validated_pair(tmp_path, monkeypatc
     result = review.archive_submission_to_drive(
         rows=_canonical_rows().to_dict("records"), economy="20USA", version="v1",
         run_id="run-1", drive_folder_id="root-folder", baseline_path=baseline,
+        base_year=2024, esto_vintage=2026,
     )
 
     assert result["success"] is True, result
@@ -264,6 +265,8 @@ def test_drive_archive_stages_then_publishes_validated_pair(tmp_path, monkeypatc
     assert payload["archive_csv_file_id"] == "file-1"
     assert payload["archive_metadata_file_id"] == "file-2"
     assert payload["row_count"] == len(_canonical_rows())
+    assert payload["base_year"] == 2024
+    assert payload["esto_vintage"] == 2026
     assert payload["canonical_long_columns"] == list(canonical_archive_rows(_canonical_rows().to_dict("records"), "20USA").columns)
 
 

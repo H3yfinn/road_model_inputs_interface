@@ -13,6 +13,17 @@
         <div class="px-6 py-2 flex justify-between items-center gap-3">
             <h1 class="text-base font-bold tracking-wide">Road data preparation model</h1>
             <div class="flex items-center justify-end gap-3">
+                <div id="road-esto-vintage-wrapper" class="hidden items-center gap-1.5">
+                    <label for="road-esto-vintage-select" class="text-xs font-semibold text-blue-100">Data vintage</label>
+                    <select id="road-esto-vintage-select" class="max-w-[19rem] rounded border border-blue-300 bg-white px-2 py-1 text-xs font-semibold text-slate-800 outline-none"></select>
+                    <div class="relative group flex-shrink-0">
+                        <button class="road-help-button" type="button" aria-label="Explain ESTO data vintage">?</button>
+                        <div class="road-help-tooltip right-0 left-auto w-80 text-left text-slate-700">
+                            <h4>ESTO data vintage and base year</h4>
+                            <p>Each ESTO vintage selects its matching model base year. Changing it loads a separate input package. Your current browser draft is saved for this vintage but edits are not copied into the other vintage. Switch back to restore it. Download your CSV first if browser storage is unavailable.</p>
+                        </div>
+                    </div>
+                </div>
                 <div id="road-archive-status-warning" class="hidden max-w-[min(46vw,38rem)] rounded border border-amber-300 bg-amber-50 px-2 py-1 text-right text-xs font-medium leading-snug text-amber-950" role="alert">
                     <span aria-hidden="true">⚠</span> Archive unavailable — download your filled CSV before running if you need changed inputs saved for review.
                 </div>

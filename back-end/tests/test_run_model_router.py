@@ -98,11 +98,37 @@ def test_write_module1_csv_records_base_year_manifest(tmp_path, monkeypatch):
     import api.run_model_router as router_mod
     monkeypatch.setattr(router_mod, "_MODULE1_INPUT_DIR", tmp_path)
 
-    path = router_mod._write_module1_csv([{"Year": 2025, "Value": 1}], "20USA", "v2026_test", 2025)
+    path = router_mod._write_module1_csv(
+        [{"Year": 2025, "Value": 1}], "20USA", "v2026_test", 2025, 2027,
+    )
 
     manifest = json.loads((path.parent / "road_module1_package_manifest.json").read_text(encoding="utf-8"))
     assert manifest["base_year"] == 2025
     assert manifest["economy"] == "20_USA"
+    assert manifest["esto_vintage"] == 2027
+
+
+def test_registered_vintage_selection_requires_exact_mapping():
+    import api.run_model_router as router_mod
+
+    assert router_mod._validate_esto_vintage_selection(
+        "v2026_08_29_esto_2026", 2024, 2026,
+    ) == 2026
+    with pytest.raises(ValueError, match="do not match"):
+        router_mod._validate_esto_vintage_selection(
+            "v2026_08_29_esto_2026", 2023, 2026,
+        )
+    with pytest.raises(ValueError, match="requires"):
+        router_mod._validate_esto_vintage_selection(
+            "v2026_08_29_esto_2026", 2024, None,
+        )
+
+
+def test_unregistered_package_rejects_claimed_vintage():
+    import api.run_model_router as router_mod
+
+    with pytest.raises(ValueError, match="not registered"):
+        router_mod._validate_esto_vintage_selection("v_legacy", 2022, 2024)
 
 
 def test_static_bundle_base_year_reads_new_metadata(tmp_path, monkeypatch):

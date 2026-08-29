@@ -390,6 +390,7 @@ def archive_submission_to_drive(
     *, rows: list[dict[str, Any]], economy: str, version: str, run_id: str,
     researcher_identity: str = "", original_filename: str = "", drive_folder_id: str | None = None,
     baseline_path: str | Path | None = None,
+    base_year: int | None = None, esto_vintage: int | None = None,
 ) -> dict[str, Any]:
     """Publish a validated immutable CSV/metadata pair to Drive."""
     root_folder = drive_folder_id or os.getenv("ROAD_MODEL_SUBMISSIONS_DRIVE_FOLDER_ID", "")
@@ -436,6 +437,8 @@ def archive_submission_to_drive(
             "row_count": len(canonical_rows), "csv_sha256": hashlib.sha256(csv_payload).hexdigest(),
             "baseline_filename": baseline_file.name,
             "baseline_sha256": hashlib.sha256(baseline_bytes).hexdigest(),
+            "base_year": int(base_year) if base_year is not None else None,
+            "esto_vintage": int(esto_vintage) if esto_vintage is not None else None,
             "canonical_long_columns": LONG_COLUMNS,
             "pair_state": "complete",
         }

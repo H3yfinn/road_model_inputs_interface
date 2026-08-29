@@ -24,6 +24,7 @@ import pandas as pd
 import yaml
 
 from core.road_module1_provenance import enrich_module1_provenance
+from core.esto_vintage_registry import load_esto_vintage_registry
 
 from core.road_module1_defaults import (
     BASE_YEAR,
@@ -680,6 +681,11 @@ def write_frontend_static_bundle(
     static_root.mkdir(parents=True, exist_ok=True)
     static_contract = _load_static_contract()
     base_years = _load_economy_base_years()
+    vintage_by_version = {
+        item.package_version: item for item in load_esto_vintage_registry()
+    }
+    selected_vintage = vintage_by_version.get(version)
+    target_base_year = selected_vintage.base_year if selected_vintage else None
 
     version_root = static_root / _sanitize_static_segment(version)
     shutil.rmtree(version_root, ignore_errors=True)
@@ -716,7 +722,7 @@ def write_frontend_static_bundle(
         long_defaults_df = enrich_module1_provenance(
             long_defaults_df,
             package_version=version,
-            target_base_year=base_years.get(economy_code, BASE_YEAR),
+            target_base_year=target_base_year or base_years.get(economy_code, BASE_YEAR),
         )
 
         long_defaults_df = _filter_to_static_contract(
@@ -749,19 +755,48 @@ def write_frontend_static_bundle(
     ]
     for available_version in available_versions:
         available_economies = list_default_economies(version=available_version, output_root=output_root)
-        versions_index.append(
-            {
-                "version": available_version,
-                "economies": [
-                    {**economy, "base_year": base_years.get(str(economy["economy"]))}
-                    for economy in available_economies
-                ],
-            }
-        )
+        vintage = vintage_by_version.get(available_version)
+        version_base_year = vintage.base_year if vintage else None
+        version_record = {
+            "version": available_version,
+            "economies": [
+                {
+                    **economy,
+                    "base_year": version_base_year or base_years.get(str(economy["economy"])),
+                }
+                for economy in available_economies
+            ],
+        }
+        if vintage:
+            version_record.update(
+                esto_vintage=vintage.esto_vintage,
+                base_year=vintage.base_year,
+                is_preliminary=vintage.is_preliminary,
+            )
+        versions_index.append(version_record)
+
+    available_version_names = {item["version"] for item in versions_index}
+    available_vintages = [
+        {
+            "esto_vintage": item.esto_vintage,
+            "base_year": item.base_year,
+            "is_preliminary": item.is_preliminary,
+            "package_version": item.package_version,
+            "label": item.label,
+        }
+        for item in vintage_by_version.values()
+        if item.package_version in available_version_names
+    ]
+    default_vintage = next(
+        (item["esto_vintage"] for item in available_vintages if item["package_version"] == version),
+        max((item["esto_vintage"] for item in available_vintages), default=None),
+    )
 
     index_payload = {
         "default_version": version,
         "configured_scenarios": _load_configured_scenario_labels(),
+        "default_esto_vintage": default_vintage,
+        "esto_vintages": available_vintages,
         "versions": versions_index,
     }
     (static_root / "index.json").write_text(
