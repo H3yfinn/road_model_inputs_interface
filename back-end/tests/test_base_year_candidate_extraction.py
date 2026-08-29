@@ -560,6 +560,28 @@ def test_extracts_explicit_original_native_candidate_and_preserves_source_year()
     assert result.summary["status_counts"] == {"candidate": 1}
 
 
+def test_invalid_zero_mileage_is_excluded_before_valid_lower_priority_fallback_is_selected():
+    rows = [
+        _source_row(
+            r"Demand\Passenger road\Cars", "Mileage", 2022, 0.0,
+            source_name="processed.csv", priority=10, source_year=2022,
+        ),
+        _source_row(
+            r"Demand\Passenger road\Cars", "Mileage", 2022, 12.0,
+            source_name="manual.csv", priority=20, source_year=2022,
+        ),
+    ]
+
+    result = _extract(rows)
+
+    assert len(result.candidates) == 1
+    assert result.candidates[0]["source_id"].endswith("manual.csv")
+    assert result.candidates[0]["payload"]["Value"] == 12.0
+    invalid = result.audit[result.audit["source_name"].eq("processed.csv")].iloc[0]
+    assert invalid["status"] == "excluded"
+    assert invalid["reason"] == "invalid_value_for_variable"
+
+
 def test_known_9th_row_is_extracted_with_verified_lineage_but_remains_legacy_unknown():
     row = _source_row(
         r"Demand\Passenger road\Cars",

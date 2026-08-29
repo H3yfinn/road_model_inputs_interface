@@ -96,6 +96,15 @@ packages preserved every canonical key and numeric value. It produced zero
 126 model-assumption rows with no fabricated source year, and recorded 2022 on
 the 76 manual Fuel Economy/Mileage fallback rows.
 
+The subsequent all-economy model matrix found that the candidate extractor
+could still prefer a higher-priority checked-in zero over one of those positive
+manual fallbacks. Zero is not a valid `Mileage` or `Fuel Economy` value under
+the existing Module 1 contract. Candidate extraction now applies that contract
+before source-priority resolution, records the excluded source row as
+`invalid_value_for_variable`, and allows the already-reviewed positive fallback
+to compete normally. This changes neither source files nor the fallback policy;
+it prevents an invalid source value from masking an existing valid candidate.
+
 ## Activation status
 
 The code contract, interface selector, package generator, and model adapter are

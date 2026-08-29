@@ -594,6 +594,9 @@ def extract_original_candidates(
             package_version=source_package_version,
             target_base_year=requested_base_year,
         ).iloc[0].to_dict()
+        validation_message = defaults.validate_module1_value_for_variable(
+            _text(payload["Variable"]), float(payload["Value"])
+        )
         records.append(
             {
                 **payload,
@@ -605,6 +608,7 @@ def extract_original_candidates(
                     if source_lineage(payload["Source"], source_package_version) == "9th_outlook"
                     else ""
                 ),
+                "_value_validation_message": validation_message,
             }
         )
 
@@ -616,6 +620,8 @@ def extract_original_candidates(
         reason = ""
         if family.family_id == DERIVED:
             reason = "derived_variable_not_a_candidate"
+        elif record["_value_validation_message"]:
+            reason = "invalid_value_for_variable"
         elif source_year is None:
             reason = "missing_source_data_year"
         elif int(record["Year"]) != source_year:
