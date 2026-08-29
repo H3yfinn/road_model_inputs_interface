@@ -4352,6 +4352,20 @@ function renderRoadModule1Inputs() {
         State.roadModule1.viewMode = 'list';
         renderRoadModule1ListInputs(filteredRows);
     }
+    syncRenderedRoadEditedState();
+}
+
+function syncRenderedRoadEditedState() {
+    if (!DOM.roadInputContainer) return;
+    DOM.roadInputContainer.querySelectorAll('.road-input-row').forEach(rowEl => {
+        const hasComment = Array.from(rowEl.querySelectorAll('.road-comment-input'))
+            .some(input => input.value.trim().length > 0);
+        const hasChangedValue = Array.from(rowEl.querySelectorAll('.road-value-input'))
+            .some(input => roadInputValueDiffersFromDefault(
+                input.value.trim(), input.dataset.defaultValue || '',
+            ));
+        rowEl.classList.toggle('is-edited', hasComment || hasChangedValue);
+    });
 }
 
 function handleRoadModule1InputChange(event) {
