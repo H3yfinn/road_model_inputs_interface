@@ -730,6 +730,7 @@ def generate_checked_in_source_review_package(
     package_version: str,
     output_dir: str | Path,
     fallback_csv: str | Path | None = None,
+    candidate_selection_overrides: Sequence[Mapping[str, Any]] | None = None,
     generation_time: str | None = None,
 ) -> dict[str, Path]:
     """Extract checked-in candidates and write a review-only resolved package."""
@@ -758,6 +759,7 @@ def generate_checked_in_source_review_package(
         source_package=source_package_version,
         package_version=package_version,
         output_dir=output_dir,
+        candidate_selection_overrides=candidate_selection_overrides,
         generation_time=generation_time,
     )
     destination = paths["resolved_csv"].parent

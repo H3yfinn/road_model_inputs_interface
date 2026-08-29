@@ -55,6 +55,38 @@ def _fake_supplemental_inventory(*, output_path):
     )
 
 
+def test_manual_candidate_override_csv_has_small_strict_reviewer_schema(tmp_path):
+    path = tmp_path / "manual_overrides.csv"
+    pd.DataFrame([{
+        "Economy": "20USA",
+        "Scenario": "Current Accounts",
+        "Branch Path": r"Demand\Passenger road\LPVs\ICE",
+        "Variable": "Mileage",
+        "Requested Base Year": 2024,
+        "Source Package": "v_source",
+        "Candidate ID": "candidate-2022",
+        "Reviewer Reason": "The older survey is more representative.",
+        "Reviewer": "model-manager",
+    }], columns=script.MANUAL_OVERRIDE_COLUMNS).to_csv(path, index=False)
+
+    assert script._read_manual_candidate_overrides(path) == [{
+        "row_key": ["20USA", "Current Accounts", r"Demand\Passenger road\LPVs\ICE", "Mileage"],
+        "requested_base_year": 2024,
+        "source_package": "v_source",
+        "candidate_id": "candidate-2022",
+        "reason": "The older survey is more representative.",
+        "reviewer": "model-manager",
+    }]
+
+
+def test_manual_candidate_override_csv_rejects_extra_or_missing_columns(tmp_path):
+    path = tmp_path / "manual_overrides.csv"
+    path.write_text("Economy,Candidate ID\n20USA,candidate\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="columns must be exactly"):
+        script._read_manual_candidate_overrides(path)
+
+
 def test_generate_staged_review_writes_only_to_new_output_and_returns_summaries(tmp_path, monkeypatch):
     monkeypatch.setattr(script, "generate_checked_in_source_review_package", _fake_package_generator)
     monkeypatch.setattr(script, "build_supplemental_provenance_inventory", _fake_supplemental_inventory)

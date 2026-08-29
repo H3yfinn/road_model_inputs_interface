@@ -831,3 +831,25 @@ Deployment details and the My Drive OAuth boundary are recorded in
   `14PE`, `16RUS`, `18CT`, `21VN`) without blocking valid economies.
 - Safety: No checked-in source/default/static output, active model input/output,
   Drive file, secret, index or deployment setting was changed or promoted.
+
+## Sparse model-manager candidate selection override
+
+- Date: 2026-08-29
+- Author: Codex
+- Purpose: Allow a reviewer to select a different eligible original observation
+  for one canonical Module 1 key, including an older or future observation in
+  place of the automatic exact-year choice when the reviewer records why.
+- Input: The optional `--manual-candidate-overrides-csv` uses exactly nine
+  columns: `Economy`, `Scenario`, `Branch Path`, `Variable`,
+  `Requested Base Year`, `Source Package`, `Candidate ID`, `Reviewer Reason`
+  and `Reviewer`.
+- Validation: The key, requested year and source package must match the staged
+  package; the candidate ID must identify exactly one extracted candidate for
+  the key and remain eligible under its resolver policy. A manual selection
+  cannot create a value/key, target a derived variable or broaden an exact-year
+  policy.
+- Audit: Resolution records the selected and automatic candidate IDs, reviewer
+  reason/name, source data year and base-year treatment. The manifest stores the
+  normalised sparse selections.
+- Safety: This remains staging-only and developer-only. It does not change ESTO
+  energy-balance anchors, source/default/static data, Drive or active model data.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import csv
 import hashlib
 import json
 from pathlib import Path
@@ -20,6 +21,17 @@ PROTECTED_OUTPUT_ROOTS = (
     REPO_ROOT / "back-end" / "outputs" / "road_module1_defaults",
     STATIC_BUNDLE_ROOT,
 )
+MANUAL_OVERRIDE_COLUMNS = [
+    "Economy",
+    "Scenario",
+    "Branch Path",
+    "Variable",
+    "Requested Base Year",
+    "Source Package",
+    "Candidate ID",
+    "Reviewer Reason",
+    "Reviewer",
+]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
@@ -66,6 +78,43 @@ def _write_summary(destination: Path, summary: dict[str, object]) -> Path:
     return path
 
 
+def _read_manual_candidate_overrides(path: str | Path | None) -> list[dict[str, object]]:
+    if path is None:
+        return []
+    source = Path(path).resolve()
+    if not source.is_file():
+        raise ValueError(f"Manual candidate override CSV does not exist: {source}")
+    with source.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames != MANUAL_OVERRIDE_COLUMNS:
+            raise ValueError(
+                f"Manual candidate override CSV columns must be exactly {MANUAL_OVERRIDE_COLUMNS}; "
+                f"found {reader.fieldnames}."
+            )
+        records = []
+        for row_number, row in enumerate(reader, start=2):
+            try:
+                requested_year = int(str(row["Requested Base Year"]).strip())
+            except ValueError as exc:
+                raise ValueError(
+                    f"Manual candidate override row {row_number} has a non-integer Requested Base Year."
+                ) from exc
+            records.append({
+                "row_key": [
+                    str(row["Economy"]).strip(),
+                    str(row["Scenario"]).strip(),
+                    str(row["Branch Path"]).strip(),
+                    str(row["Variable"]).strip(),
+                ],
+                "requested_base_year": requested_year,
+                "source_package": str(row["Source Package"]).strip(),
+                "candidate_id": str(row["Candidate ID"]).strip(),
+                "reason": str(row["Reviewer Reason"]).strip(),
+                "reviewer": str(row["Reviewer"]).strip(),
+            })
+    return records
+
+
 def _review_researcher_submissions(
     *,
     destination: Path,
@@ -101,6 +150,7 @@ def _generate_economy_package(
     package_version: str,
     source_package_version: str,
     fallback_csv: str | Path | None = None,
+    candidate_selection_overrides: Sequence[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     package_paths = generate_checked_in_source_review_package(
         economy=economy,
@@ -109,6 +159,7 @@ def _generate_economy_package(
         package_version=package_version,
         output_dir=output_dir,
         fallback_csv=fallback_csv,
+        candidate_selection_overrides=candidate_selection_overrides,
     )
     manifest = json.loads(package_paths["manifest_json"].read_text(encoding="utf-8"))
     resolution = manifest["resolution"]
@@ -180,6 +231,7 @@ def generate_staged_review(
     fallback_csv: str | Path | None = None,
     include_researcher_submissions: bool = False,
     researcher_submissions_folder_id: str | None = None,
+    candidate_selection_overrides: Sequence[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     """Generate one economy review plus optional researcher-submission review."""
     destination = _unused_output_dir(output_dir)
@@ -195,6 +247,10 @@ def generate_staged_review(
         package_version=package_version,
         source_package_version=source_package_version,
         fallback_csv=fallback_csv,
+        candidate_selection_overrides=[
+            item for item in (candidate_selection_overrides or ())
+            if item.get("row_key", [None])[0] == economy
+        ],
     )
     supplemental_summary, supplemental_path = _supplemental_inventory(destination)
     summary: dict[str, object] = {
@@ -225,6 +281,7 @@ def generate_all_economies_staged_review(
     source_package_version: str = CURRENT_SOURCE_PACKAGE_VERSION,
     include_researcher_submissions: bool = False,
     researcher_submissions_folder_id: str | None = None,
+    candidate_selection_overrides: Sequence[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     """Generate every checked-in economy plus optional researcher-submission review."""
     destination = _unused_output_dir(output_dir)
@@ -246,6 +303,10 @@ def generate_all_economies_staged_review(
                 output_dir=destination / "packages" / economy,
                 package_version=package_version,
                 source_package_version=source_package_version,
+                candidate_selection_overrides=[
+                    item for item in (candidate_selection_overrides or ())
+                    if item.get("row_key", [None])[0] == economy
+                ],
             )
         except REVIEW_FAILURES as exc:
             failure: dict[str, object] = {"economy": economy, "error": str(exc)}
@@ -316,6 +377,14 @@ def _parser() -> argparse.ArgumentParser:
         help="Optional single-economy fallback CSV; not valid with --all-economies.",
     )
     parser.add_argument(
+        "--manual-candidate-overrides-csv",
+        default=None,
+        help=(
+            "Optional developer-reviewed sparse candidate selections. The CSV identifies existing candidate IDs; "
+            "it cannot supply arbitrary values or promote the output."
+        ),
+    )
+    parser.add_argument(
         "--include-researcher-submissions",
         action="store_true",
         help=(
@@ -337,6 +406,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        manual_overrides = _read_manual_candidate_overrides(args.manual_candidate_overrides_csv)
         if args.researcher_submissions_folder_id and not args.include_researcher_submissions:
             raise ValueError(
                 "--researcher-submissions-folder-id requires --include-researcher-submissions."
@@ -351,6 +421,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 source_package_version=args.source_package_version,
                 include_researcher_submissions=args.include_researcher_submissions,
                 researcher_submissions_folder_id=args.researcher_submissions_folder_id,
+                candidate_selection_overrides=manual_overrides,
             )
         else:
             summary = generate_staged_review(
@@ -362,6 +433,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 fallback_csv=args.fallback_csv,
                 include_researcher_submissions=args.include_researcher_submissions,
                 researcher_submissions_folder_id=args.researcher_submissions_folder_id,
+                candidate_selection_overrides=manual_overrides,
             )
     except REVIEW_FAILURES as exc:
         print(f"Review package generation failed: {exc}", file=sys.stderr)

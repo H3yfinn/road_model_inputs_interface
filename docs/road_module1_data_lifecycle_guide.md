@@ -594,6 +594,24 @@ A saved draft should be offered only when its package checksum matches. The
 browser must never scan Drive, choose the newest submission, merge sources or
 run source-priority logic.
 
+### Sparse manual candidate selections
+
+A model manager may deliberately select a different already-extracted original
+candidate for one exact Module 1 resolution key. This is a developer review
+control, not a researcher-interface field. Pass a strict nine-column CSV to
+`generate_module1_review_package.py --manual-candidate-overrides-csv`. Each row
+identifies the economy, scenario, branch path, variable, requested base year,
+source package, candidate ID, reviewer reason and optional reviewer name.
+
+The chosen candidate must exist for that key and remain eligible under the
+variable's resolver policy. The override cannot supply an arbitrary value,
+introduce a key, select a shifted/generated row, target derived Stock Share or
+broaden an exact-year-required policy. The resolved row still records its real
+source year and `carried_forward`, `carried_backward` or `native` treatment.
+The audit records `manual_candidate_override`, the automatic candidate that
+would otherwise have won, the reviewer reason and reviewer. The manifest stores
+the sparse override records. Nothing is promoted automatically.
+
 ## Archive review and promotion
 
 Changed researcher runs archive a complete canonical-long CSV plus matching

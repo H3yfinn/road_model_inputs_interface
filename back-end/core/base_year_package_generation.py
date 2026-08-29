@@ -55,6 +55,10 @@ AUDIT_COLUMNS = [
     "selection_reason",
     "rejection_count",
     "rejections",
+    "manual_candidate_override_applied",
+    "manual_override_reason",
+    "manual_override_reviewer",
+    "automatic_candidate_id",
 ]
 SUPPORTED_STRATEGY = "prefer_earlier"
 
@@ -214,6 +218,45 @@ def _policy_overrides(overrides: Mapping[str, str] | None) -> dict[str, str]:
     return dict(sorted(normalised.items()))
 
 
+def _candidate_selection_overrides(
+    overrides: Sequence[Mapping[str, Any]] | None,
+    *,
+    fallback_keys: set[tuple[str, ...]],
+    requested_base_year: int,
+    source_package: str,
+) -> dict[tuple[str, ...], dict[str, Any]]:
+    normalised: dict[tuple[str, ...], dict[str, Any]] = {}
+    for item in overrides or ():
+        if not isinstance(item, Mapping):
+            raise ValueError("Every manual candidate override must be a mapping.")
+        row_key = item.get("row_key")
+        if isinstance(row_key, str) or not isinstance(row_key, Sequence):
+            raise ValueError("Manual candidate override row_key must be a four-value sequence.")
+        key = tuple(_required_text(value, "manual override row_key value") for value in row_key)
+        if len(key) != len(RESOLUTION_KEY_COLUMNS):
+            raise ValueError(f"Manual candidate override row_key must contain {RESOLUTION_KEY_COLUMNS} in that order.")
+        if key not in fallback_keys:
+            raise ValueError(f"Manual candidate override key is absent from the authoritative fallback: {key!r}.")
+        if key in normalised:
+            raise ValueError(f"Duplicate manual candidate override for canonical key {key!r}.")
+        if _normalise_year(item.get("requested_base_year"), "manual override requested_base_year") != requested_base_year:
+            raise ValueError("Manual candidate override requested_base_year must match the generated package.")
+        if _required_text(item.get("source_package"), "manual override source_package") != source_package:
+            raise ValueError("Manual candidate override source_package must match the generated package.")
+        family = policy_family_for_variable(key[-1])
+        if family.family_id == DERIVED:
+            raise ValueError(f"Derived variable {key[-1]!r} cannot have a manual candidate override.")
+        normalised[key] = {
+            "row_key": list(key),
+            "requested_base_year": requested_base_year,
+            "source_package": source_package,
+            "candidate_id": _required_text(item.get("candidate_id"), "manual override candidate_id"),
+            "reason": _required_text(item.get("reason"), "manual override reason"),
+            "reviewer": str(item.get("reviewer", "") or "").strip(),
+        }
+    return dict(sorted(normalised.items()))
+
+
 def _selected_row(fallback_row: pd.Series, selected: Any, result: Any, requested_base_year: int) -> dict[str, Any]:
     payload = dict(selected.payload)
     row = fallback_row.to_dict()
@@ -340,6 +383,7 @@ def generate_resolved_base_year_package(
     output_dir: str | Path,
     strategy: str = SUPPORTED_STRATEGY,
     variable_policy_overrides: Mapping[str, str] | None = None,
+    candidate_selection_overrides: Sequence[Mapping[str, Any]] | None = None,
     generation_time: str | None = None,
 ) -> dict[str, Path]:
     """Write one reviewed-candidate package without touching current defaults.
@@ -359,6 +403,12 @@ def generate_resolved_base_year_package(
     overrides = _policy_overrides(variable_policy_overrides)
     fallback = _canonical_fallback(fallback_rows, economy_name, year)
     fallback_keys = set(fallback[RESOLUTION_KEY_COLUMNS].itertuples(index=False, name=None))
+    manual_overrides = _candidate_selection_overrides(
+        candidate_selection_overrides,
+        fallback_keys=fallback_keys,
+        requested_base_year=year,
+        source_package=source_package_name,
+    )
 
     grouped: dict[tuple[str, ...], list[Mapping[str, Any]]] = {}
     candidate_ids: set[str] = set()
@@ -396,12 +446,36 @@ def generate_resolved_base_year_package(
                     "selection_reason": "generated_derived_control_preserved",
                     "rejection_count": 0,
                     "rejections": "[]",
+                    "manual_candidate_override_applied": False,
+                    "manual_override_reason": "",
+                    "manual_override_reviewer": "",
+                    "automatic_candidate_id": "",
                 }
             )
             continue
         policy_id = overrides.get(key[-1], family.resolver_policy_id)
         row_candidates = grouped.get(key, [])
-        result = resolve_base_year_candidates(row_candidates, year, policy_id)
+        automatic_result = resolve_base_year_candidates(row_candidates, year, policy_id)
+        manual_override = manual_overrides.get(key)
+        if manual_override is None:
+            result = automatic_result
+        else:
+            selected_candidates = [
+                candidate for candidate in row_candidates
+                if str(candidate.get("candidate_id", "")).strip() == manual_override["candidate_id"]
+            ]
+            if len(selected_candidates) != 1:
+                raise ValueError(
+                    f"Manual candidate override {manual_override['candidate_id']!r} must identify exactly one "
+                    f"candidate for canonical key {key!r}; found {len(selected_candidates)}."
+                )
+            result = resolve_base_year_candidates(selected_candidates, year, policy_id)
+            if result.selected is None:
+                reasons = sorted({reason for rejection in result.rejections for reason in rejection.reasons})
+                raise ValueError(
+                    f"Manual candidate override {manual_override['candidate_id']!r} is not eligible under "
+                    f"policy {policy_id!r}: {reasons}."
+                )
         rejections = [
             {"candidate_id": rejection.candidate_id, "reasons": list(rejection.reasons)}
             for rejection in result.rejections
@@ -432,9 +506,15 @@ def generate_resolved_base_year_package(
                 "selected_source_data_year": selected_year,
                 "selected_source_classification": selected_classification,
                 "base_year_treatment": treatment,
-                "selection_reason": result.selection_reason,
+                "selection_reason": "manual_candidate_override" if manual_override else result.selection_reason,
                 "rejection_count": len(rejections),
                 "rejections": json.dumps(rejections, sort_keys=True, separators=(",", ":")),
+                "manual_candidate_override_applied": manual_override is not None,
+                "manual_override_reason": manual_override["reason"] if manual_override else "",
+                "manual_override_reviewer": manual_override["reviewer"] if manual_override else "",
+                "automatic_candidate_id": (
+                    automatic_result.selected.candidate_id if automatic_result.selected is not None else ""
+                ),
             }
         )
 
@@ -471,6 +551,7 @@ def generate_resolved_base_year_package(
         "package_version": version,
         "strategy": strategy,
         "variable_policy_overrides": overrides,
+        "candidate_selection_overrides": list(manual_overrides.values()),
         "output_filename": csv_path.name,
         "output_sha256": checksum,
         "audit_filename": audit_path.name,

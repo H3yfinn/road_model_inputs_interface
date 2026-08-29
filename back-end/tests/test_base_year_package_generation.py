@@ -236,6 +236,81 @@ def test_sparse_policy_override_is_recorded_and_can_require_exact_year(tmp_path)
     assert manifest["resolution"]["variable_policy_overrides"] == {"Mileage": "energy_balance_exact_year"}
 
 
+def test_sparse_manual_candidate_override_can_choose_eligible_older_value_over_exact_year(tmp_path):
+    row = fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Mileage", 9)
+    candidates = [
+        candidate("exact", row, 2024, 44),
+        candidate("reviewer-selected-older", row, 2022, 22),
+    ]
+    manual_override = {
+        "row_key": [ECONOMY, SCENARIO, row["Branch Path"], row["Variable"]],
+        "requested_base_year": YEAR,
+        "source_package": "synthetic-original-candidates-v1",
+        "candidate_id": "reviewer-selected-older",
+        "reason": "The 2022 survey is more representative for this vehicle branch.",
+        "reviewer": "model-manager",
+    }
+
+    paths = generate(
+        tmp_path,
+        [row],
+        candidates,
+        candidate_selection_overrides=[manual_override],
+    )
+    resolved = pd.read_csv(paths["resolved_csv"])
+    audit = pd.read_csv(paths["audit_csv"])
+    manifest = json.loads(paths["manifest_json"].read_text(encoding="utf-8"))
+
+    assert resolved.loc[0, "Value"] == 22
+    assert resolved.loc[0, "Source Data Year"] == 2022
+    assert resolved.loc[0, "Base Year Treatment"] == "carried_forward"
+    assert audit.loc[0, "selection_reason"] == "manual_candidate_override"
+    assert bool(audit.loc[0, "manual_candidate_override_applied"])
+    assert audit.loc[0, "automatic_candidate_id"] == "exact"
+    assert audit.loc[0, "manual_override_reason"] == manual_override["reason"]
+    assert manifest["resolution"]["candidate_selection_overrides"] == [manual_override]
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda override: override.update(candidate_id="missing"), "exactly one candidate"),
+        (lambda override: override.update(reason=""), "manual override reason"),
+        (lambda override: override.update(requested_base_year=2023), "must match the generated package"),
+        (lambda override: override.update(source_package="wrong"), "must match the generated package"),
+    ],
+)
+def test_malformed_manual_candidate_overrides_are_rejected(tmp_path, mutate, message):
+    row = fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Mileage", 9)
+    item = candidate("selected", row, 2022, 22)
+    override = {
+        "row_key": [ECONOMY, SCENARIO, row["Branch Path"], row["Variable"]],
+        "requested_base_year": YEAR,
+        "source_package": "synthetic-original-candidates-v1",
+        "candidate_id": "selected",
+        "reason": "Reviewed source choice.",
+    }
+    mutate(override)
+    with pytest.raises(ValueError, match=message):
+        generate(tmp_path, [row], [item], candidate_selection_overrides=[override])
+
+
+def test_manual_candidate_override_cannot_target_derived_stock_share(tmp_path):
+    row = fallback_row(
+        "Demand\\Passenger road\\LPVs", "Stock Share", 100,
+        **{"Derivation Method": "stock_share_from_stock"},
+    )
+    override = {
+        "row_key": [ECONOMY, SCENARIO, row["Branch Path"], row["Variable"]],
+        "requested_base_year": YEAR,
+        "source_package": "synthetic-original-candidates-v1",
+        "candidate_id": "share",
+        "reason": "Invalid direct derived override.",
+    }
+    with pytest.raises(ValueError, match="cannot have a manual candidate override"):
+        generate(tmp_path, [row], [], candidate_selection_overrides=[override])
+
+
 def test_manifest_has_identity_summary_rejections_and_verified_checksums(tmp_path):
     row = fallback_row("Demand\\Passenger road\\LPVs\\ICE", "Mileage", 9)
     legacy = candidate("legacy", row, 2024, 99, source_classification="legacy_unknown")
