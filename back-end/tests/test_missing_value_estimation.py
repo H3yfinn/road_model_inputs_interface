@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -210,3 +211,25 @@ def test_comparison_html_escapes_embedded_script_content():
 
     assert "</script><script>alert(1)</script>" not in html
     assert "\\u003c/script>" in html
+
+
+def test_checked_in_missing_value_estimates_are_complete_reviewed_last_resort_source():
+    source_path = (
+        Path(__file__).resolve().parents[1]
+        / "data" / "road_model" / "manually_filled_rows"
+        / "cross_validated_missing_value_estimates_2022.csv"
+    )
+    rows = pd.read_csv(source_path)
+
+    assert len(rows) == 188
+    assert rows[["Economy", "Scenario", "Branch Path", "Variable", "Year"]].duplicated().sum() == 0
+    assert set(rows["Economy"]) == {"07INA", "08JPN", "10MAS", "11MEX", "12NZ", "13PNG", "14PE", "18CT"}
+    assert set(rows["Variable"]) == {"Fuel Economy", "Mileage"}
+    assert set(rows["Year"]) == {2022}
+    assert set(rows["Source Data Year"]) == {2022}
+    assert set(rows["Source Classification"]) == {"model_assumption"}
+    assert set(rows["Base Year Treatment"]) == {"transformed"}
+    assert rows["Value"].gt(0).all()
+    assert rows["Comment"].str.contains("Cross-validation median absolute percentage error").all()
+    assert rows["Comment"].str.contains("Replace when better economy-specific evidence").all()
+    assert rows["DO_NOT_USE"].isna().all()

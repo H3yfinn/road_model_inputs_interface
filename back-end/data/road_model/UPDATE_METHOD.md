@@ -913,8 +913,20 @@ Deployment details and the My Drive OAuth boundary are recorded in
 - Provenance: Proposals are `model_assumption` with source data year 2022 and
   explicit derivation/replacement guidance. A later base-year test must retain
   2022 and use `carried_forward`, not relabel the estimate as native.
-- Safety: The command is review-only, refuses an existing output directory and
-  never applies or promotes values. Application is a separate exact-key step
-  that may replace only a non-positive value. No checked-in source/default/static
-  package, active model input/output, Drive file, secret or deployment setting
-  was changed for the case study.
+- Reviewed source: After visual review, the accepted 188 rows were added to
+  `manually_filled_rows/cross_validated_missing_value_estimates_2022.csv` in
+  raw/internal units. The separate dataset retains proposal IDs, concrete
+  methods, validation error and replacement guidance. It is priority 50 and is
+  used only when the primary processed-source value is invalid.
+- Resolver policy: `model_assumption` is a configured last-resort
+  classification for seed-eligible variables. Any valid native observation or
+  verified historical candidate is selected instead, regardless of year. This
+  makes newly supplied evidence automatically displace the proxy.
+- Validation: Fresh source-driven staging generated 21 of 21 packages for each
+  of base years 2022, 2023 and 2024. All contained positive Mileage/Fuel Economy
+  values, no duplicate keys and the expected 188 reviewed rows. The subsequent
+  21 × 3 model matrix passed 63 of 63 runs.
+- Safety: The estimator command itself remains review-only, refuses an existing
+  output directory and never applies or promotes values. Source activation was
+  separately authorised and did not change generated backend/static defaults,
+  active model input/output, Drive files, secrets or deployment settings.

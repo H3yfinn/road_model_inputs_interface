@@ -145,6 +145,25 @@ def test_future_candidate_uses_canonical_future_year_seed_term(tmp_path):
     assert resolved.loc[0, "Derivation Method"] == "future_year_seed"
 
 
+def test_non_native_candidate_retains_its_concrete_derivation_method(tmp_path):
+    row = fallback_row("Demand\\Passenger road\\LPVs\\BEV", "Mileage", 3)
+    proxy = candidate(
+        "proxy",
+        row,
+        2022,
+        33,
+        source_classification="model_assumption",
+    )
+    proxy["payload"]["Source Classification"] = "model_assumption"
+    proxy["payload"]["Derivation Method"] = "same_economy_vehicle_size_median"
+
+    paths = generate(tmp_path, [row], [proxy])
+    resolved = pd.read_csv(paths["resolved_csv"])
+
+    assert resolved.loc[0, "Base Year Treatment"] == "carried_forward"
+    assert resolved.loc[0, "Derivation Method"] == "same_economy_vehicle_size_median"
+
+
 def test_stock_share_without_explicit_stock_derivation_preserves_fallback(tmp_path):
     rows = [
         fallback_row("Demand\\Passenger road\\LPVs", "Stock", 30),

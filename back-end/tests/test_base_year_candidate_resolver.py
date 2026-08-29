@@ -134,6 +134,34 @@ def test_only_verified_9th_lineage_makes_legacy_candidate_seed_eligible():
     assert exact_year_result.rejections[0].reasons == ("ineligible_source_classification",)
 
 
+def test_model_assumption_is_used_only_when_no_native_or_verified_candidate_exists():
+    proxy = candidate("proxy", 2022, source_classification="model_assumption")
+    proxy_only = resolve_base_year_candidates([proxy], 2024, "seed_eligible")
+    assert proxy_only.selected.candidate_id == "proxy"
+    assert proxy_only.base_year_treatment == "carried_forward"
+
+    for native in [candidate("older-native", 2018), candidate("future-native", 2026)]:
+        resolved = resolve_base_year_candidates([proxy, native], 2024, "seed_eligible")
+        assert resolved.selected.candidate_id == native["candidate_id"]
+        assert {item.candidate_id: item.reasons for item in resolved.rejections}["proxy"] == (
+            "higher_evidence_classification_preferred",
+        )
+
+    exact_only = resolve_base_year_candidates([proxy], 2022, EXACT_YEAR_ENERGY_BALANCE_POLICY)
+    assert exact_only.selected is None
+    assert exact_only.rejections[0].reasons == ("ineligible_source_classification",)
+
+
+def test_policy_rejects_overlapping_primary_and_last_resort_classifications():
+    invalid = replace(
+        SEED_ELIGIBLE_POLICY,
+        policy_id="overlap",
+        eligible_classifications=frozenset({"native_observation", "model_assumption"}),
+    )
+    with pytest.raises(ValueError, match="must not overlap"):
+        resolve_base_year_candidates([], 2022, invalid)
+
+
 def test_exact_year_only_policy_rejects_seed_years():
     result = resolve_base_year_candidates([candidate("old", 2021)], 2022, EXACT_YEAR_ENERGY_BALANCE_POLICY)
     assert result.selected is None

@@ -10,6 +10,7 @@ same key appears in more than one source.
 | File | Purpose |
 |---|---|
 | `model_assumption_defaults.csv` | APEC-wide defaults for model-assumption rows (`Passenger Stock Growth Rate Adjustment`, `Freight GDP Elasticity Adjustment`). Priority 50 — lower than processed source (10), so an economy-specific row in processed source will override it. |
+| `cross_validated_missing_value_estimates_2022.csv` | Reviewed 2022 Mileage and Fuel Economy estimates for otherwise invalid canonical rows. These are explicitly classified as `model_assumption`, retain their derivation and validation note, and remain a last resort behind any valid native or verified historical candidate. |
 | `manually_entered_missing_rows.csv` | Auto-generated rows from LEAP coverage diagnostics. `Value` is left blank until filled manually. Priority 100 — lowest priority fallback. |
 
 ## Schema
@@ -39,6 +40,7 @@ priority wins. The current priorities are:
 |---|---|---|
 | `processed_source/*` | 10 | Wins by default |
 | `model_assumption_defaults.csv` | 50 | APEC-wide fallback; override by adding the row to processed source |
+| `cross_validated_missing_value_estimates_2022.csv` | 50 | Last-resort reviewed proxy; valid native or verified historical data wins regardless of year |
 | `manually_entered_missing_rows.csv` | 100 | Last resort; only used when no other source has the row |
 
 `final_value_overrides/` applies after all source merge steps regardless of priority.

@@ -52,37 +52,42 @@ source year 2022, `model_assumption`, its concrete derivation, cross-validation
 error and replacement guidance. The method and results are documented in
 [`road_module1_missing_value_estimation_case_study_2026_08_29.md`](road_module1_missing_value_estimation_case_study_2026_08_29.md).
 
-The proposals were applied only to disposable model-package copies. All 24
-previously failing economy/vintage runs then passed. A fresh complete 21 × 3
-matrix subsequently passed 63 of 63 runs across ESTO 2024/base year 2022, ESTO
-2025/base year 2023 and ESTO 2026/base year 2024. No proposal has been promoted
-into a checked-in source/default/static package.
+The proposals were initially applied only to disposable model-package copies.
+All 24 previously failing economy/vintage runs then passed, followed by a clean
+63-of-63 matrix across ESTO 2024/base year 2022, ESTO 2025/base year 2023 and
+ESTO 2026/base year 2024.
 
-## Human review required before activation
+## Reviewed source activation
 
-A reviewer must inspect and accept the 188-row proposal/evidence package before
-the values are added to the source layer and a new immutable package is built.
-That is a promotion decision, not something the estimator performs. If accepted,
-2022 remains the source data year; use in the 2023 and 2024 base-year packages
-must be `carried_forward`. Native evidence introduced later must take priority
-over the model assumption.
+After visual review, the 188 rows were accepted into the separate checked-in
+source dataset
+`manually_filled_rows/cross_validated_missing_value_estimates_2022.csv`. This
+does not activate or deploy a generated frontend bundle. The dataset records
+source year 2022, `model_assumption`, the concrete estimation method, proposal
+ID, validation result and replacement guidance.
 
-## Production-ready checklist after that decision
+The seed-eligible resolver treats `model_assumption` as a configured last
+resort. Any valid native observation or verified historical candidate wins,
+even when it is farther from the requested base year. With no such evidence,
+the 2022 proxy resolves as `transformed` for base year 2022 and
+`carried_forward` for base years 2023 and 2024; its concrete estimation method
+is preserved separately from that base-year treatment.
 
-1. Review and accept or revise the 188 proposal rows and their evidence.
-2. Add accepted values to the correct documented source layer, then regenerate
-   all three packages into a new staging directory; do not reuse a
-   shifted/generated package as candidate evidence.
-3. Require 21 successful economy packages per vintage and zero quarantined
-   source conflicts.
-4. Run the static publication gate and require zero invalid values and zero
-   duplicate canonical keys.
-5. Rerun the 21 × 3 model matrix and require 63 successful runs.
-6. Repeat the local browser smoke test for selector switching, draft isolation,
+Fresh source-driven staging generated 21 of 21 economy packages for each of
+base years 2022, 2023 and 2024, with zero failures, invalid Mileage/Fuel Economy
+values or duplicate canonical keys. Each package set selected exactly the 188
+reviewed rows. A subsequent model matrix using those source-resolved packages
+passed 63 of 63 runs.
+
+## Remaining local release checklist
+
+1. Generate the three immutable backend/static package versions through the
+   normal publication gate and inspect their manifests/checksums. Do not copy a
+   shifted generated package back into the source layer.
+2. Repeat the local browser smoke test for selector switching, draft isolation,
    comment/source guidance, acknowledgement and one full model run.
-7. Rerun focused archive/batch tests and both repositories' full suites.
-8. Review the final diffs and generated-package manifests/checksums.
-9. Only then perform a separately authorised promotion/deployment; verify the
+3. Review the final generated-package diffs and provenance display.
+4. Only then perform a separately authorised deployment; verify the
    deployed index and one economy from each vintage without changing Drive
    archive contents.
 

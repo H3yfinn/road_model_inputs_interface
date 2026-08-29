@@ -174,6 +174,15 @@ required model branch usable while being honest about uncertainty. It does not
 make the estimates native evidence, prove that every branch is equally likely,
 or authorise automatic promotion.
 
+Following review, the accepted rows are stored separately in
+`manually_filled_rows/cross_validated_missing_value_estimates_2022.csv`. They
+are resolver-eligible only as `model_assumption` last-resort candidates. Any
+valid native observation or verified historical candidate wins regardless of
+whether it is earlier or later than the requested base year; only when none is
+available can the 2022 estimate be carried to another base year. The source
+dataset retains the estimation method, cross-validation result and replacement
+guidance instead of disguising these values as observations.
+
 Native or better documented economy-specific evidence should replace a proxy
 through the normal researcher submission and developer review process. The
 original proposal ID and derivation audit should remain available so the reason

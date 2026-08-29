@@ -268,11 +268,18 @@ def _selected_row(fallback_row: pd.Series, selected: Any, result: Any, requested
     row["Source Data Year"] = result.selected_source_data_year
     row["Source Classification"] = selected.source_classification
     row["Base Year Treatment"] = result.base_year_treatment
-    row["Derivation Method"] = {
+    resolution_method = {
         "exact": "direct_observation",
         "earlier": "prior_observation_seed",
         "future": "future_year_seed",
     }[result.direction]
+    payload_method = str(payload.get("Derivation Method", "") or "").strip()
+    if selected.source_classification != "native_observation" and payload_method not in {
+        "", "legacy_unrecorded",
+    }:
+        row["Derivation Method"] = payload_method
+    else:
+        row["Derivation Method"] = resolution_method
     return row
 
 

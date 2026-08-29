@@ -399,7 +399,11 @@ An operator supplies all of the following explicitly:
 
 For each non-derived fallback key, the generator calls the existing resolver.
 A selected candidate replaces that value and preserves its real source year,
-classification, treatment and source identity. If no candidate is eligible,
+classification, treatment and source identity. Valid native observations and
+verified historical candidates are the primary evidence pool. Reviewed
+`model_assumption` candidates are eligible only as a last resort when that
+primary pool is empty, so adding native evidence automatically displaces a
+proxy regardless of year. If no candidate is eligible,
 the fallback row is copied unchanged. `legacy_unknown` remains ineligible.
 `Stock Share` candidates are rejected. Rows explicitly marked
 `stock_share_from_stock` are recalculated from resolved `Stock`; detailed

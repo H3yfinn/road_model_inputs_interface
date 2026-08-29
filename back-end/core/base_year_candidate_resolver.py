@@ -35,6 +35,7 @@ class ResolverPolicy:
     quality_tier_priority: Mapping[str, int]
     source_priority: Mapping[str, int]
     eligible_source_lineages: frozenset[str] = frozenset()
+    last_resort_classifications: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,7 @@ SEED_ELIGIBLE_POLICY = ResolverPolicy(
     quality_tier_priority={"default": 0},
     source_priority={"default": 0},
     eligible_source_lineages=frozenset({"verified_9th_outlook"}),
+    last_resort_classifications=frozenset({"model_assumption"}),
 )
 
 POLICIES_BY_ID = {
@@ -190,6 +192,10 @@ def _validate_policy(policy: ResolverPolicy | str) -> ResolverPolicy:
         raise ValueError("allow_seed_years must be boolean.")
     if not policy.eligible_classifications <= VALID_SOURCE_CLASSIFICATIONS:
         raise ValueError("Policy has unsupported eligible source classifications.")
+    if not policy.last_resort_classifications <= VALID_SOURCE_CLASSIFICATIONS:
+        raise ValueError("Policy has unsupported last-resort source classifications.")
+    if policy.eligible_classifications & policy.last_resort_classifications:
+        raise ValueError("Primary and last-resort source classifications must not overlap.")
     if not policy.eligible_source_lineages <= VALID_SOURCE_LINEAGES:
         raise ValueError("Policy has unsupported eligible source lineages.")
     if not policy.quality_tier_priority or not policy.source_priority:
@@ -222,10 +228,11 @@ def resolve_base_year_candidates(
 ) -> CandidateResolution:
     """Select a source candidate without mutating inputs or reading any files.
 
-    Direction and source-data year are deliberately ranked before quality/source
-    priority: an eligible earlier observation always beats future data, even when
-    the future value is closer.  The last tie-breaker is candidate_id, so input
-    ordering and filesystem enumeration cannot affect the answer.
+    Primary evidence classifications always beat configured last-resort
+    classifications. Within the winning evidence class, direction and source-data
+    year are ranked before quality/source priority: an eligible earlier observation
+    beats future data even when the future value is closer. The last tie-breaker is
+    candidate_id, so input ordering and filesystem enumeration cannot affect the answer.
     """
     requested_year = _validate_year(requested_base_year, "requested_base_year")
     resolver_policy = _validate_policy(policy)
@@ -246,7 +253,9 @@ def resolve_base_year_candidates(
     eligible: list[Candidate] = []
     for candidate in normalised:
         reasons: list[str] = []
-        classification_eligible = candidate.source_classification in resolver_policy.eligible_classifications
+        classification_eligible = candidate.source_classification in (
+            resolver_policy.eligible_classifications | resolver_policy.last_resort_classifications
+        )
         lineage_eligible = candidate.source_lineage in resolver_policy.eligible_source_lineages
         if not classification_eligible and not lineage_eligible:
             reasons.append("ineligible_source_classification")
@@ -275,6 +284,12 @@ def resolve_base_year_candidates(
             tuple(sorted(rejected, key=lambda item: item.candidate_id)),
         )
 
+    preferred = [
+        candidate for candidate in eligible
+        if candidate.source_classification not in resolver_policy.last_resort_classifications
+    ]
+    ranking_pool = preferred or eligible
+
     def rank(candidate: Candidate) -> tuple[int, int, int, int, str]:
         direction, _, _ = _direction_and_treatment(candidate, requested_year)
         direction_rank = {"exact": 0, "earlier": 1, "future": 2}[direction]
@@ -287,9 +302,14 @@ def resolve_base_year_candidates(
             candidate.candidate_id,
         )
 
-    selected = min(eligible, key=rank)
+    selected = min(ranking_pool, key=rank)
 
     def selection_rejection_reason(candidate: Candidate) -> str:
+        if (
+            candidate.source_classification in resolver_policy.last_resort_classifications
+            and selected.source_classification not in resolver_policy.last_resort_classifications
+        ):
+            return "higher_evidence_classification_preferred"
         selected_direction, _, _ = _direction_and_treatment(selected, requested_year)
         candidate_direction, _, _ = _direction_and_treatment(candidate, requested_year)
         if selected_direction != candidate_direction:
