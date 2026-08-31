@@ -262,7 +262,7 @@ Active supplemental source files include:
 
 | File | Supplies |
 |---|---|
-| `apec_phev_utilisation_rates.csv` | PHEV electric driving share by economy and vehicle type; LPVs feed passenger road, LCVs feed the freight fallback, and truck rows feed the truck-specific control. The 30 August 2026 truck rows are explicitly labelled case-study proxies from LCVs pending reviewed truck duty-cycle evidence. |
+| `apec_phev_utilisation_rates.csv` | PHEV electric driving share by economy and vehicle type; LPVs feed passenger road, LCVs feed the freight fallback, and truck rows feed the truck-specific control. The truck rows are explicitly labelled `case_study_proxy_from_lcv`; their use was approved on 31 August 2026 while evidence grade D remains until reviewed truck duty-cycle evidence replaces the proxy. |
 | `apec_reconciliation_factors.csv` | Module 6 reconciliation weights and scalar bounds |
 | `apec_vehicle_equivalent_weights.csv` | Vehicle equivalent weights for Module 3 |
 | `apec_passenger_vehicle_saturation.csv` | Passenger vehicle saturation for Module 3 |
