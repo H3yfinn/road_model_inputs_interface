@@ -183,6 +183,8 @@ Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Fuel Economy,fuel,True,False,Tru
 Demand\Freight road\Trucks\PHEV heavy\Biodiesel,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV heavy\Electricity,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV heavy\Electricity,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
+Demand\Freight road\Trucks\PHEV heavy\Efuel,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
+Demand\Freight road\Trucks\PHEV heavy\Efuel,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV heavy\Gas and diesel oil,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV heavy\Gas and diesel oil,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV medium,Sales Share,drive_or_size,True,True,True,False,%,
@@ -191,6 +193,8 @@ Demand\Freight road\Trucks\PHEV medium\Biodiesel,Fuel Economy,fuel,True,False,Tr
 Demand\Freight road\Trucks\PHEV medium\Biodiesel,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV medium\Electricity,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV medium\Electricity,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
+Demand\Freight road\Trucks\PHEV medium\Efuel,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
+Demand\Freight road\Trucks\PHEV medium\Efuel,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV medium\Gas and diesel oil,Fuel Economy,fuel,True,False,True,True,MJ/100 km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV medium\Gas and diesel oil,Mileage,fuel,True,False,True,True,Thousand km,Fuel row globally required unless excluded by economy-specific ESTO zero-fuel config.
 Demand\Freight road\Trucks\PHEV,PHEV Electric Driving Share,drive_or_size,True,False,True,True,%,Truck-specific PHEV electric driving share used by Module 6; approved 31 August 2026 as an explicit LCV-derived proxy while retaining evidence grade D until truck duty-cycle evidence replaces it.
