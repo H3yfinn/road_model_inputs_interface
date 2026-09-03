@@ -671,6 +671,7 @@ def _phev_rate_for_branch(
 PHEV_UTILISATION_BRANCH_PATHS = [
     "Demand\\Passenger road\\PHEV",
     "Demand\\Freight road\\PHEV",
+    "Demand\\Freight road\\Trucks\\PHEV",
 ]
 
 
@@ -700,9 +701,10 @@ def overlay_phev_utilisation_rates(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Use the PHEV utilisation CSV for base-year PHEV electric driving share rows.
 
-    When the source CSV has a vehicle_type column, applies LPVs rate to passenger
-    branch paths and LCVs rate to freight branch paths. Falls back to a single
-    economy-level rate when no vehicle_type column is present.
+    When the source CSV has a vehicle_type column, applies LPVs rate to the
+    passenger aggregate, LCVs rate to the freight aggregate, and Trucks rate to
+    the truck-specific control branch. Falls back to a single economy-level rate
+    when no vehicle_type column is present.
     """
     phev_df, resolved_path = load_phev_utilisation_rates(source_path)
     if phev_df.empty or resolved_path is None:
@@ -2180,7 +2182,7 @@ def _load_transport_leap_export_defaults_from_path(resolved_path_text: str) -> p
 
     workbook_df = workbook_df[workbook_df["Branch Path"].ne("") & workbook_df["Variable"].ne("")]
 
-    # PHEV is only valid for LPVs and LCVs — drop Bus/Motorcycle PHEV rows from the source.
+    # PHEV is valid for LPVs, LCVs, and Trucks — drop Bus/Motorcycle PHEV rows.
     _phev_oos = (
         workbook_df["Branch Path"].str.contains("PHEV", na=False)
         & (
@@ -4673,19 +4675,19 @@ def write_economy_package(
     # (valid_drive_types_by_vehicle_type in vehicle_mappings.yaml):
     # - Use Fuel Economy variable name.
     # - HEV and EREV are LPV-only; drop them from all other segments.
-    # - Trucks and Buses have no PHEV; drop those rows too.
+    # - Buses have no PHEV; truck PHEV is retained.
     default_filled["Variable"] = default_filled["Variable"].replace(
         {"Final On-Road Fuel Economy": "Fuel Economy"}
     )
     branch_series = default_filled["Branch Path"].astype(str)
     is_hev_or_erev = branch_series.str.contains(r"\\(?:HEV|EREV)(?:\\|$)", regex=True)
     is_lpv_branch = branch_series.str.startswith("Demand\\Passenger road\\LPVs\\")
-    is_truck_or_bus_phev = (
-        branch_series.str.contains(r"\\(?:Trucks|Buses)\\", regex=True)
+    is_bus_phev = (
+        branch_series.str.contains(r"\\Buses\\", regex=True)
         & branch_series.str.contains(r"\\PHEV(?:\\|$)", regex=True)
     )
     default_filled = default_filled[
-        ~((is_hev_or_erev & ~is_lpv_branch) | is_truck_or_bus_phev)
+        ~((is_hev_or_erev & ~is_lpv_branch) | is_bus_phev)
     ].copy()
 
     # Vehicle equivalent weights are only required for passenger branches.

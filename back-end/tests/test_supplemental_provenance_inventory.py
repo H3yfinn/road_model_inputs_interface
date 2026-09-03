@@ -42,9 +42,9 @@ def test_checked_in_inventory_tracks_active_supplements_without_review_flags():
     assert before == after
     assert inventory.summary == {
         "active_source_count": 7,
-        "inventory_record_count": 73,
+        "inventory_record_count": 94,
         "review_required_count": 0,
-        "status_counts": {"tracked_complete": 69, "tracked_metadata_limited": 4},
+        "status_counts": {"tracked_complete": 90, "tracked_metadata_limited": 4},
     }
     assert set(inventory.rows["Source Classification"]) == {"model_assumption", "structural_assumption"}
     assert not inventory.rows["review_required"].any()

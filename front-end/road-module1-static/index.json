@@ -5,93 +5,116 @@
     "Reference",
     "Target"
   ],
+  "default_esto_vintage": null,
+  "esto_vintages": [],
   "versions": [
     {
       "version": "v2026_05_25_best_guess",
       "economies": [
         {
           "economy": "01AUS",
-          "economy_name": "Australia"
+          "economy_name": "Australia",
+          "base_year": 2022
         },
         {
           "economy": "02BD",
-          "economy_name": "Brunei Darussalam"
+          "economy_name": "Brunei Darussalam",
+          "base_year": 2022
         },
         {
           "economy": "03CDA",
-          "economy_name": "Canada"
+          "economy_name": "Canada",
+          "base_year": 2022
         },
         {
           "economy": "04CHL",
-          "economy_name": "Chile"
+          "economy_name": "Chile",
+          "base_year": 2022
         },
         {
           "economy": "05PRC",
-          "economy_name": "China"
+          "economy_name": "China",
+          "base_year": 2022
         },
         {
           "economy": "06HKC",
-          "economy_name": "Hong Kong, China"
+          "economy_name": "Hong Kong, China",
+          "base_year": 2022
         },
         {
           "economy": "07INA",
-          "economy_name": "Indonesia"
+          "economy_name": "Indonesia",
+          "base_year": 2022
         },
         {
           "economy": "08JPN",
-          "economy_name": "Japan"
+          "economy_name": "Japan",
+          "base_year": 2022
         },
         {
           "economy": "09ROK",
-          "economy_name": "Republic of Korea"
+          "economy_name": "Republic of Korea",
+          "base_year": 2022
         },
         {
           "economy": "10MAS",
-          "economy_name": "Malaysia"
+          "economy_name": "Malaysia",
+          "base_year": 2022
         },
         {
           "economy": "11MEX",
-          "economy_name": "Mexico"
+          "economy_name": "Mexico",
+          "base_year": 2022
         },
         {
           "economy": "12NZ",
-          "economy_name": "New Zealand"
+          "economy_name": "New Zealand",
+          "base_year": 2022
         },
         {
           "economy": "13PNG",
-          "economy_name": "Papua New Guinea"
+          "economy_name": "Papua New Guinea",
+          "base_year": 2022
         },
         {
           "economy": "14PE",
-          "economy_name": "Peru"
+          "economy_name": "Peru",
+          "base_year": 2022
         },
         {
           "economy": "15PHL",
-          "economy_name": "The Philippines"
+          "economy_name": "The Philippines",
+          "base_year": 2022
         },
         {
           "economy": "16RUS",
-          "economy_name": "Russia"
+          "economy_name": "Russia",
+          "base_year": 2021
         },
         {
           "economy": "17SGP",
-          "economy_name": "Singapore"
+          "economy_name": "Singapore",
+          "base_year": 2022
         },
         {
           "economy": "18CT",
-          "economy_name": "Chinese Taipei"
+          "economy_name": "Chinese Taipei",
+          "base_year": 2022
         },
         {
           "economy": "19THA",
-          "economy_name": "Thailand"
+          "economy_name": "Thailand",
+          "base_year": 2022
         },
         {
           "economy": "20USA",
-          "economy_name": "United States"
+          "economy_name": "United States",
+          "base_year": 2022
         },
         {
           "economy": "21VN",
-          "economy_name": "Viet Nam"
+          "economy_name": "Viet Nam",
+          "base_year": 2022
         }
       ]
     },
@@ -100,87 +123,108 @@
       "economies": [
         {
           "economy": "01AUS",
-          "economy_name": "Australia"
+          "economy_name": "Australia",
+          "base_year": 2022
         },
         {
           "economy": "02BD",
-          "economy_name": "Brunei Darussalam"
+          "economy_name": "Brunei Darussalam",
+          "base_year": 2022
         },
         {
           "economy": "03CDA",
-          "economy_name": "Canada"
+          "economy_name": "Canada",
+          "base_year": 2022
         },
         {
           "economy": "04CHL",
-          "economy_name": "Chile"
+          "economy_name": "Chile",
+          "base_year": 2022
         },
         {
           "economy": "05PRC",
-          "economy_name": "China"
+          "economy_name": "China",
+          "base_year": 2022
         },
         {
           "economy": "06HKC",
-          "economy_name": "Hong Kong, China"
+          "economy_name": "Hong Kong, China",
+          "base_year": 2022
         },
         {
           "economy": "07INA",
-          "economy_name": "Indonesia"
+          "economy_name": "Indonesia",
+          "base_year": 2022
         },
         {
           "economy": "08JPN",
-          "economy_name": "Japan"
+          "economy_name": "Japan",
+          "base_year": 2022
         },
         {
           "economy": "09ROK",
-          "economy_name": "Republic of Korea"
+          "economy_name": "Republic of Korea",
+          "base_year": 2022
         },
         {
           "economy": "10MAS",
-          "economy_name": "Malaysia"
+          "economy_name": "Malaysia",
+          "base_year": 2022
         },
         {
           "economy": "11MEX",
-          "economy_name": "Mexico"
+          "economy_name": "Mexico",
+          "base_year": 2022
         },
         {
           "economy": "12NZ",
-          "economy_name": "New Zealand"
+          "economy_name": "New Zealand",
+          "base_year": 2022
         },
         {
           "economy": "13PNG",
-          "economy_name": "Papua New Guinea"
+          "economy_name": "Papua New Guinea",
+          "base_year": 2022
         },
         {
           "economy": "14PE",
-          "economy_name": "Peru"
+          "economy_name": "Peru",
+          "base_year": 2022
         },
         {
           "economy": "15PHL",
-          "economy_name": "The Philippines"
+          "economy_name": "The Philippines",
+          "base_year": 2022
         },
         {
           "economy": "16RUS",
-          "economy_name": "Russia"
+          "economy_name": "Russia",
+          "base_year": 2021
         },
         {
           "economy": "17SGP",
-          "economy_name": "Singapore"
+          "economy_name": "Singapore",
+          "base_year": 2022
         },
         {
           "economy": "18CT",
-          "economy_name": "Chinese Taipei"
+          "economy_name": "Chinese Taipei",
+          "base_year": 2022
         },
         {
           "economy": "19THA",
-          "economy_name": "Thailand"
+          "economy_name": "Thailand",
+          "base_year": 2022
         },
         {
           "economy": "20USA",
-          "economy_name": "United States"
+          "economy_name": "United States",
+          "base_year": 2022
         },
         {
           "economy": "21VN",
-          "economy_name": "Viet Nam"
+          "economy_name": "Viet Nam",
+          "base_year": 2022
         }
       ]
     }
