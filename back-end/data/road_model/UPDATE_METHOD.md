@@ -331,6 +331,28 @@ road_module1_final_value_override_report.html
 
 Open the HTML report before treating an override run as reviewed.
 
+### Upstream workbook replacement versus reviewed correction
+
+Use exactly one of these paths for a numeric change:
+
+- **New upstream LEAP workbook:** replace the relevant file in
+  `leap_import_workbooks/`, run `prepare_road_source.py`, then run the regular
+  build. Do not copy individual workbook values into an override merely to
+  avoid source prep.
+- **Reviewed economy-specific correction:** add or update one row in the
+  economy's `final_value_overrides/` file. Keep the upstream workbook and
+  `processed_source/` unchanged, then review the generated override report.
+
+The source merge resolves competing source rows using the configured priority
+before package construction. Final overrides replace the selected row in place;
+they must never add a second canonical key. At package publication, exact
+duplicate canonical-long rows are collapsed and recorded in
+`road_module1_canonical_key_deduplication_report.csv`. A duplicate with a
+different value, scale, units, source, comment, or other hand-off metadata is
+an error and must be resolved in the source or override review before static
+sync. The frontend static CSV is written only after this uniqueness check, so
+the browser cannot silently select between duplicate rows.
+
 ## Static Row Contract
 
 `config/road_module1_static_contract.csv` is the active static row contract. It
