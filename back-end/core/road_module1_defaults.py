@@ -3418,6 +3418,99 @@ def _wide_defaults_to_long(defaults_df: pd.DataFrame, economy: str) -> pd.DataFr
     return pd.DataFrame(rows, columns=MODULE1_LONG_COLUMNS)
 
 
+CANONICAL_KEY_DEDUPLICATION_REPORT_COLUMNS = [
+    "Action",
+    *MODULE1_LONG_KEY_COLUMNS,
+    "Duplicate Row Count",
+    "Retained Source",
+    "Retained Comment",
+]
+
+
+def canonicalise_module1_long_rows(
+    long_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Collapse exact canonical-long duplicates and reject ambiguous duplicates.
+
+    Source priority is resolved before rows become the wide generated package.
+    This final boundary only removes byte-for-byte equivalent canonical rows,
+    which can be introduced when an overlay repeats an already-selected row.
+    It never chooses between distinct values or provenance records: those are
+    a source/overlay conflict and must be corrected before publication.
+    """
+    if long_df.empty:
+        return (
+            pd.DataFrame(columns=MODULE1_LONG_COLUMNS),
+            pd.DataFrame(columns=CANONICAL_KEY_DEDUPLICATION_REPORT_COLUMNS),
+        )
+
+    rows = long_df[MODULE1_LONG_COLUMNS].copy()
+    duplicate_mask = rows.duplicated(subset=MODULE1_LONG_KEY_COLUMNS, keep=False)
+    if not duplicate_mask.any():
+        return rows.reset_index(drop=True), pd.DataFrame(columns=CANONICAL_KEY_DEDUPLICATION_REPORT_COLUMNS)
+
+    keep_indices = list(rows.index[~duplicate_mask])
+    audit_rows: list[dict[str, object]] = []
+    conflicts: list[dict[str, object]] = []
+    for key, group in rows.loc[duplicate_mask].groupby(
+        MODULE1_LONG_KEY_COLUMNS, sort=True, dropna=False
+    ):
+        comparable = group[MODULE1_LONG_COLUMNS].astype(object)
+        comparable = comparable.where(comparable.notna(), "<NA>").astype(str)
+        if len(comparable.drop_duplicates()) != 1:
+            conflicts.extend(
+                group[
+                    [
+                        *MODULE1_LONG_KEY_COLUMNS,
+                        "Value",
+                        "Scale",
+                        "Units",
+                        "Source",
+                        "Comment",
+                    ]
+                ].head(10).to_dict(orient="records")
+            )
+            continue
+
+        retained = group.iloc[0]
+        keep_indices.append(retained.name)
+        audit_rows.append(
+            {
+                "Action": "collapsed_exact_duplicate",
+                **dict(zip(MODULE1_LONG_KEY_COLUMNS, key)),
+                "Duplicate Row Count": len(group),
+                "Retained Source": retained["Source"],
+                "Retained Comment": retained["Comment"],
+            }
+        )
+
+    if conflicts:
+        raise ValueError(
+            "Generated Module 1 package has conflicting duplicate canonical keys. "
+            "Source priority must resolve these before package publication; no row was selected. "
+            f"Sample: {conflicts[:10]}"
+        )
+
+    canonical_rows = rows.loc[keep_indices].sort_index(kind="stable").reset_index(drop=True)
+    audit_df = pd.DataFrame(audit_rows, columns=CANONICAL_KEY_DEDUPLICATION_REPORT_COLUMNS)
+    return canonical_rows, audit_df
+
+
+def raise_if_module1_long_rows_have_duplicate_keys(long_df: pd.DataFrame, *, context: str) -> None:
+    """Reject every remaining duplicate canonical key at a publication boundary."""
+    duplicate_mask = long_df.duplicated(subset=MODULE1_LONG_KEY_COLUMNS, keep=False)
+    if not duplicate_mask.any():
+        return
+    sample = long_df.loc[
+        duplicate_mask,
+        [*MODULE1_LONG_KEY_COLUMNS, "Value", "Source", "Comment"],
+    ].head(10).to_dict(orient="records")
+    raise ValueError(
+        f"{context} has duplicate canonical Module 1 keys after resolution. "
+        f"Sample: {sample}"
+    )
+
+
 def _long_defaults_to_ui_wide(long_df: pd.DataFrame, economy: str, region_name: str | None = None) -> pd.DataFrame:
     """Convert canonical long rows back to the legacy wide shape used by the UI/backend helpers."""
     if long_df.empty:
@@ -4812,7 +4905,17 @@ def write_economy_package(
         package_version=version,
         target_base_year=2021 if economy.code == "16RUS" else BASE_YEAR,
     )
+    long_defaults, canonical_key_deduplication_report = canonicalise_module1_long_rows(long_defaults)
+    raise_if_module1_long_rows_have_duplicate_keys(
+        long_defaults,
+        context=f"Generated Module 1 package for {economy.code}",
+    )
     long_defaults.to_csv(paths["default_filled_inputs"], index=False)
+    canonical_key_deduplication_report_path = (
+        economy_dir / "road_module1_canonical_key_deduplication_report.csv"
+    )
+    canonical_key_deduplication_report.to_csv(canonical_key_deduplication_report_path, index=False)
+    paths["canonical_key_deduplication_report"] = canonical_key_deduplication_report_path
 
     # Keep these variables computed for optional debugging/use in interactive sessions.
     _ = (

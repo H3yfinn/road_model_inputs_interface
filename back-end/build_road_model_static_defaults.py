@@ -45,6 +45,7 @@ from core.road_module1_defaults import (
     TRANSPORT_LEAP_EXPORT_SHEET,
     _wide_defaults_to_long,
     _transport_leap_source_regions,
+    raise_if_module1_long_rows_have_duplicate_keys,
     find_transport_leap_export_path,
     get_economy_info,
     list_default_economies,
@@ -757,6 +758,10 @@ def write_frontend_static_bundle(
             economy_code=economy_code,
         )
         long_defaults_df = _round_static_display_values(long_defaults_df)
+        raise_if_module1_long_rows_have_duplicate_keys(
+            long_defaults_df,
+            context=f"Static Module 1 bundle for {economy_code}",
+        )
         _validate_static_values(long_defaults_df, economy_code)
 
         economy_row_keys[economy_code] = set(
@@ -768,7 +773,7 @@ def write_frontend_static_bundle(
         )
 
         csv_path = version_root / f"{economy_safe}.csv"
-        long_defaults_df[MODULE1_LONG_COLUMNS].drop_duplicates().to_csv(csv_path, index=False)
+        long_defaults_df[MODULE1_LONG_COLUMNS].to_csv(csv_path, index=False)
         defaults_files_written += 1
 
     versions_index = []
