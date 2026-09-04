@@ -3055,18 +3055,24 @@ def load_processed_source_inputs(
         return pd.DataFrame(columns=MODULE1_INPUT_COLUMNS)
     source_df["Year"] = source_df["Year"].astype(int)
     base_year_key_columns = ["Branch Path", "Variable", "Scenario", "Units"]
-    has_base_year = set(
-        source_df.loc[source_df["Year"].eq(BASE_YEAR), base_year_key_columns]
-        .astype(str)
-        .agg("\u241f".join, axis=1)
-    )
+    base_year_rows = source_df[source_df["Year"].eq(BASE_YEAR)].copy()
+    base_year_priorities = {
+        "\u241f".join(str(row[column]) for column in base_year_key_columns): float(row["_priority_sort"])
+        for _, row in base_year_rows.sort_values("_priority_sort", kind="stable")
+        .drop_duplicates(subset=base_year_key_columns, keep="first")
+        .iterrows()
+    }
     # Resolve each canonical key independently.  Never re-ingest a previously
     # generated fallback: only ranked source rows reach this point.
     fallback_base_rows = []
     prior_year_df = source_df[source_df["Year"].lt(BASE_YEAR)].copy()
     for _, group_df in prior_year_df.groupby(base_year_key_columns, dropna=False):
         key = "\u241f".join(str(group_df.iloc[0][column]) for column in base_year_key_columns)
-        if key in has_base_year:
+        prior_year_priority = float(group_df["_priority_sort"].min())
+        base_year_priority = base_year_priorities.get(key)
+        # A lower-priority base-year fallback must not mask a better prior-year
+        # source that can be carried forward to the model base year.
+        if base_year_priority is not None and base_year_priority <= prior_year_priority:
             continue
         # Ranking is deterministic: source quality/priority first, then newest
         # eligible observation, then source name.  Future observations are not
@@ -4903,7 +4909,7 @@ def write_economy_package(
     long_defaults = enrich_module1_provenance(
         long_defaults,
         package_version=version,
-        target_base_year=2021 if economy.code == "16RUS" else BASE_YEAR,
+        target_base_year=BASE_YEAR,
     )
     long_defaults, canonical_key_deduplication_report = canonicalise_module1_long_rows(long_defaults)
     raise_if_module1_long_rows_have_duplicate_keys(

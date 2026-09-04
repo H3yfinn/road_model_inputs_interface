@@ -218,6 +218,53 @@ def test_source_merge_and_canonical_long_conversion_preserve_structured_metadata
     ]
 
 
+def test_better_prior_year_source_beats_manual_base_year_fallback(tmp_path, monkeypatch):
+    import core.road_module1_defaults as defaults
+
+    source_dir = tmp_path / "processed_source"
+    source_dir.mkdir()
+    pd.DataFrame([
+        {
+            "Branch Path": "Demand\\Freight road\\Trucks\\EREV heavy\\Biodiesel",
+            "Variable": "Fuel Economy",
+            "Scenario": "Current Accounts",
+            "Year": 2021,
+            "Value": 789.9,
+            "Units": "MJ/100 km",
+        }
+    ]).to_csv(source_dir / "road_module1_source_16RUS.csv", index=False)
+    manual_dir = tmp_path / "manual"
+    manual_dir.mkdir()
+    pd.DataFrame([
+        {
+            "Economy": "16_RUS",
+            "Branch Path": "Demand\\Freight road\\Trucks\\EREV heavy\\Biodiesel",
+            "Variable": "Fuel Economy",
+            "Scenario": "Current Accounts",
+            "Year": 2022,
+            "Value": 2034.4,
+            "Units": "MJ/100 km",
+            "notes": "fallback",
+            "DO_NOT_USE": "",
+            "share_decreased_from": "",
+        }
+    ]).to_csv(manual_dir / "manually_entered_missing_rows.csv", index=False)
+    monkeypatch.setattr(defaults, "PROCESSED_SOURCE_DIR", source_dir)
+    monkeypatch.setattr(defaults, "MANUALLY_FILLED_ROWS_DIR", manual_dir)
+
+    wide = defaults.load_processed_source_inputs(
+        defaults.EconomyInfo("16RUS", "Russia", 0.0),
+        scenarios=["Current Accounts"],
+    )
+    row = wide[
+        wide["Branch Path"].eq("Demand\\Freight road\\Trucks\\EREV heavy\\Biodiesel")
+        & wide["Variable"].eq("Fuel Economy")
+        & wide["Scenario"].eq("Current Accounts")
+    ].iloc[0]
+    assert row["2022"] == 789.9
+    assert row["source_type"] == "processed_source"
+
+
 def test_source_prepare_preserves_optional_metadata_in_temp_output(tmp_path):
     from scripts.prepare_road_source import expand_for_viewing_to_long, write_processed_source_files
 
